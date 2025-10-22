@@ -1,0 +1,164 @@
+// CwlPdfParser. Copyright © 2025 Matt Gallagher. See LICENSE file for usage permissions.
+
+import Swift
+
+typealias ASCII = UTF8.CodeUnit
+
+extension ASCII {
+	static let nul: ASCII = 0x00
+	static let startOfHeading: ASCII = 0x01
+	static let startOfText: ASCII = 0x02
+	static let endOfText: ASCII = 0x03
+	static let endOfTransmission: ASCII = 0x04
+	static let enquiry: ASCII = 0x05
+	static let acknowledgement: ASCII = 0x06
+	static let bell: ASCII = 0x07
+	static let backspace: ASCII = 0x08
+	static let tab: ASCII = 0x09
+	static let lineFeed: ASCII = 0x0A
+	static let verticalTab: ASCII = 0x0B
+	static let formFeed: ASCII = 0x0C
+	static let carriageReturn: ASCII = 0x0D
+	static let shiftOut: ASCII = 0x0E
+	static let shiftIn: ASCII = 0x0F
+	static let dataLinkEscape: ASCII = 0x10
+	static let deviceControl1Xon: ASCII = 0x11
+	static let deviceControl2: ASCII = 0x12
+	static let deviceControl3Xoff: ASCII = 0x13
+	static let deviceControl4: ASCII = 0x14
+	static let negativeAcknowledgement: ASCII = 0x15
+	static let synchronousIdle: ASCII = 0x16
+	static let endOfTransmissionBlock: ASCII = 0x17
+	static let cancel: ASCII = 0x18
+	static let endOfMedium: ASCII = 0x19
+	static let substitute: ASCII = 0x1A
+	static let escape: ASCII = 0x1B
+	static let fileSeparator: ASCII = 0x1C
+	static let groupSeparator: ASCII = 0x1D
+	static let recordSeparator: ASCII = 0x1E
+	static let unitSeparator: ASCII = 0x1F
+	static let space: ASCII = 0x20
+	static let exclamationMark: ASCII = 0x21
+	static let doubleQuote: ASCII = 0x22
+	static let hash: ASCII = 0x23
+	static let dollarSign: ASCII = 0x24
+	static let percent: ASCII = 0x25
+	static let ampersand: ASCII = 0x26
+	static let apostrophe: ASCII = 0x27
+	static let openParenthesis: ASCII = 0x28
+	static let closeParenthesis: ASCII = 0x29
+	static let asterisk: ASCII = 0x2A
+	static let plus: ASCII = 0x2B
+	static let comma: ASCII = 0x2C
+	static let hyphen: ASCII = 0x2D
+	static let dot: ASCII = 0x2E
+	static let slash: ASCII = 0x2F
+	static let digit0: ASCII = 0x30
+	static let digit1: ASCII = 0x31
+	static let digit2: ASCII = 0x32
+	static let digit3: ASCII = 0x33
+	static let digit4: ASCII = 0x34
+	static let digit5: ASCII = 0x35
+	static let digit6: ASCII = 0x36
+	static let digit7: ASCII = 0x37
+	static let digit8: ASCII = 0x38
+	static let digit9: ASCII = 0x39
+	static let colon: ASCII = 0x3A
+	static let semicolon: ASCII = 0x3B
+	static let lessThan: ASCII = 0x3C
+	static let greaterThan: ASCII = 0x3E
+	static let equals: ASCII = 0x3D
+	static let questionMark: ASCII = 0x3F
+	static let atSign: ASCII = 0x40
+	static let A: ASCII = 0x41
+	static let B: ASCII = 0x42
+	static let C: ASCII = 0x43
+	static let D: ASCII = 0x44
+	static let E: ASCII = 0x45
+	static let F: ASCII = 0x46
+	static let G: ASCII = 0x47
+	static let H: ASCII = 0x48
+	static let I: ASCII = 0x49
+	static let J: ASCII = 0x4A
+	static let K: ASCII = 0x4B
+	static let L: ASCII = 0x4C
+	static let M: ASCII = 0x4D
+	static let N: ASCII = 0x4E
+	static let O: ASCII = 0x4F
+	static let P: ASCII = 0x50
+	static let Q: ASCII = 0x51
+	static let R: ASCII = 0x52
+	static let S: ASCII = 0x53
+	static let T: ASCII = 0x54
+	static let U: ASCII = 0x55
+	static let V: ASCII = 0x56
+	static let W: ASCII = 0x57
+	static let X: ASCII = 0x58
+	static let Y: ASCII = 0x59
+	static let Z: ASCII = 0x5A
+	static let openBracket: ASCII = 0x5B
+	static let backslash: ASCII = 0x5C
+	static let closeBracket: ASCII = 0x5D
+	static let caret: ASCII = 0x5E
+	static let underscore: ASCII = 0x5F
+	static let graveAccent: ASCII = 0x60
+	static let a: ASCII = 0x61
+	static let b: ASCII = 0x62
+	static let c: ASCII = 0x63
+	static let d: ASCII = 0x64
+	static let e: ASCII = 0x65
+	static let f: ASCII = 0x66
+	static let g: ASCII = 0x67
+	static let h: ASCII = 0x68
+	static let i: ASCII = 0x69
+	static let j: ASCII = 0x6A
+	static let k: ASCII = 0x6B
+	static let l: ASCII = 0x6C
+	static let m: ASCII = 0x6D
+	static let n: ASCII = 0x6E
+	static let o: ASCII = 0x6F
+	static let p: ASCII = 0x70
+	static let q: ASCII = 0x71
+	static let r: ASCII = 0x72
+	static let s: ASCII = 0x73
+	static let t: ASCII = 0x74
+	static let u: ASCII = 0x75
+	static let v: ASCII = 0x76
+	static let w: ASCII = 0x77
+	static let x: ASCII = 0x78
+	static let y: ASCII = 0x79
+	static let z: ASCII = 0x7A
+	static let openBrace: ASCII = 0x7B
+	static let pipe: ASCII = 0x7C
+	static let closeBrace: ASCII = 0x7D
+	static let tilde: ASCII = 0x7E
+	static let delete: ASCII = 0x7F
+
+	static func isEol(_ byte: ASCII) -> Bool {
+		return byte == ASCII.carriageReturn || byte == ASCII.lineFeed
+	}
+	
+	static func isNonEolWhitespace(_ byte: ASCII) -> Bool {
+		return byte == ASCII.nul
+		|| byte == ASCII.tab
+		|| byte == ASCII.formFeed
+		|| byte == ASCII.space
+	}
+	
+	static func isWhitespace(_ byte: ASCII) -> Bool {
+		return byte == ASCII.nul
+		|| byte == ASCII.tab
+		|| byte == ASCII.lineFeed
+		|| byte == ASCII.formFeed
+		|| byte == ASCII.carriageReturn
+		|| byte == ASCII.space
+	}
+	
+	static func isDigit(_ byte: ASCII) -> Bool {
+		return byte >= ASCII.digit0 && byte <= ASCII.digit9
+	}
+	
+	static func isLetter(_ byte: ASCII) -> Bool {
+		return (byte >= ASCII.a && byte <= ASCII.z) || (byte >= ASCII.A && byte <= ASCII.Z)
+	}
+}
