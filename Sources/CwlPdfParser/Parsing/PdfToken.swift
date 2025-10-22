@@ -88,6 +88,7 @@ extension PdfParseContext {
 					token = .comment(range.lowerBound..<(slice.startIndex - 1))
 					return
 				default:
+					token = .comment(range.lowerBound..<slice.startIndex)
 					break
 				}
 			case .hex(var data, let high, let name):
@@ -133,6 +134,7 @@ extension PdfParseContext {
 					token = .identifier(range.lowerBound..<(slice.startIndex - 1))
 					return
 				default:
+					token = .identifier(range.lowerBound..<slice.startIndex)
 					break
 				}
 			case .integer(let sign, let value):
@@ -152,6 +154,7 @@ extension PdfParseContext {
 				case .hash:
 					token = .hex(Data(), high: nil, name: slice.base[range.lowerBound..<(slice.startIndex - 1)].pdfText())
 				default:
+					token = .name(string: string, range: range.lowerBound..<slice.startIndex)
 					break
 				}
 			case .real(let sign, let value, let fraction):
@@ -169,6 +172,7 @@ extension PdfParseContext {
 				case .backslash:
 					token = .stringEscape(bytes: Data(slice.base[range.lowerBound..<(slice.startIndex - 1)]))
 				default:
+					token = .string(bytes: bytes, range: range.lowerBound..<slice.startIndex)
 					break
 				}
 			case .stringEscape(let bytes):

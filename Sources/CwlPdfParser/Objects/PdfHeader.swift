@@ -18,7 +18,7 @@ extension PdfHeader: PdfContextParseable {
 		}
 		var commentContext = PdfParseContext(slice: context.slice[reslice: range])
 		try commentContext.nextToken()
-		guard case .comment(let range) = commentContext.token else {
+		guard case .identifier(let range) = commentContext.token else {
 			throw PdfParseError(context: commentContext, failure: .headerNotFound)
 		}
 		let split = commentContext.pdfText(range: range).split(separator: "-")
