@@ -48,7 +48,8 @@ public struct OffsetSlice<Base: RandomAccessCollection>: RandomAccessCollection 
 	/// By contrast, subscript(reslice bounds:) will allow the reslice if bounds are within range for the
 	/// base collection. This allows backtracking to bounds that were *previously* in range.
 	public subscript(reslice bounds: Range<Index>) -> OffsetSlice<Base> {
-		OffsetSlice(base, bounds: rangeToBase(bounds), offset: offset)
+		let baseRange = rangeToBase(bounds)
+		return OffsetSlice(base, bounds: rangeToBase(bounds), offset: bounds.lowerBound - baseRange.lowerBound)
 	}
 }
 

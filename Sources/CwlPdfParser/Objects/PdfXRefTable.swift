@@ -30,14 +30,14 @@ extension PdfXRefTable: PdfContextParseable {
 			let firstNumber = try context.naturalNumber()
 			try context.nextToken()
 			let fieldCount = try context.naturalNumber()
-			for number in firstNumber..<fieldCount {
+			for number in firstNumber..<(firstNumber + fieldCount) {
 				try context.nextToken()
 				let location = try context.naturalNumber()
 				try context.nextToken()
 				let generation = try context.naturalNumber()
 				try context.nextToken()
 				if context.identifier(equals: .f) {
-					break
+					continue
 				} else if context.identifier(equals: .n) {
 					let objNum = PdfObjNum(number: number, generation: generation)
 					if objects[objNum] == nil {

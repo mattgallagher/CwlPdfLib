@@ -36,7 +36,7 @@ extension PdfParseContext {
 				case .openBracket:
 					token = .arrayOpen
 					return
-				case .lessThan:
+				case .greaterThan:
 					token = .closeAngle
 				case .lessThan:
 					token = .openAngle
@@ -102,7 +102,7 @@ extension PdfParseContext {
 				case .nul, .space, .carriageReturn, .formFeed, .lineFeed, .tab:
 					if let name {
 						if high != nil {
-							data.append(contentsOf: [slice.base[slice.startIndex - 1]])
+							data.append(contentsOf: slice[reslice: (slice.startIndex - 1)..<slice.startIndex])
 						}
 						token = try .name(string: name + data.utf8(), range: slice.startIndex..<slice.startIndex)
 						return
@@ -113,7 +113,7 @@ extension PdfParseContext {
 					guard let nybble = nybbleFromHex(byte) else {
 						if let name {
 							if high != nil {
-								data.append(contentsOf: [slice.base[slice.startIndex - 1]])
+								data.append(contentsOf: slice[reslice: (slice.startIndex - 1)..<slice.startIndex])
 							}
 							token = try .name(string: name + data.utf8(), range: slice.startIndex..<slice.startIndex)
 							break
@@ -152,7 +152,7 @@ extension PdfParseContext {
 					token = .name(string: string, range: range.lowerBound..<(slice.startIndex - 1))
 					return
 				case .hash:
-					token = .hex(Data(), high: nil, name: slice.base[range.lowerBound..<(slice.startIndex - 1)].pdfText())
+					token = .hex(Data(), high: nil, name: slice[reslice: range.lowerBound..<(slice.startIndex - 1)].pdfText())
 				default:
 					token = .name(string: string, range: range.lowerBound..<slice.startIndex)
 					break
@@ -170,7 +170,7 @@ extension PdfParseContext {
 					token = .string(bytes: bytes, range: range.lowerBound..<(slice.startIndex - 1))
 					return
 				case .backslash:
-					token = .stringEscape(bytes: Data(slice.base[range.lowerBound..<(slice.startIndex - 1)]))
+					token = .stringEscape(bytes: Data(slice[reslice: range.lowerBound..<(slice.startIndex - 1)]))
 				default:
 					token = .string(bytes: bytes, range: range.lowerBound..<slice.startIndex)
 					break

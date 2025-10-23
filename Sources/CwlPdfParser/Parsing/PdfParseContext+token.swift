@@ -8,11 +8,11 @@ protocol PdfContextParseable: Sendable {
 
 extension PdfParseContext {
 	func pdfText(range: Range<Int>) -> String {
-		slice.base[range].pdfText()
+		slice[reslice: range].pdfText()
 	}
 	
 	func data(range: Range<Int>) -> Data {
-		Data(slice.base[range])
+		Data(slice[reslice: range])
 	}
 	
 	func identifierString(else failure: PdfParseFailure) throws -> String {
@@ -38,13 +38,13 @@ extension PdfParseContext {
 	}
 	
 	func identifier(token: PdfToken? = nil, equals identifier: PdfIdentifier, else failure: PdfParseFailure) throws {
-		guard case .identifier(let range) = token ?? self.token, slice.base[range].elementsEqual(identifier.rawValue.utf8) else {
+		guard case .identifier(let range) = token ?? self.token, slice[reslice: range].elementsEqual(identifier.rawValue.utf8) else {
 			throw PdfParseError(context: self, failure: failure)
 		}
 	}
 	
 	func identifier(token: PdfToken? = nil, equals identifier: PdfIdentifier) -> Bool {
-		guard case .identifier(let range) = token ?? self.token, slice.base[range].elementsEqual(identifier.rawValue.utf8) else {
+		guard case .identifier(let range) = token ?? self.token, slice[reslice: range].elementsEqual(identifier.rawValue.utf8) else {
 			return false
 		}
 		return true

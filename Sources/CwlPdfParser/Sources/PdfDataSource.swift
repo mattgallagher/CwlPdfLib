@@ -31,7 +31,7 @@ public struct PdfDataSource: PdfSource {
 	}
 	
 	public mutating func seek(to newOffset: Int) throws {
-		guard newOffset >= 0, newOffset < data.count else {
+		guard newOffset >= 0, newOffset <= data.count else {
 			throw PdfParseError(failure: .endOfFile, range: newOffset..<newOffset)
 		}
 		offset = newOffset
@@ -45,7 +45,7 @@ public struct PdfDataSource: PdfSource {
 			offset = range.upperBound
 		}
 		return try data[range].withUnsafeBytes {
-			try handler(OffsetSlice($0, bounds: $0.startIndex..<$0.endIndex, offset: 0))
+			try handler(OffsetSlice($0, bounds: $0.startIndex..<$0.endIndex, offset: range.lowerBound - $0.startIndex))
 		}
 	}
 }

@@ -44,6 +44,7 @@ extension PdfSource {
 		let start = self.offset
 		var range = start..<start
 		for _ in 0..<lineCount {
+			context.matchCount = 0
 			range = try advance(context: &context, limit: limit, reverse: reverse, includeLast: false, until: { byte, context in context.step(byte: byte) })
 			if range.isEmpty, context.matchCount > 0 {
 				if reverse {
@@ -92,8 +93,13 @@ private extension PdfSource {
 		}
 		if !includeLast {
 			count -= 1
+			try seek(to: self.offset + (reverse ? 1 : -1))
 		}
-		return start..<(start + count)
+		if reverse {
+			return (start - count)..<start
+		} else {
+			return start..<(start + count)
+		}
 	}
 }
 

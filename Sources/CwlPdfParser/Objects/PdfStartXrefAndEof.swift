@@ -17,7 +17,7 @@ extension PdfStartXrefAndEof: PdfContextParseable {
 		try context.nextToken()
 		guard
 			case .comment(let range) = context.token,
-			context.slice[range].starts(with: [.percent, .e, .o, .f])
+			context.slice[reslice: range].starts(with: [.percent, .E, .O, .F])
 		else {
 			throw PdfParseError(context: context, failure: .eofMarkerNotFound)
 		}

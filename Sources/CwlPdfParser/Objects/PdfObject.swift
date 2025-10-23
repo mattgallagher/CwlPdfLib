@@ -20,10 +20,6 @@ public typealias PdfArray = [PdfObject]
 public typealias PdfDictionary = [String: PdfObject]
 public typealias PdfNameTree = [(String, value: PdfObject)]
 public typealias PdfNumberTree = [(key: Int, value: PdfObject)]
-public struct PdfStream: Sendable {
-	let dictionary: PdfDictionary
-	let data: Data
-}
 
 extension PdfObject: PdfContextParseable {
 	static func parse(context: inout PdfParseContext) throws -> PdfObject {
@@ -34,7 +30,7 @@ extension PdfObject: PdfContextParseable {
 	}
 	
 	static func parseIfNext(context: inout PdfParseContext) throws -> PdfObject? {
-		var stack = [StackElement]()
+		var stack = [ParseStackElement]()
 		
 		repeat {
 			try context.nextToken()
@@ -46,7 +42,7 @@ extension PdfObject: PdfContextParseable {
 				}
 			}
 			
-			var element: StackElement
+			var element: ParseStackElement
 			switch token {
 			case .arrayClose:
 				let index = stack.lastIndex { token in
@@ -92,8 +88,10 @@ extension PdfObject: PdfContextParseable {
 				element = .object(.dictionary(dictionary))
 			case .dictionaryOpen:
 				element = .dictionaryOpen
+			case .hex(let bytes, _, _):
+				element = .object(.string(bytes))
 			case .identifier(let range):
-				if context.slice.base[range].elementsEqual(PdfIdentifier.R.rawValue.utf8) {
+				if context.slice[reslice: range].elementsEqual(PdfIdentifier.R.rawValue.utf8) {
 					guard
 						let generationToken = stack.popLast(),
 						case .object(.integer(let generation)) = generationToken,
@@ -114,7 +112,7 @@ extension PdfObject: PdfContextParseable {
 				element = .object(.real(sign * value))
 			case .string(let bytes, let range):
 				element = .object(.string(bytes + context.data(range: range)))
-			case .closeAngle, .openAngle, .hex, .stringEscape, .stringOctal:
+			case .closeAngle, .openAngle, .stringEscape, .stringOctal:
 				// These types are internal only and returned only if an end-of-range is
 				// encountered, unexpectedly.
 				throw PdfParseError(context: context, failure: .objectEndedUnexpectedly)
@@ -136,7 +134,25 @@ extension PdfObject: PdfContextParseable {
 	}
 }
 
-enum StackElement {
+extension PdfObject: CustomDebugStringConvertible {
+	public var debugDescription: String {
+		switch self {
+		case .array(let array): return array.debugDescription
+		case .boolean(let bool): return bool.description
+		case .dictionary(let dictionary): return dictionary.debugDescription
+		case .identifier(let identifier): return "'\(identifier)'"
+		case .integer(let integer): return integer.description
+		case .name(let name): return "\\\(name)"
+		case .null: return "null"
+		case .real(let real): return real.description
+		case .reference(let reference): return reference.debugDescription
+		case .stream(let stream): return stream.debugDescription
+		case .string(let data): return data.map { String(format: "%02hhx", $0) }.joined()
+		}
+	}
+}
+
+private enum ParseStackElement {
 	case arrayOpen
 	case dictionaryOpen
 	case object(PdfObject)

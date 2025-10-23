@@ -37,6 +37,9 @@ public struct PdfFileSource: PdfSource {
 	}
 	
 	public mutating func seek(to newOffset: Int) throws {
+		guard newOffset >= 0, newOffset <= length else {
+			throw PdfParseError(failure: .endOfFile, range: newOffset..<newOffset)
+		}
 		offset = newOffset
 	}
 	

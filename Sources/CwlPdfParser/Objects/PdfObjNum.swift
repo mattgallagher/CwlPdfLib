@@ -9,3 +9,9 @@ public struct PdfObjNum: Hashable, Sendable {
 		self.generation = generation
 	}
 }
+
+extension PdfObjNum: CustomDebugStringConvertible {
+	public var debugDescription: String {
+		return "\(number) \(generation) R"
+	}
+}
