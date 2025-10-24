@@ -55,4 +55,21 @@ struct PdfDocumentTests {
 		#expect(!xrefTable.trailer.isEmpty)
 		#expect(!xrefTable.trailer.isEmpty)
 	}
+	
+	@Test(arguments: [
+		"three-page-images-annots.pdf",
+	])
+	func `GIVEN a pdf file with multiple xref tabls WHEN PdfDocument.init THEN xref tables extracted, object ends calculated and size is max objNum plus one`(filename: String) throws {
+		let fileURL = try #require(Bundle.module.url(forResource: "Fixtures/\(filename)", withExtension: nil))
+		let document = try PdfDocument(source: PdfDataSource(Data(contentsOf: fileURL, options: .mappedIfSafe)))
+		
+		#expect(document.xrefTables.count == 2)
+		#expect(document.objectEnds.count == 105)
+		
+		var size = 0
+		if case .integer(let value) = document.trailer["Size"] {
+			size = value
+		}
+		#expect(size == (document.xrefTables.flatMap { $0.objectLocations.keys.map { $0.number } }.max() ?? 0) + 1)
+	}
 }

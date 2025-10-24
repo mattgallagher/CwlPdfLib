@@ -105,6 +105,7 @@ extension PdfParseContext {
 							data.append(contentsOf: slice[reslice: (slice.startIndex - 1)..<slice.startIndex])
 						}
 						token = try .name(string: name + data.utf8(), range: slice.startIndex..<slice.startIndex)
+						slice = slice[reslice: (slice.startIndex - 1)..<slice.endIndex]
 						return
 					} else {
 						break
@@ -132,6 +133,7 @@ extension PdfParseContext {
 				switch byte {
 				case .nul, .space, .carriageReturn, .formFeed, .lineFeed, .tab, .percent, .openParenthesis, .closeParenthesis, .openBracket, .closeBracket, .openBrace, .closeBrace, .slash, .lessThan, .greaterThan, .backslash:
 					token = .identifier(range.lowerBound..<(slice.startIndex - 1))
+					slice = slice[reslice: (slice.startIndex - 1)..<slice.endIndex]
 					return
 				default:
 					token = .identifier(range.lowerBound..<slice.startIndex)
@@ -144,12 +146,14 @@ extension PdfParseContext {
 				case .digit0...(.digit9):
 					token = .integer(sign: sign, value: value * 10 + Int(byte - .digit0))
 				default:
+					slice = slice[reslice: (slice.startIndex - 1)..<slice.endIndex]
 					return
 				}
 			case .name(let string, let range):
 				switch byte {
 				case .nul, .space, .carriageReturn, .formFeed, .lineFeed, .tab, .percent, .openParenthesis, .closeParenthesis, .openBracket, .closeBracket, .openBrace, .closeBrace, .slash, .lessThan, .greaterThan, .backslash:
 					token = .name(string: string, range: range.lowerBound..<(slice.startIndex - 1))
+					slice = slice[reslice: (slice.startIndex - 1)..<slice.endIndex]
 					return
 				case .hash:
 					token = .hex(Data(), high: nil, name: slice[reslice: range.lowerBound..<(slice.startIndex - 1)].pdfText())
@@ -162,6 +166,7 @@ extension PdfParseContext {
 				case .digit0...(.digit9):
 					token = .real(sign: sign, value: value + fraction * Double(byte - .digit0), fraction: fraction * 0.1)
 				default:
+					slice = slice[reslice: (slice.startIndex - 1)..<slice.endIndex]
 					return
 				}
 			case .string(let bytes, let range):
