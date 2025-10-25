@@ -1,4 +1,4 @@
-// CwlPdfParser. Copyright © 2025 Matt Gallagher. See LICENSE file for usage permissions.
+// CwlPdfLib. Copyright © 2025 Matt Gallagher. See LICENSE file for usage permissions.
 
 public enum PdfIdentifier: String {
 	case endobj = "endobj"

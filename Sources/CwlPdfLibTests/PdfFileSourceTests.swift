@@ -1,9 +1,9 @@
-// CwlPdfParser. Copyright © 2025 Matt Gallagher. See LICENSE file for usage permissions.
+// CwlPdfLib. Copyright © 2025 Matt Gallagher. See LICENSE file for usage permissions.
 
 import Foundation
 import Testing
 
-@testable import CwlPdfParser
+@testable import CwlPdfLib
 
 struct PdfFileSourceTests {
 	@Test(arguments: [

@@ -1,4 +1,4 @@
-// CwlPdfParser. Copyright © 2025 Matt Gallagher. See LICENSE file for usage permissions.
+// CwlPdfLib. Copyright © 2025 Matt Gallagher. See LICENSE file for usage permissions.
 
 public struct PdfHeader: Sendable {
 	public let type: String

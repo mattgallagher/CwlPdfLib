@@ -1,4 +1,4 @@
-// CwlPdfParser. Copyright © 2025 Matt Gallagher. See LICENSE file for usage permissions.
+// CwlPdfLib. Copyright © 2025 Matt Gallagher. See LICENSE file for usage permissions.
 
 /// A simple wrapper around a `Slice` with `Int` indexes. Indices exposed by this collection have `offset`
 /// added, relative to the `base`.

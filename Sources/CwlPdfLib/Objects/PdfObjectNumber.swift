@@ -1,6 +1,6 @@
-// CwlPdfParser. Copyright © 2025 Matt Gallagher. See LICENSE file for usage permissions.
+// CwlPdfLib. Copyright © 2025 Matt Gallagher. See LICENSE file for usage permissions.
 
-public struct PdfObjNum: Hashable, Sendable {
+public struct PdfObjectNumber: Hashable, Sendable {
 	public let number: Int
 	public let generation: Int
 	
@@ -10,7 +10,7 @@ public struct PdfObjNum: Hashable, Sendable {
 	}
 }
 
-extension PdfObjNum: CustomDebugStringConvertible {
+extension PdfObjectNumber: CustomDebugStringConvertible {
 	public var debugDescription: String {
 		return "\(number) \(generation) R"
 	}

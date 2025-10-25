@@ -1,4 +1,4 @@
-// CwlPdfParser. Copyright © 2025 Matt Gallagher. See LICENSE file for usage permissions.
+// CwlPdfLib. Copyright © 2025 Matt Gallagher. See LICENSE file for usage permissions.
 
 import Foundation
 
@@ -11,7 +11,7 @@ public enum PdfObject: Sendable {
 	case name(String)
 	case null
 	case real(Double)
-	case reference(PdfObjNum)
+	case reference(PdfObjectNumber)
 	case stream(PdfStream)
 	case string(Data)
 }
@@ -23,13 +23,13 @@ public typealias PdfNumberTree = [(key: Int, value: PdfObject)]
 
 extension PdfObject: PdfContextParseable {
 	static func parse(context: inout PdfParseContext) throws -> PdfObject {
-		guard let object = try parseIfNext(context: &context) else {
+		guard let object = try parseNext(context: &context) else {
 			throw PdfParseError(context: context, failure: .expectedObject)
 		}
 		return object
 	}
 	
-	static func parseIfNext(context: inout PdfParseContext) throws -> PdfObject? {
+	static func parseNext(context: inout PdfParseContext) throws -> PdfObject? {
 		var stack = [ParseStackElement]()
 		
 		repeat {
@@ -100,7 +100,7 @@ extension PdfObject: PdfContextParseable {
 					else {
 						throw PdfParseError(context: context, failure: .unexpectedToken)
 					}
-					element = .object(.reference(PdfObjNum(number: number, generation: generation)))
+					element = .object(.reference(PdfObjectNumber(number: number, generation: generation)))
 				} else {
 					element = .object(.identifier(context.pdfText(range: range)))
 				}

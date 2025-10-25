@@ -1,4 +1,4 @@
-// CwlPdfParser. Copyright © 2025 Matt Gallagher. See LICENSE file for usage permissions.
+// CwlPdfLib. Copyright © 2025 Matt Gallagher. See LICENSE file for usage permissions.
 
 import Foundation
 
@@ -19,7 +19,7 @@ public enum PdfParseFailure: Sendable {
 
 public struct PdfParseError: Error {
 	public let failure: PdfParseFailure
-	public var objNum: PdfObjNum?
+	public var objNum: PdfObjectNumber?
 	public var underlying: Error?
 	public let range: Range<Int>
 }
