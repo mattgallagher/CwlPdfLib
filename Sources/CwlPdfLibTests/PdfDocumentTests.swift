@@ -12,10 +12,11 @@ struct PdfDocumentTests {
 	])
 	func `GIVEN a pdf file seeked to 0 WHEN PdfHeader.parse over a parseContext of lineCount 1 THEN pdf and version number extracted`(filename: String) throws {
 		let fileURL = try #require(Bundle.module.url(forResource: "Fixtures/\(filename)", withExtension: nil))
-		var dataSource = try PdfDataSource(Data(contentsOf: fileURL, options: .mappedIfSafe)) as any PdfSource
-		try dataSource.seek(to: 0)
+		let dataSource = try PdfDataSource(Data(contentsOf: fileURL, options: .mappedIfSafe)) as any PdfSource
+		var buffer = PdfSourceBuffer()
+		try dataSource.seek(to: 0, buffer: &buffer)
 		
-		let header = try dataSource.parseContext(lineCount: 1) { context in
+		let header = try dataSource.parseContext(lineCount: 1, buffer: &buffer) { context in
 			try PdfHeader.parse(context: &context)
 		}
 		
@@ -29,10 +30,11 @@ struct PdfDocumentTests {
 	])
 	func `GIVEN a pdf file seeked to end and an xref table range WHEN PdfStartXrefAndEof.parse over a reverse parseContext of lineCount 3 THEN matching xref table range extracted`(filename: String, range: Range<Int>) throws {
 		let fileURL = try #require(Bundle.module.url(forResource: "Fixtures/\(filename)", withExtension: nil))
-		var dataSource = try PdfDataSource(Data(contentsOf: fileURL, options: .mappedIfSafe)) as any PdfSource
-		try dataSource.seek(to: dataSource.length)
+		let dataSource = try PdfDataSource(Data(contentsOf: fileURL, options: .mappedIfSafe)) as any PdfSource
+		var buffer = PdfSourceBuffer()
+		try dataSource.seek(to: dataSource.length, buffer: &buffer)
 		
-		let xref = try dataSource.parseContext(lineCount: 3, reverse: true) { context in
+		let xref = try dataSource.parseContext(lineCount: 3, reverse: true, buffer: &buffer) { context in
 			try PdfStartXrefAndEof.parse(context: &context)
 		}
 		
@@ -45,8 +47,7 @@ struct PdfDocumentTests {
 	])
 	func `GIVEN a pdf file and appropriate range WHEN PdfXRefTable.parse over that range THEN xref table extracted`(filename: String, range: Range<Int>) throws {
 		let fileURL = try #require(Bundle.module.url(forResource: "Fixtures/\(filename)", withExtension: nil))
-		var dataSource = try PdfDataSource(Data(contentsOf: fileURL, options: .mappedIfSafe)) as any PdfSource
-		try dataSource.seek(to: dataSource.length)
+		let dataSource = try PdfDataSource(Data(contentsOf: fileURL, options: .mappedIfSafe)) as any PdfSource
 		
 		let xrefTable = try dataSource.parseContext(range: range) { context in
 			try PdfXRefTable.parse(context: &context)
@@ -64,7 +65,7 @@ struct PdfDocumentTests {
 		let document = try PdfDocument(source: PdfDataSource(Data(contentsOf: fileURL, options: .mappedIfSafe)))
 		
 		#expect(document.xrefTables.count == 2)
-		#expect(document.objectEnds.count == 105)
+		#expect(document.objectLayouts.count == 105)
 		
 		var size = 0
 		if case .integer(let value) = document.trailer["Size"] {

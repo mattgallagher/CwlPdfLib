@@ -1,14 +1,14 @@
 // CwlPdfLib. Copyright © 2025 Matt Gallagher. See LICENSE file for usage permissions.
 
 extension PdfSource {
-	mutating func parseContext<Output>(range: Range<Int>, handler: (inout PdfParseContext) throws -> Output) throws -> Output {
+	func parseContext<Output>(range: Range<Int>, handler: (inout PdfParseContext) throws -> Output) throws -> Output {
 		return try self.bytes(in: range) { buffer in
 			var context = PdfParseContext(slice: buffer[...], token: nil)
 			return try handler(&context)
 		}
 	}
 	
-	mutating func parseContext<Output, S: BidirectionalCollection>(untilMatch pattern: S, limit: Int? = nil, reverse: Bool = false, handler: (inout PdfParseContext) throws -> Output) throws -> Output where S.Element == UInt8, S.Index == Int {
+	func parseContext<Output, S: BidirectionalCollection>(untilMatch pattern: S, limit: Int? = nil, reverse: Bool = false, buffer: inout PdfSourceBuffer, handler: (inout PdfParseContext) throws -> Output) throws -> Output where S.Element == UInt8, S.Index == Int {
 		guard !pattern.isEmpty else {
 			let buffer = UnsafeRawBufferPointer(start: nil, count: 0)
 			var context = PdfParseContext(slice: OffsetSlice(buffer, bounds: 0..<0, offset: 0), token: nil)
@@ -22,6 +22,7 @@ extension PdfSource {
 				limit: limit,
 				reverse: true,
 				includeLast: true,
+				buffer: &buffer,
 				until: { byte, context in context.step(byte: byte) }
 			)
 			return try parseContext(range: range, handler: handler)
@@ -32,20 +33,21 @@ extension PdfSource {
 				limit: limit,
 				reverse: false,
 				includeLast: true,
+				buffer: &buffer,
 				until: { byte, context in context.step(byte: byte) }
 			)
 			return try parseContext(range: range, handler: handler)
 		}
 	}
 	
-	mutating func parseContext<Output>(lineCount: Int, limit: Int? = nil, reverse: Bool = false, handler: (inout PdfParseContext) throws -> Output) throws -> Output {
+	func parseContext<Output>(lineCount: Int, limit: Int? = nil, reverse: Bool = false, buffer: inout PdfSourceBuffer, handler: (inout PdfParseContext) throws -> Output) throws -> Output {
 		var context = EndOfLineContext()
 		context.reverse = reverse
-		let start = self.offset
+		let start = buffer.offset
 		var range = start..<start
 		for _ in 0..<lineCount {
 			context.matchCount = 0
-			range = try advance(context: &context, limit: limit, reverse: reverse, includeLast: false, until: { byte, context in context.step(byte: byte) })
+			range = try advance(context: &context, limit: limit, reverse: reverse, includeLast: false, buffer: &buffer, until: { byte, context in context.step(byte: byte) })
 			if range.isEmpty, context.matchCount > 0 {
 				if reverse {
 					range = range.lowerBound..<(range.lowerBound + context.matchCount)
@@ -66,9 +68,9 @@ extension PdfSource {
 }
 
 private extension PdfSource {
-	mutating func advance<Context>(context: inout Context, limit: Int? = nil, reverse: Bool, includeLast: Bool, until condition: (UInt8, inout Context) -> Bool) throws -> Range<Int> {
-		let start = self.offset
-		let limit = reverse ? max(self.offset - (limit ?? self.offset), 0) : min(self.offset + (limit ?? self.length), self.length)
+	 func advance<Context>(context: inout Context, limit: Int? = nil, reverse: Bool, includeLast: Bool, buffer: inout PdfSourceBuffer, until condition: (UInt8, inout Context) -> Bool) throws -> Range<Int> {
+		let start = buffer.offset
+		let limit = reverse ? max(buffer.offset - (limit ?? buffer.offset), 0) : min(buffer.offset + (limit ?? self.length), self.length)
 		var byte: UInt8 = 0
 		var didReadEndByte = true
 		var count = 0
@@ -80,9 +82,9 @@ private extension PdfSource {
 			}
 			
 			if reverse {
-				byte = try readPrevious()
+				byte = try readPrevious(buffer: &buffer)
 			} else {
-				byte = try readNext()
+				byte = try readNext(buffer: &buffer)
 			}
 			count += 1
 		} while !condition(byte, &context)
@@ -93,7 +95,7 @@ private extension PdfSource {
 		}
 		if !includeLast {
 			count -= 1
-			try seek(to: self.offset + (reverse ? 1 : -1))
+			try seek(to: buffer.offset + (reverse ? 1 : -1), buffer: &buffer)
 		}
 		if reverse {
 			return (start - count)..<start

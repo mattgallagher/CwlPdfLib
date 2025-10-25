@@ -10,8 +10,10 @@ public enum PdfParseFailure: Sendable {
 	case endOfFile
 	case headerNotFound
 	case invalidHexDigit
-	case missingEndOfScope 
+	case missingEndOfScope
+	case missingLayoutForObject
 	case objectEndedUnexpectedly
+	case objectNotFount
 	case startXrefNotFound
 	case unexpectedToken
 	case xrefNotFound
@@ -19,9 +21,9 @@ public enum PdfParseFailure: Sendable {
 
 public struct PdfParseError: Error {
 	public let failure: PdfParseFailure
-	public var objNum: PdfObjectNumber?
+	public var objectNumber: PdfObjectNumber?
 	public var underlying: Error?
-	public let range: Range<Int>
+	public var range: Range<Int>?
 }
 
 extension PdfParseError {
