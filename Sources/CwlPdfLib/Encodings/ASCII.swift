@@ -133,32 +133,4 @@ extension ASCII {
 	static let closeBrace: ASCII = 0x7D
 	static let tilde: ASCII = 0x7E
 	static let delete: ASCII = 0x7F
-
-	static func isEol(_ byte: ASCII) -> Bool {
-		return byte == ASCII.carriageReturn || byte == ASCII.lineFeed
-	}
-	
-	static func isNonEolWhitespace(_ byte: ASCII) -> Bool {
-		return byte == ASCII.nul
-		|| byte == ASCII.tab
-		|| byte == ASCII.formFeed
-		|| byte == ASCII.space
-	}
-	
-	static func isWhitespace(_ byte: ASCII) -> Bool {
-		return byte == ASCII.nul
-		|| byte == ASCII.tab
-		|| byte == ASCII.lineFeed
-		|| byte == ASCII.formFeed
-		|| byte == ASCII.carriageReturn
-		|| byte == ASCII.space
-	}
-	
-	static func isDigit(_ byte: ASCII) -> Bool {
-		return byte >= ASCII.digit0 && byte <= ASCII.digit9
-	}
-	
-	static func isLetter(_ byte: ASCII) -> Bool {
-		return (byte >= ASCII.a && byte <= ASCII.z) || (byte >= ASCII.A && byte <= ASCII.Z)
-	}
 }

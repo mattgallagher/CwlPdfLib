@@ -12,6 +12,7 @@ public struct PdfHeader: Sendable {
 
 extension PdfHeader: PdfContextParseable {
 	static func parse(context: inout PdfParseContext) throws -> PdfHeader {
+		context.skipComments = false
 		try context.nextToken()
 		guard case .comment(let range) = context.token else {
 			throw PdfParseError(context: context, failure: .headerNotFound)

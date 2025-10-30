@@ -86,6 +86,9 @@ extension PdfParseContext {
 				switch byte {
 				case .carriageReturn, .formFeed, .lineFeed:
 					token = .comment(range.lowerBound..<(slice.startIndex - 1))
+					if skipComments {
+						break
+					}
 					return
 				default:
 					token = .comment(range.lowerBound..<slice.startIndex)
@@ -175,7 +178,7 @@ extension PdfParseContext {
 					token = .string(bytes: bytes, range: range.lowerBound..<(slice.startIndex - 1))
 					return
 				case .backslash:
-					token = .stringEscape(bytes: Data(slice[reslice: range.lowerBound..<(slice.startIndex - 1)]))
+					token = .stringEscape(bytes: bytes + Data(slice[reslice: range.lowerBound..<(slice.startIndex - 1)]))
 				default:
 					token = .string(bytes: bytes, range: range.lowerBound..<slice.startIndex)
 					break

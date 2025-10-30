@@ -38,17 +38,18 @@ public struct PdfDocument: Sendable {
 			}
 			return layout
 		}
-		throw PdfParseError(failure: .objectNotFount, objectNumber: objectNumber, range: 0..<source.length)
+		throw PdfParseError(failure: .objectNotFound, objectNumber: objectNumber, range: 0..<source.length)
 	}
 	
-	public func object(for layout: PdfObjectLayout) throws -> PdfObject {
+	public func object(at layout: PdfObjectLayout) throws -> PdfObject {
 		return try source.parseContext(range: layout.range) { context in
-			try PdfObject.parse(context: &context)
+			context.objectNumber = layout.objectNumber
+			return try PdfObject.parseIndirect(context: &context)
 		}
 	}
 	
 	public func object(for objectNumber: PdfObjectNumber) throws -> PdfObject {
-		return try object(for: layout(for: objectNumber))
+		return try object(at: layout(for: objectNumber))
 	}
 	
 	public var allObjectLayouts: [PdfObjectLayout] {

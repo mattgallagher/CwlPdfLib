@@ -14,10 +14,11 @@ extension PdfStartXrefAndEof: PdfContextParseable {
 		try context.nextToken()
 		let startXref = try context.naturalNumber()
 
+		context.skipComments = false
 		try context.nextToken()
 		guard
 			case .comment(let range) = context.token,
-			context.slice[reslice: range].starts(with: [.percent, .E, .O, .F])
+			context.slice[reslice: range].starts(with: "%EOF".utf8)
 		else {
 			throw PdfParseError(context: context, failure: .eofMarkerNotFound)
 		}

@@ -1,7 +1,8 @@
 // CwlPdfLib. Copyright © 2025 Matt Gallagher. See LICENSE file for usage permissions.
 
 /// A simple wrapper around a `Slice` with `Int` indexes. Indices exposed by this collection have `offset`
-/// added, relative to the `base`.
+/// added, relative to those on the underlying `Slice`, allowing them to match the indices of a collection that
+/// may be larger than the `base`.
 public struct OffsetSlice<Base: RandomAccessCollection>: RandomAccessCollection where Base.Index == Int {
 	public typealias SubSequence = OffsetSlice<Base>
 	public typealias Index = Int
@@ -14,7 +15,7 @@ public struct OffsetSlice<Base: RandomAccessCollection>: RandomAccessCollection 
 	public var base: Base {
 		underlying.base
 	}
-
+	
 	public init(_ base: Base, bounds: Range<Int>, offset: Int) {
 		self.underlying = Slice(base: base, bounds: bounds)
 		self.offset = offset
@@ -33,6 +34,9 @@ public struct OffsetSlice<Base: RandomAccessCollection>: RandomAccessCollection 
 
 	public var count: Int { underlying.count }
 	public var isEmpty: Bool { underlying.isEmpty }
+	public var slice: Slice<Base> {
+		return underlying
+	}
 	
 	public func rangeToBase(_ range: Range<Int>) -> Range<Int> {
 		(range.startIndex - offset)..<(range.endIndex - offset)
@@ -44,9 +48,18 @@ public struct OffsetSlice<Base: RandomAccessCollection>: RandomAccessCollection 
 		return duplicate
 	}
 	
+	public mutating func pop(length: Int) -> Self? {
+		if count < length {
+			return nil
+		}
+		let result = self[reslice: startIndex..<(startIndex + length)]
+		self = self.dropFirst(length)
+		return result
+	}
+	
 	/// Calling subscript(_ bounds:) will trigger a fatal error if bounds is outside the current slice.
 	/// By contrast, subscript(reslice bounds:) will allow the reslice if bounds are within range for the
-	/// base collection. This allows backtracking to bounds that were *previously* in range.
+	/// base collection. This allows backtracking to bounds that were previously in range.
 	public subscript(reslice bounds: Range<Index>) -> OffsetSlice<Base> {
 		let baseRange = rangeToBase(bounds)
 		return OffsetSlice(base, bounds: rangeToBase(bounds), offset: bounds.lowerBound - baseRange.lowerBound)

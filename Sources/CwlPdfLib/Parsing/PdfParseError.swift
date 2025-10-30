@@ -5,17 +5,22 @@ import Foundation
 public enum PdfParseFailure: Sendable {
 	case eofMarkerNotFound
 	case expectedDictionary
+	case expectedIdentifierNotFound
 	case expectedNaturalNumber
+	case expectedCrLf
 	case expectedObject
 	case endOfFile
 	case headerNotFound
 	case invalidHexDigit
+	case missingLength
 	case missingEndOfScope
 	case missingLayoutForObject
 	case objectEndedUnexpectedly
-	case objectNotFount
+	case objectNotFound
 	case startXrefNotFound
 	case unexpectedToken
+	case unknownFilter
+	case unsupportedFilter
 	case xrefNotFound
 }
 
@@ -28,6 +33,6 @@ public struct PdfParseError: Error {
 
 extension PdfParseError {
 	init(context: PdfParseContext, failure: PdfParseFailure) {
-		self.init(failure: failure, range: (context.tokenStart ?? context.slice.startIndex)..<context.slice.startIndex)
+		self.init(failure: failure, objectNumber: context.objectNumber, range: (context.tokenStart ?? context.slice.startIndex)..<context.slice.startIndex)
 	}
 }

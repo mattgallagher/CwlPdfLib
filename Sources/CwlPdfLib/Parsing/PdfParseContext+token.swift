@@ -15,6 +15,19 @@ extension PdfParseContext {
 		Data(slice[reslice: range])
 	}
 	
+	mutating func readEndOfLine() throws {
+		if slice.first == .carriageReturn {
+			slice = slice.dropFirst()
+		}
+		if slice.first == .lineFeed {
+			slice = slice.dropFirst()
+		}
+	}
+	
+	mutating func skip(count: Int) throws {
+		slice = slice.dropFirst(count)
+	}
+	
 	func identifierString(else failure: PdfParseFailure) throws -> String {
 		guard case .identifier(let range) = token else {
 			throw PdfParseError(context: self, failure: failure)

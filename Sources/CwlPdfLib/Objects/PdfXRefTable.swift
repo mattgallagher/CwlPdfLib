@@ -74,7 +74,7 @@ extension PdfXRefTable: PdfContextParseable {
 		if let finalObjectCutoff {
 			let allObjectLocations = xrefTables.flatMap { $0.objectLocations }.sorted { $0.value < $1.value }
 			for (previous, next) in zip(allObjectLocations, [allObjectLocations.dropFirst(), [(PdfObjectNumber(number: 0, generation: 0), finalObjectCutoff)]].joined()) {
-				let revision = (revisions[previous.key] ?? 0) + 1
+				let revision = revisions[previous.key].map { $0 + 1 } ?? 0
 				objectLayouts[previous.value] = PdfObjectLayout(objectNumber: previous.key, range: previous.value..<next.value, revision: revision)
 				revisions[previous.key] = revision
 			}

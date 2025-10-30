@@ -21,7 +21,7 @@ struct PdfFileSourceTests {
 		#expect(first == 37, "Expected the file \(file.name) to start with %")
 		
 		let headerFound = try fileSource.bytes(in: 0..<4) { buffer in
-			buffer[...].starts(with: [ASCII.percent, ASCII.P, ASCII.D, ASCII.F])
+			buffer[...].starts(with: "%PDF".utf8)
 		}
 		#expect(headerFound, "Failed to read %PDF header from \(file.name)")
 		
@@ -36,7 +36,7 @@ struct PdfFileSourceTests {
 		#expect(error?.failure == .endOfFile, "Expected a PdfParseError with .endOfFile as the failure")
 		
 		let headerFoundAgain = try fileSource.bytes(in: 0..<4) { buffer in
-			buffer[...].starts(with: [ASCII.percent, ASCII.P, ASCII.D, ASCII.F])
+			buffer[...].starts(with: "%PDF".utf8)
 		}
 		#expect(headerFoundAgain, "Failed to read %PDF header from \(file.name)")
 	}

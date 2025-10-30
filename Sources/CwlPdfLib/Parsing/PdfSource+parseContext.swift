@@ -159,7 +159,7 @@ private struct EndOfLineContext {
 	var reverse = false
 
 	mutating func step(byte: UInt8) -> Bool {
-		if ASCII.isEol(byte) {
+		if byte == .lineFeed || byte == .carriageReturn {
 			if !reverse {
 				matchCount += 1
 			} else if matchCount != 0 {

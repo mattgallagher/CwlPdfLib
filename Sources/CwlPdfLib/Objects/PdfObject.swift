@@ -2,7 +2,7 @@
 
 import Foundation
 
-public enum PdfObject: Sendable {
+public enum PdfObject: Sendable, Equatable {
 	case array(PdfArray)
 	case boolean(Bool)
 	case dictionary([String: PdfObject])
@@ -21,11 +21,93 @@ public typealias PdfDictionary = [String: PdfObject]
 public typealias PdfNameTree = [(String, value: PdfObject)]
 public typealias PdfNumberTree = [(key: Int, value: PdfObject)]
 
+public extension PdfObject {
+	var array: PdfArray? {
+		guard case .array(let pdfArray) = self else {
+			return nil
+		}
+		return pdfArray
+	}
+	
+	var boolean: Bool? {
+		guard case .boolean(let boolean) = self else {
+			return nil
+		}
+		return boolean
+	}
+	
+	var dictionary: PdfDictionary? {
+		guard case .dictionary(let pdfDictionary) = self else {
+			return nil
+		}
+		return pdfDictionary
+	}
+	
+	var name: String? {
+		guard case .name(let string) = self else {
+			return nil
+		}
+		return string
+	}
+	
+	var number: Double? {
+		switch self {
+		case .integer(let integer): return Double(integer)
+		case .real(let real): return real
+		default: return nil
+		}
+	}
+
+	var pdfText: String? {
+		guard case .string(let string) = self else {
+			return nil
+		}
+		return string.pdfText()
+	}
+	
+	var stream: PdfStream? {
+		guard case .stream(let stream) = self else {
+			return nil
+		}
+		return stream
+	}
+}
+
 extension PdfObject: PdfContextParseable {
 	static func parse(context: inout PdfParseContext) throws -> PdfObject {
 		guard let object = try parseNext(context: &context) else {
 			throw PdfParseError(context: context, failure: .expectedObject)
 		}
+		return object
+	}
+	
+	static func parseIndirect(context: inout PdfParseContext) throws -> PdfObject {
+		try context.nextToken()
+		let number = try context.naturalNumber()
+		try context.nextToken()
+		let generation = try context.naturalNumber()
+		guard number == context.objectNumber?.number, generation == context.objectNumber?.generation else {
+			throw PdfParseError(context: context, failure: .objectNotFound)
+		}
+		try context.nextToken()
+		try context.identifier(equals: .obj, else: .expectedIdentifierNotFound)
+		var object = try PdfObject.parse(context: &context)
+		try context.nextToken()
+		if context.identifier(equals: .stream) {
+			guard case .dictionary(let dictionary) = object else {
+				throw PdfParseError(context: context, failure: .expectedDictionary)
+			}
+			guard let lengthObject = dictionary["Length"], case .integer(let length) = lengthObject else {
+				throw PdfParseError(context: context, failure: .missingLength)
+			}
+			try context.readEndOfLine()
+			let data = try context.decode(length: length, filter: dictionary["Filter"], decodeParams: dictionary["DecodeParms"])
+			object = .stream(PdfStream(dictionary: dictionary, data: data))
+			try context.nextToken()
+			try context.identifier(equals: .endstream, else: .expectedIdentifierNotFound)
+			try context.nextToken()
+		}
+		try context.identifier(equals: .endobj, else: .expectedIdentifierNotFound)
 		return object
 	}
 	
@@ -147,7 +229,7 @@ extension PdfObject: CustomDebugStringConvertible {
 		case .real(let real): return real.description
 		case .reference(let reference): return reference.debugDescription
 		case .stream(let stream): return stream.debugDescription
-		case .string(let data): return data.map { String(format: "%02hhx", $0) }.joined()
+		case .string(let data): return data.pdfText()
 		}
 	}
 }

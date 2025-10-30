@@ -9,3 +9,9 @@ public struct PdfObjectLayout: Sendable, Hashable, Identifiable {
 		range.lowerBound
 	}
 }
+
+extension PdfObjectLayout: CustomDebugStringConvertible {
+	public var debugDescription: String {
+		"Obj #\(objectNumber.number) \(objectNumber.generation).\(revision)"
+	}
+}
