@@ -71,4 +71,42 @@ struct PdfDocumentTests {
 		}
 		#expect(size == (document.xrefTables.flatMap { $0.objectLocations.keys.map { $0.number } }.max() ?? 0) + 1)
 	}
+	
+	@Test(arguments: [
+		("blank-page.pdf", [
+			"ID": PdfObject.array([.string(Data(hexString: "edb254fca2ae46d92dad520df17ccad1")!, hex: true), .string(Data(hexString: "edb254fca2ae46d92dad520df17ccad1")!, hex: true)]),
+			"Info": PdfObject.reference(PdfObjectNumber(number: 6, generation: 0)),
+			"Root": PdfObject.reference(PdfObjectNumber(number: 5, generation: 0)),
+			"Size": PdfObject.integer(7)
+		]),
+		("single-text-line.pdf", [
+			"ID": PdfObject.array([.string(Data(hexString: "5571570d6c27c2b8042a720ce493221a")!, hex: true), .string(Data(hexString: "5571570d6c27c2b8042a720ce493221a")!, hex: true)]),
+			"Info": PdfObject.reference(PdfObjectNumber(number: 11, generation: 0)),
+			"Root": PdfObject.reference(PdfObjectNumber(number: 8, generation: 0)),
+			"Size": PdfObject.integer(12)
+		])
+	])
+	func `GIVEN a pdf file WHEN PdfDocument.init THEN trailer parsed`(filename: String, trailer: PdfDictionary) throws {
+		let fileURL = try #require(Bundle.module.url(forResource: "Fixtures/\(filename)", withExtension: nil))
+		let document = try PdfDocument(source: PdfDataSource(Data(contentsOf: fileURL, options: .mappedIfSafe)))
+		
+		#expect(document.trailer == trailer)
+	}
+}
+
+private extension Data {
+	init?(hexString: String) {
+		var high: UInt8?
+		var result = Data()
+		for character in hexString.utf8 {
+			guard let nybble = nybbleFromHex(character) else { return nil }
+			if let highNybble = high {
+				result.append((highNybble << 4) + nybble)
+				high = nil
+			} else {
+				high = nybble
+			}
+		}
+		self = result
+	}
 }

@@ -2,13 +2,13 @@
 
 import Foundation
 
-public struct PdfStream: Sendable, Equatable {
+public struct PdfStream: Sendable {
 	let dictionary: PdfDictionary
 	let data: Data
 }
 
 extension PdfStream: CustomDebugStringConvertible {
 	public var debugDescription: String {
-		return "\(dictionary.debugDescription) stream \(data.count)"
+		return "\(dictionary.debugDescription) stream \"\(String(data: data, encoding: .utf8) ?? "<unknown: \(data.count) bytes>")\""
 	}
 }

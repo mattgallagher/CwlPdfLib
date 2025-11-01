@@ -13,16 +13,16 @@ extension PdfParseContext {
 		}
 		for filter in try filters(from: filter) {
 			switch filter {
-			case "ASCII85Decode": throw PdfParseError(context: self, failure: .unsupportedFilter)
-			case "ASCIIHexDecode": throw PdfParseError(context: self, failure: .unsupportedFilter)
-			case "CCITTFaxDecode": throw PdfParseError(context: self, failure: .unsupportedFilter)
+			case "ASCII85Decode", "AHx": throw PdfParseError(context: self, failure: .unsupportedFilter)
+			case "ASCIIHexDecode", "A85": throw PdfParseError(context: self, failure: .unsupportedFilter)
+			case "CCITTFaxDecode", "CCF": throw PdfParseError(context: self, failure: .unsupportedFilter)
 			case "Crypt": throw PdfParseError(context: self, failure: .unsupportedFilter)
-			case "DCTDecode": throw PdfParseError(context: self, failure: .unsupportedFilter)
-			case "FlateDecode": data = try (data.dropFirst(2) as NSData).decompressed(using: .zlib) as Data
+			case "DCTDecode", "DCT": throw PdfParseError(context: self, failure: .unsupportedFilter)
+			case "FlateDecode", "Fl": data = try (data.dropFirst(2) as NSData).decompressed(using: .zlib) as Data
 			case "JBIG2Decode": throw PdfParseError(context: self, failure: .unsupportedFilter)
 			case "JPXDecode": throw PdfParseError(context: self, failure: .unsupportedFilter)
-			case "LZWDecode": throw PdfParseError(context: self, failure: .unsupportedFilter)
-			case "RunLengthDecode": throw PdfParseError(context: self, failure: .unsupportedFilter)
+			case "LZWDecode", "LZW": throw PdfParseError(context: self, failure: .unsupportedFilter)
+			case "RunLengthDecode", "RL": throw PdfParseError(context: self, failure: .unsupportedFilter)
 			default: throw PdfParseError(context: self, failure: .unknownFilter)
 			}
 		}

@@ -2,7 +2,7 @@
 
 import Foundation
 
-public enum PdfObject: Sendable, Equatable {
+public enum PdfObject: Sendable {
 	case array(PdfArray)
 	case boolean(Bool)
 	case dictionary([String: PdfObject])
@@ -13,7 +13,7 @@ public enum PdfObject: Sendable, Equatable {
 	case real(Double)
 	case reference(PdfObjectNumber)
 	case stream(PdfStream)
-	case string(Data)
+	case string(Data, hex: Bool = false)
 }
 
 public typealias PdfArray = [PdfObject]
@@ -43,6 +43,20 @@ public extension PdfObject {
 		return pdfDictionary
 	}
 	
+	var identifier: String? {
+		guard case .identifier(let string) = self else {
+			return nil
+		}
+		return string
+	}
+	
+	var integer: Int? {
+		switch self {
+		case .integer(let integer): return integer
+		default: return nil
+		}
+	}
+	
 	var name: String? {
 		guard case .name(let string) = self else {
 			return nil
@@ -57,19 +71,47 @@ public extension PdfObject {
 		default: return nil
 		}
 	}
+	
+	var isNull: Bool {
+		switch self {
+		case .null: return true
+		default: return false
+		}
+	}
 
 	var pdfText: String? {
-		guard case .string(let string) = self else {
+		guard case .string(let string, _) = self else {
 			return nil
 		}
 		return string.pdfText()
 	}
 	
+	var real: Double? {
+		switch self {
+		case .real(let real): return real
+		default: return nil
+		}
+	}
+	
+	var reference: PdfObjectNumber? {
+		switch self {
+		case .reference(let objectNumber): return objectNumber
+		default: return nil
+		}
+	}
+
 	var stream: PdfStream? {
 		guard case .stream(let stream) = self else {
 			return nil
 		}
 		return stream
+	}
+
+	var string: Data? {
+		guard case .string(let string, _) = self else {
+			return nil
+		}
+		return string
 	}
 }
 
@@ -171,7 +213,7 @@ extension PdfObject: PdfContextParseable {
 			case .dictionaryOpen:
 				element = .dictionaryOpen
 			case .hex(let bytes, _, _):
-				element = .object(.string(bytes))
+				element = .object(.string(bytes, hex: true))
 			case .identifier(let range):
 				if context.slice[reslice: range].elementsEqual(PdfIdentifier.R.rawValue.utf8) {
 					guard
@@ -193,7 +235,7 @@ extension PdfObject: PdfContextParseable {
 			case .real(let sign, let value, _):
 				element = .object(.real(sign * value))
 			case .string(let bytes, let range):
-				element = .object(.string(bytes + context.data(range: range)))
+				element = .object(.string(bytes + context.data(range: range), hex: false))
 			case .closeAngle, .openAngle, .stringEscape, .stringOctal:
 				// These types are internal only and returned only if an end-of-range is
 				// encountered, unexpectedly.
@@ -229,7 +271,8 @@ extension PdfObject: CustomDebugStringConvertible {
 		case .real(let real): return real.description
 		case .reference(let reference): return reference.debugDescription
 		case .stream(let stream): return stream.debugDescription
-		case .string(let data): return data.pdfText()
+		case .string(let data, false): return data.pdfText()
+		case .string(let data, true): return "<\(data.hexString())>"
 		}
 	}
 }
@@ -238,4 +281,24 @@ private enum ParseStackElement {
 	case arrayOpen
 	case dictionaryOpen
 	case object(PdfObject)
+}
+
+private extension Data {
+	 func hexString() -> String {
+		  var chars: [UInt8] = []
+		  chars.reserveCapacity(count * 2)
+		  for byte in self {
+			  chars.append(hexFromNybble(nybble: byte / 16))
+			  chars.append(hexFromNybble(nybble: byte % 16))
+		  }
+		  return String(bytes: chars, encoding: .utf8)!
+	 }
+	
+	func hexFromNybble(nybble: UInt8) -> UInt8 {
+		if nybble < 10 {
+			return ASCII.digit0 + nybble
+		} else {
+			return ASCII.a + nybble - 10
+		}
+	}
 }
