@@ -44,7 +44,7 @@ public struct PdfDocument: Sendable {
 	public func object(range byteRange: PdfObjectByteRange) throws -> PdfObject {
 		return try source.parseContext(range: byteRange.range) { context in
 			context.objectIdentifier = byteRange.objectIdentifier
-			return try PdfObject.parseIndirect(context: &context)
+			return try PdfObject.parseIndirect(document: self, context: &context)
 		}
 	}
 	

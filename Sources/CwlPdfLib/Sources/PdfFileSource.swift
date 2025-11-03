@@ -1,14 +1,14 @@
 // CwlPdfLib. Copyright © 2025 Matt Gallagher. See LICENSE file for usage permissions.
 
 import Foundation
-import os
+import Synchronization
 
-public struct PdfFileSource: PdfSource {
+public final class PdfFileSource: PdfSource {
 	private let url: URL
 	
 	// Even though `FileHandle` is `Sendable` and theoretically threadsafe, in practice,
 	// it is necessary to use a lock to ensure seek and read calls are performed atomically.
-	private let fileHandle: OSAllocatedUnfairLock<FileHandle>
+	private let fileHandle: Mutex<FileHandle>
 	
 	public let length: Int
 	private static let bufferSize = 4096
@@ -17,7 +17,7 @@ public struct PdfFileSource: PdfSource {
 		self.url = url
 		let fileHandle = try FileHandle(forReadingFrom: url)
 		self.length = try Int(fileHandle.seekToEnd())
-		self.fileHandle = OSAllocatedUnfairLock(uncheckedState: fileHandle)
+		self.fileHandle = Mutex(fileHandle)
 	}
 	
 	public func readNext(buffer: inout PdfSourceBuffer) throws -> UInt8 {

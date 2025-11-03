@@ -85,28 +85,19 @@ struct PdfObjectParsingTests {
 
 extension PdfObject: Equatable {
 	public static func == (lhs: PdfObject, rhs: PdfObject) -> Bool {
-		switch lhs {
-		case .array(let array): array == rhs.array
-		case .boolean(let boolean): boolean == rhs.boolean
-		case .dictionary(let dictionary): dictionary == rhs.dictionary
-		case .identifier(let identifier): identifier == rhs.identifier
-		case .integer(let integer): integer == rhs.integer
-		case .name(let name): name == rhs.name
-		case .null: rhs.isNull
-		case .real(let real):
-			if case .real(let other) = rhs {
-				abs(real - other) < realPrecision
-			} else {
-				false
-			}
-		case .reference(let reference): reference == rhs.reference
-		case .stream(let stream): stream == rhs.stream
-		case .string(let string, let hex):
-			if case .string(let rhsString, let rhsHex) = rhs {
-				string == rhsString && hex == rhsHex
-			} else {
-				false
-			}
+		switch (lhs, rhs) {
+		case (.array(let lhs), .array(let rhs)): lhs == rhs
+		case (.boolean(let lhs), .boolean(let rhs)): lhs == rhs
+		case (.dictionary(let lhs), .dictionary(let rhs)): lhs == rhs
+		case (.identifier(let lhs), .identifier(let rhs)): lhs == rhs
+		case (.integer(let lhs), .integer(let rhs)): lhs == rhs
+		case (.name(let lhs), .name(let rhs)): lhs == rhs
+		case (.null, .null): true
+		case (.real(let lhs), .real(let rhs)): abs(lhs - rhs) < realPrecision
+		case (.reference(let lhs), .reference(let rhs)): lhs == rhs
+		case (.stream(let lhs), .stream(let rhs)): lhs == rhs
+		case (.string(let lhs, let lhsHex), .string(let rhs, let rhsHex)): lhs == rhs && lhsHex == rhsHex
+		default: false
 		}
 	}
 	

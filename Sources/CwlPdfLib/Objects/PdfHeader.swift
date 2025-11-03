@@ -17,14 +17,14 @@ extension PdfHeader: PdfContextParseable {
 		guard case .comment(let range) = context.token else {
 			throw PdfParseError(context: context, failure: .headerNotFound)
 		}
-		var commentContext = PdfParseContext(slice: context.slice[reslice: range])
-		try commentContext.nextToken()
-		guard case .identifier(let range) = commentContext.token else {
-			throw PdfParseError(context: commentContext, failure: .headerNotFound)
+		context.slice = context.slice[reslice: range]
+		try context.nextToken()
+		guard case .identifier(let range) = context.token else {
+			throw PdfParseError(context: context, failure: .headerNotFound)
 		}
-		let split = commentContext.pdfText(range: range).split(separator: "-")
+		let split = context.pdfText(range: range).split(separator: "-")
 		guard split.count == 2, let type = split.first, let version = split.dropFirst().first else {
-			throw PdfParseError(context: commentContext, failure: .headerNotFound)
+			throw PdfParseError(context: context, failure: .headerNotFound)
 		}
 		return PdfHeader(type: String(type), version: String(version))
 	}

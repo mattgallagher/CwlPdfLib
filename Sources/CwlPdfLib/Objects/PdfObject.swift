@@ -22,25 +22,28 @@ public typealias PdfNameTree = [(String, value: PdfObject)]
 public typealias PdfNumberTree = [(key: Int, value: PdfObject)]
 
 public extension PdfObject {
-	var array: PdfArray? {
-		guard case .array(let pdfArray) = self else {
-			return nil
+	func array(document: PdfDocument?) throws -> PdfArray? {
+		switch self {
+		case .array(let array): return array
+		case .reference(let reference): return try document?.object(for: reference)?.array(document: document)
+		default: return nil
 		}
-		return pdfArray
 	}
 	
-	var boolean: Bool? {
-		guard case .boolean(let boolean) = self else {
-			return nil
+	func boolean(document: PdfDocument?) throws -> Bool? {
+		switch self {
+		case .boolean(let boolean): return boolean
+		case .reference(let reference): return try document?.object(for: reference)?.boolean(document: document)
+		default: return nil
 		}
-		return boolean
 	}
 	
-	var dictionary: PdfDictionary? {
-		guard case .dictionary(let pdfDictionary) = self else {
-			return nil
+	func dictionary(document: PdfDocument?) throws -> PdfDictionary? {
+		switch self {
+		case .dictionary(let dictionary): return dictionary
+		case .reference(let reference): return try document?.object(for: reference)?.dictionary(document: document)
+		default: return nil
 		}
-		return pdfDictionary
 	}
 	
 	var identifier: String? {
@@ -49,46 +52,52 @@ public extension PdfObject {
 		}
 		return string
 	}
-	
-	var integer: Int? {
+
+	func integer(document: PdfDocument?) throws -> Int? {
 		switch self {
 		case .integer(let integer): return integer
+		case .reference(let reference): return try document?.object(for: reference)?.integer(document: document)
 		default: return nil
 		}
 	}
-	
-	var name: String? {
-		guard case .name(let string) = self else {
-			return nil
+
+	func name(document: PdfDocument?) throws -> String? {
+		switch self {
+		case .name(let name): return name
+		case .reference(let reference): return try document?.object(for: reference)?.name(document: document)
+		default: return nil
 		}
-		return string
 	}
-	
-	var number: Double? {
+
+	func number(document: PdfDocument?) throws -> Double? {
 		switch self {
 		case .integer(let integer): return Double(integer)
 		case .real(let real): return real
+		case .reference(let reference): return try document?.object(for: reference)?.number(document: document)
 		default: return nil
 		}
 	}
-	
-	var isNull: Bool {
+
+	func isNull(document: PdfDocument?) throws -> Bool {
 		switch self {
 		case .null: return true
+		case .reference(let reference): return try document?.object(for: reference)?.isNull(document: document) ?? true
 		default: return false
 		}
 	}
 
-	var pdfText: String? {
-		guard case .string(let string, _) = self else {
-			return nil
+	func pdfText(document: PdfDocument?) throws -> String? {
+		switch self {
+		case .string(let string, _): return string.pdfText()
+		case .reference(let reference): return try document?.object(for: reference)?.pdfText(document: document)
+		default: return nil
 		}
-		return string.pdfText()
 	}
-	
-	var real: Double? {
+
+	func real(document: PdfDocument?) throws -> Double? {
 		switch self {
 		case .real(let real): return real
+		case .reference(let reference): return try document?.object(for: reference)?.real(document: document)
 		default: return nil
 		}
 	}
@@ -100,18 +109,20 @@ public extension PdfObject {
 		}
 	}
 
-	var stream: PdfStream? {
-		guard case .stream(let stream) = self else {
-			return nil
+	func stream(document: PdfDocument?) throws -> PdfStream? {
+		switch self {
+		case .stream(let stream): return stream
+		case .reference(let reference): return try document?.object(for: reference)?.stream(document: document)
+		default: return nil
 		}
-		return stream
 	}
-
-	var string: Data? {
-		guard case .string(let string, _) = self else {
-			return nil
+	
+	func string(document: PdfDocument?) throws -> Data? {
+		switch self {
+		case .string(let string, _): return string
+		case .reference(let reference): return try document?.object(for: reference)?.string(document: document)
+		default: return nil
 		}
-		return string
 	}
 }
 
@@ -123,7 +134,7 @@ extension PdfObject: PdfContextParseable {
 		return object
 	}
 	
-	static func parseIndirect(context: inout PdfParseContext) throws -> PdfObject {
+	static func parseIndirect(document: PdfDocument, context: inout PdfParseContext) throws -> PdfObject {
 		try context.nextToken()
 		let number = try context.naturalNumber()
 		try context.nextToken()
@@ -143,7 +154,15 @@ extension PdfObject: PdfContextParseable {
 				throw PdfParseError(context: context, failure: .missingLength)
 			}
 			try context.readEndOfLine()
-			let data = try context.decode(length: length, filter: dictionary["Filter"], decodeParams: dictionary["DecodeParms"])
+			
+			let filters: [String] = switch dictionary["Filter"] as PdfObject? {
+			case nil: []
+			case .name(let string): [string]
+			case .array(let array): try array.compactMap { try $0.name(document: document) }
+			default: throw PdfParseError(context: context, failure: .unexpectedToken)
+			}
+			
+			let data = try context.decode(length: length, filters: filters, decodeParams: dictionary["DecodeParms"])
 			object = .stream(PdfStream(dictionary: dictionary, data: data))
 			try context.nextToken()
 			try context.identifier(equals: .endstream, else: .expectedIdentifierNotFound)
