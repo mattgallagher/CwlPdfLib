@@ -7,7 +7,7 @@ public struct PdfDocument: Sendable {
 	let header: PdfHeader
 	let trailer: PdfDictionary
 	let xrefTables: [PdfXRefTable]
-	let objectLayouts: [Int: PdfObjectLayout]
+	let byteRangeFromObjectOffset: [Int: PdfObjectByteRange]
 	let startXrefAndEof: PdfStartXrefAndEof
 
 	public init(source: any PdfSource) throws {
@@ -24,40 +24,41 @@ public struct PdfDocument: Sendable {
 			try PdfStartXrefAndEof.parse(context: &context)
 		}
 		
-		(self.xrefTables, self.trailer, self.objectLayouts) = try PdfXRefTable.parseXrefTables(
+		(self.xrefTables, self.trailer, self.byteRangeFromObjectOffset) = try PdfXRefTable.parseXrefTables(
 			source: self.source,
 			firstXrefRange: self.startXrefAndEof.range
 		)
 	}
 
-	public func layout(for objectNumber: PdfObjectNumber) throws -> PdfObjectLayout {
+	public func objectByteRange(for objectIdentifier: PdfObjectIdentifier) throws -> PdfObjectByteRange? {
 		for table in xrefTables {
-			guard let location = table.objectLocations[objectNumber] else { continue }
-			guard let layout = objectLayouts[location] else {
-				throw PdfParseError(failure: .missingLayoutForObject, objectNumber: objectNumber, range: 0..<source.length)
+			guard let location = table.objectLocations[objectIdentifier] else { continue }
+			guard let layout = byteRangeFromObjectOffset[location] else {
+				throw PdfParseError(failure: .missingLayoutForObject, objectIdentifier: objectIdentifier, range: 0..<source.length)
 			}
 			return layout
 		}
-		throw PdfParseError(failure: .objectNotFound, objectNumber: objectNumber, range: 0..<source.length)
+		return nil
 	}
 	
-	public func object(at layout: PdfObjectLayout) throws -> PdfObject {
-		return try source.parseContext(range: layout.range) { context in
-			context.objectNumber = layout.objectNumber
+	public func object(range byteRange: PdfObjectByteRange) throws -> PdfObject {
+		return try source.parseContext(range: byteRange.range) { context in
+			context.objectIdentifier = byteRange.objectIdentifier
 			return try PdfObject.parseIndirect(context: &context)
 		}
 	}
 	
-	public func object(for objectNumber: PdfObjectNumber) throws -> PdfObject {
-		return try object(at: layout(for: objectNumber))
+	public func object(for objectIdentifier: PdfObjectIdentifier) throws -> PdfObject? {
+		guard let byteRange = try objectByteRange(for: objectIdentifier) else { return nil }
+		return try object(range: byteRange)
 	}
 	
-	public var allObjectLayouts: [PdfObjectLayout] {
-		objectLayouts.sorted { lhs, rhs in
-			if lhs.value.objectNumber.number == rhs.value.objectNumber.number {
+	public var allObjectByteRanges: [PdfObjectByteRange] {
+		byteRangeFromObjectOffset.sorted { lhs, rhs in
+			if lhs.value.objectIdentifier.number == rhs.value.objectIdentifier.number {
 				return lhs.value.range.lowerBound < rhs.value.range.lowerBound
 			}
-			return lhs.value.objectNumber.number < rhs.value.objectNumber.number
+			return lhs.value.objectIdentifier.number < rhs.value.objectIdentifier.number
 		}.map { $0.value }
 	}
 }

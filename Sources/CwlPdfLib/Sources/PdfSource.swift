@@ -13,5 +13,5 @@ public protocol PdfSource: Sendable {
 public struct PdfSourceBuffer {
 	var buffer = Data()
 	var bufferStart = 0
-	public internal(set) var offset: Int = 0
+	var offset: Int = 0
 }

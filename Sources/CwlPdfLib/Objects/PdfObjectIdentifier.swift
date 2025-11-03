@@ -1,6 +1,6 @@
 // CwlPdfLib. Copyright © 2025 Matt Gallagher. See LICENSE file for usage permissions.
 
-public struct PdfObjectNumber: Hashable, Sendable {
+public struct PdfObjectIdentifier: Hashable, Sendable {
 	public let number: Int
 	public let generation: Int
 	
@@ -10,7 +10,7 @@ public struct PdfObjectNumber: Hashable, Sendable {
 	}
 }
 
-extension PdfObjectNumber: CustomDebugStringConvertible {
+extension PdfObjectIdentifier: CustomDebugStringConvertible {
 	public var debugDescription: String {
 		return "\(number) \(generation) R"
 	}

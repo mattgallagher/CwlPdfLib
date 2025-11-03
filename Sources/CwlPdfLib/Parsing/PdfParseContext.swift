@@ -4,7 +4,7 @@ import Foundation
 
 struct PdfParseContext {
 	var slice: OffsetSlice<UnsafeRawBufferPointer>
-	var objectNumber: PdfObjectNumber?
+	var objectIdentifier: PdfObjectIdentifier?
 	var skipComments = true
 	var token: PdfToken?
 	var tokenStart: Int?

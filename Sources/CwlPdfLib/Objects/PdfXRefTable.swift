@@ -2,9 +2,9 @@
 
 public struct PdfXRefTable: Sendable {
 	public let trailer: PdfDictionary
-	public var objectLocations: [PdfObjectNumber: Int]
+	public var objectLocations: [PdfObjectIdentifier: Int]
 
-	init(trailerDictionary: PdfDictionary, objectLocations: [PdfObjectNumber: Int] = [:]) {
+	init(trailerDictionary: PdfDictionary, objectLocations: [PdfObjectIdentifier: Int] = [:]) {
 		self.trailer = trailerDictionary
 		self.objectLocations = objectLocations
 	}
@@ -12,7 +12,7 @@ public struct PdfXRefTable: Sendable {
 
 extension PdfXRefTable: PdfContextParseable {
 	static func parse(context: inout PdfParseContext) throws -> PdfXRefTable {
-		var objects: [PdfObjectNumber: Int] = [:]
+		var locations: [PdfObjectIdentifier: Int] = [:]
 
 		try context.nextToken()
 		try context.identifier(equals: .xref, else: .xrefNotFound)
@@ -24,7 +24,7 @@ extension PdfXRefTable: PdfContextParseable {
 				guard case .dictionary(let dictionary) = object else {
 					throw PdfParseError(context: context, failure: .expectedDictionary)
 				}
-				return PdfXRefTable(trailerDictionary: dictionary, objectLocations: objects)
+				return PdfXRefTable(trailerDictionary: dictionary, objectLocations: locations)
 			}
 			
 			let firstNumber = try context.naturalNumber()
@@ -39,7 +39,7 @@ extension PdfXRefTable: PdfContextParseable {
 				if context.identifier(equals: .f) || location == 0 {
 					continue
 				} else if context.identifier(equals: .n) {
-					objects[PdfObjectNumber(number: number, generation: generation)] = location
+						locations[PdfObjectIdentifier(number: number, generation: generation)] = location
 				} else {
 					throw PdfParseError(context: context, failure: .unexpectedToken)
 				}
@@ -47,11 +47,11 @@ extension PdfXRefTable: PdfContextParseable {
 		} while true
 	}
 	
-	static func parseXrefTables(source: any PdfSource, firstXrefRange: Range<Int>) throws -> ([PdfXRefTable], PdfDictionary, [Int: PdfObjectLayout]) {
+	static func parseXrefTables(source: any PdfSource, firstXrefRange: Range<Int>) throws -> ([PdfXRefTable], PdfDictionary, [Int: PdfObjectByteRange]) {
 		var finalObjectCutoff: Int?
 		var xrefTables = [PdfXRefTable]()
 		var nextRange = firstXrefRange
-		var revisions = [PdfObjectNumber: Int]()
+		var revisions = [PdfObjectIdentifier: Int]()
 		repeat {
 			let nextTable = try source.parseContext(range: nextRange) { context in
 				try PdfXRefTable.parse(context: &context)
@@ -70,16 +70,16 @@ extension PdfXRefTable: PdfContextParseable {
 			throw PdfParseError(failure: .xrefNotFound, range: firstXrefRange)
 		}
 		
-		var objectLayouts = [Int: PdfObjectLayout]()
+		var objectRanges = [Int: PdfObjectByteRange]()
 		if let finalObjectCutoff {
-			let allObjectLocations = xrefTables.flatMap { $0.objectLocations }.sorted { $0.value < $1.value }
-			for (previous, next) in zip(allObjectLocations, [allObjectLocations.dropFirst(), [(PdfObjectNumber(number: 0, generation: 0), finalObjectCutoff)]].joined()) {
+			let allObjectByteRanges = xrefTables.flatMap { $0.objectLocations }.sorted { $0.value < $1.value }
+			for (previous, next) in zip(allObjectByteRanges, [allObjectByteRanges.dropFirst(), [(PdfObjectIdentifier(number: 0, generation: 0), finalObjectCutoff)]].joined()) {
 				let revision = revisions[previous.key].map { $0 + 1 } ?? 0
-				objectLayouts[previous.value] = PdfObjectLayout(objectNumber: previous.key, range: previous.value..<next.value, revision: revision)
+				objectRanges[previous.value] = PdfObjectByteRange(objectIdentifier: previous.key, range: previous.value..<next.value, revision: revision)
 				revisions[previous.key] = revision
 			}
 		}
 		
-		return (xrefTables, trailerDictionary, objectLayouts)
+		return (xrefTables, trailerDictionary, objectRanges)
 	}
 }

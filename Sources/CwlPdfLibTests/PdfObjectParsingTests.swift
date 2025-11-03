@@ -11,12 +11,12 @@ struct PdfObjectParsingTests {
 		arguments: [
 			(
 				"blank-page.pdf",
-				PdfObjectNumber(number: 1, generation: 0),
+				PdfObjectIdentifier(number: 1, generation: 0),
 				PdfObject.dictionary([
 					"Type": .name("Page"),
-					"Parent": .reference(PdfObjectNumber(number: 2, generation: 0)),
-					"Contents": .reference(PdfObjectNumber(number: 3, generation: 0)),
-					"Resources": .reference(PdfObjectNumber(number: 4, generation: 0)),
+					"Parent": .reference(PdfObjectIdentifier(number: 2, generation: 0)),
+					"Contents": .reference(PdfObjectIdentifier(number: 3, generation: 0)),
+					"Resources": .reference(PdfObjectIdentifier(number: 4, generation: 0)),
 					"MediaBox": .array(
 						[
 							.integer(0),
@@ -29,17 +29,17 @@ struct PdfObjectParsingTests {
 			),
 			(
 				"blank-page.pdf",
-				PdfObjectNumber(number: 2, generation: 0),
+				PdfObjectIdentifier(number: 2, generation: 0),
 				PdfObject.dictionary([
 					"MediaBox": .array([.integer(0), .integer(0), .real(595.2756), .real(841.8898)]),
-					"Kids": .array([.reference(PdfObjectNumber(number: 1, generation: 0))]),
+					"Kids": .array([.reference(PdfObjectIdentifier(number: 1, generation: 0))]),
 					"Count": .integer(1),
 					"Type": .name("Pages")
 				])
 			),
 			(
 				"blank-page.pdf",
-				PdfObjectNumber(number: 3, generation: 0),
+				PdfObjectIdentifier(number: 3, generation: 0),
 				PdfObject.stream(PdfStream(dictionary: [
 					"Filter": .name("FlateDecode"),
 					"Length": .integer(11),
@@ -47,22 +47,22 @@ struct PdfObjectParsingTests {
 			),
 			(
 				"blank-page.pdf",
-				PdfObjectNumber(number: 4, generation: 0),
+				PdfObjectIdentifier(number: 4, generation: 0),
 				PdfObject.dictionary([
 					"ProcSet": .array([.name("PDF")])
 				])
 			),
 			(
 				"blank-page.pdf",
-				PdfObjectNumber(number: 5, generation: 0),
+				PdfObjectIdentifier(number: 5, generation: 0),
 				PdfObject.dictionary([
-					"Pages": .reference(PdfObjectNumber(number: 2, generation: 0)),
+					"Pages": .reference(PdfObjectIdentifier(number: 2, generation: 0)),
 					"Type": .name("Catalog")
 				])
 			),
 			(
 				"blank-page.pdf",
-				PdfObjectNumber(number: 6, generation: 0),
+				PdfObjectIdentifier(number: 6, generation: 0),
 				PdfObject.dictionary([
 					"Title": .string("Untitled".pdfData()),
 					"Producer": .string("macOS Version 15.4.1 (Build 24E263) Quartz PDFContext".pdfData()),
@@ -73,11 +73,11 @@ struct PdfObjectParsingTests {
 			)
 		]
 	)
-	func `GIVEN a pdf file WHEN PdfDocument.object THEN object parsed`(filename: String, objectNumber: PdfObjectNumber, matches: PdfObject) throws {
+	func `GIVEN a pdf file WHEN PdfDocument.object THEN object parsed`(filename: String, objectIdentifier: PdfObjectIdentifier, matches: PdfObject) throws {
 		let fileURL = try #require(Bundle.module.url(forResource: "Fixtures/\(filename)", withExtension: nil))
 		let document = try PdfDocument(source: PdfDataSource(Data(contentsOf: fileURL, options: .mappedIfSafe)))
 		
-		let object = try document.object(for: objectNumber)
+		let object = try document.object(for: objectIdentifier)
 		
 		#expect(object == matches)
 	}

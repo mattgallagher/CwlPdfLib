@@ -63,7 +63,7 @@ struct PdfDocumentTests {
 		let document = try PdfDocument(source: PdfDataSource(Data(contentsOf: fileURL, options: .mappedIfSafe)))
 		
 		#expect(document.xrefTables.count == 2)
-		#expect(document.objectLayouts.count == 105)
+		#expect(document.byteRangeFromObjectOffset.count == 105)
 		
 		var size = 0
 		if case .integer(let value) = document.trailer["Size"] {
@@ -75,14 +75,14 @@ struct PdfDocumentTests {
 	@Test(arguments: [
 		("blank-page.pdf", [
 			"ID": PdfObject.array([.string(Data(hexString: "edb254fca2ae46d92dad520df17ccad1")!, hex: true), .string(Data(hexString: "edb254fca2ae46d92dad520df17ccad1")!, hex: true)]),
-			"Info": PdfObject.reference(PdfObjectNumber(number: 6, generation: 0)),
-			"Root": PdfObject.reference(PdfObjectNumber(number: 5, generation: 0)),
+			"Info": PdfObject.reference(PdfObjectIdentifier(number: 6, generation: 0)),
+			"Root": PdfObject.reference(PdfObjectIdentifier(number: 5, generation: 0)),
 			"Size": PdfObject.integer(7)
 		]),
 		("single-text-line.pdf", [
 			"ID": PdfObject.array([.string(Data(hexString: "5571570d6c27c2b8042a720ce493221a")!, hex: true), .string(Data(hexString: "5571570d6c27c2b8042a720ce493221a")!, hex: true)]),
-			"Info": PdfObject.reference(PdfObjectNumber(number: 11, generation: 0)),
-			"Root": PdfObject.reference(PdfObjectNumber(number: 8, generation: 0)),
+			"Info": PdfObject.reference(PdfObjectIdentifier(number: 11, generation: 0)),
+			"Root": PdfObject.reference(PdfObjectIdentifier(number: 8, generation: 0)),
 			"Size": PdfObject.integer(12)
 		])
 	])

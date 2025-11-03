@@ -11,7 +11,7 @@ public enum PdfObject: Sendable {
 	case name(String)
 	case null
 	case real(Double)
-	case reference(PdfObjectNumber)
+	case reference(PdfObjectIdentifier)
 	case stream(PdfStream)
 	case string(Data, hex: Bool = false)
 }
@@ -93,9 +93,9 @@ public extension PdfObject {
 		}
 	}
 	
-	var reference: PdfObjectNumber? {
+	var reference: PdfObjectIdentifier? {
 		switch self {
-		case .reference(let objectNumber): return objectNumber
+		case .reference(let objectIdentifier): return objectIdentifier
 		default: return nil
 		}
 	}
@@ -128,7 +128,7 @@ extension PdfObject: PdfContextParseable {
 		let number = try context.naturalNumber()
 		try context.nextToken()
 		let generation = try context.naturalNumber()
-		guard number == context.objectNumber?.number, generation == context.objectNumber?.generation else {
+		guard number == context.objectIdentifier?.number, generation == context.objectIdentifier?.generation else {
 			throw PdfParseError(context: context, failure: .objectNotFound)
 		}
 		try context.nextToken()
@@ -224,7 +224,7 @@ extension PdfObject: PdfContextParseable {
 					else {
 						throw PdfParseError(context: context, failure: .unexpectedToken)
 					}
-					element = .object(.reference(PdfObjectNumber(number: number, generation: generation)))
+					element = .object(.reference(PdfObjectIdentifier(number: number, generation: generation)))
 				} else {
 					element = .object(.identifier(context.pdfText(range: range)))
 				}

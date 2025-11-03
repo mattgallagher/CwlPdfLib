@@ -26,13 +26,13 @@ public enum PdfParseFailure: Sendable {
 
 public struct PdfParseError: Error {
 	public let failure: PdfParseFailure
-	public var objectNumber: PdfObjectNumber?
+	public var objectIdentifier: PdfObjectIdentifier?
 	public var underlying: Error?
 	public var range: Range<Int>?
 }
 
 extension PdfParseError {
 	init(context: PdfParseContext, failure: PdfParseFailure) {
-		self.init(failure: failure, objectNumber: context.objectNumber, range: (context.tokenStart ?? context.slice.startIndex)..<context.slice.startIndex)
+		self.init(failure: failure, objectIdentifier: context.objectIdentifier, range: (context.tokenStart ?? context.slice.startIndex)..<context.slice.startIndex)
 	}
 }
