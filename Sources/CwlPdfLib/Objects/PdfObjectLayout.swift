@@ -1,6 +1,6 @@
 // CwlPdfParser. Copyright © 2025 Matt Gallagher. See LICENSE file for usage permissions.
 
-public struct PdfObjectByteRange: Sendable, Hashable, Identifiable {
+public struct PdfObjectLayout: Sendable, Hashable, Identifiable {
 	public let objectIdentifier: PdfObjectIdentifier
 	public let range: Range<Int>
 	public let revision: Int
@@ -10,7 +10,7 @@ public struct PdfObjectByteRange: Sendable, Hashable, Identifiable {
 	}
 }
 
-extension PdfObjectByteRange: CustomDebugStringConvertible {
+extension PdfObjectLayout: CustomDebugStringConvertible {
 	public var debugDescription: String {
 		"Obj #\(objectIdentifier.number) \(objectIdentifier.generation).\(revision)"
 	}

@@ -47,7 +47,7 @@ extension PdfXRefTable: PdfContextParseable {
 		} while true
 	}
 	
-	static func parseXrefTables(source: any PdfSource, firstXrefRange: Range<Int>) throws -> ([PdfXRefTable], PdfDictionary, [Int: PdfObjectByteRange]) {
+	static func parseXrefTables(source: any PdfSource, firstXrefRange: Range<Int>) throws -> ([PdfXRefTable], PdfDictionary, [Int: PdfObjectLayout]) {
 		var finalObjectCutoff: Int?
 		var xrefTables = [PdfXRefTable]()
 		var nextRange = firstXrefRange
@@ -60,7 +60,7 @@ extension PdfXRefTable: PdfContextParseable {
 			if finalObjectCutoff == nil, !nextTable.objectLocations.isEmpty {
 				finalObjectCutoff = nextRange.lowerBound
 			}
-			guard case .integer(let previousStart) = nextTable.trailer["Prev"] else {
+			guard case .integer(let previousStart) = nextTable.trailer[.Prev] else {
 				break
 			}
 			nextRange = previousStart..<nextRange.startIndex
@@ -70,12 +70,12 @@ extension PdfXRefTable: PdfContextParseable {
 			throw PdfParseError(failure: .xrefNotFound, range: firstXrefRange)
 		}
 		
-		var objectRanges = [Int: PdfObjectByteRange]()
+		var objectRanges = [Int: PdfObjectLayout]()
 		if let finalObjectCutoff {
 			let allObjectByteRanges = xrefTables.flatMap { $0.objectLocations }.sorted { $0.value < $1.value }
 			for (previous, next) in zip(allObjectByteRanges, [allObjectByteRanges.dropFirst(), [(PdfObjectIdentifier(number: 0, generation: 0), finalObjectCutoff)]].joined()) {
 				let revision = revisions[previous.key].map { $0 + 1 } ?? 0
-				objectRanges[previous.value] = PdfObjectByteRange(objectIdentifier: previous.key, range: previous.value..<next.value, revision: revision)
+				objectRanges[previous.value] = PdfObjectLayout(objectIdentifier: previous.key, range: previous.value..<next.value, revision: revision)
 				revisions[previous.key] = revision
 			}
 		}

@@ -7,7 +7,7 @@ public struct PdfDocument: Sendable {
 	let header: PdfHeader
 	let trailer: PdfDictionary
 	let xrefTables: [PdfXRefTable]
-	let byteRangeFromObjectOffset: [Int: PdfObjectByteRange]
+	let objectLayoutFromOffset: [Int: PdfObjectLayout]
 	let startXrefAndEof: PdfStartXrefAndEof
 
 	public init(source: any PdfSource) throws {
@@ -24,16 +24,16 @@ public struct PdfDocument: Sendable {
 			try PdfStartXrefAndEof.parse(context: &context)
 		}
 		
-		(self.xrefTables, self.trailer, self.byteRangeFromObjectOffset) = try PdfXRefTable.parseXrefTables(
+		(self.xrefTables, self.trailer, self.objectLayoutFromOffset) = try PdfXRefTable.parseXrefTables(
 			source: self.source,
 			firstXrefRange: self.startXrefAndEof.range
 		)
 	}
 
-	public func objectByteRange(for objectIdentifier: PdfObjectIdentifier) throws -> PdfObjectByteRange? {
+	public func objectByteRange(for objectIdentifier: PdfObjectIdentifier) throws -> PdfObjectLayout? {
 		for table in xrefTables {
 			guard let location = table.objectLocations[objectIdentifier] else { continue }
-			guard let layout = byteRangeFromObjectOffset[location] else {
+			guard let layout = objectLayoutFromOffset[location] else {
 				throw PdfParseError(failure: .missingLayoutForObject, objectIdentifier: objectIdentifier, range: 0..<source.length)
 			}
 			return layout
@@ -41,20 +41,20 @@ public struct PdfDocument: Sendable {
 		return nil
 	}
 	
-	public func object(range byteRange: PdfObjectByteRange) throws -> PdfObject {
-		return try source.parseContext(range: byteRange.range) { context in
-			context.objectIdentifier = byteRange.objectIdentifier
+	public func object(layout: PdfObjectLayout) throws -> PdfObject {
+		return try source.parseContext(range: layout.range) { context in
+			context.objectIdentifier = layout.objectIdentifier
 			return try PdfObject.parseIndirect(document: self, context: &context)
 		}
 	}
 	
 	public func object(for objectIdentifier: PdfObjectIdentifier) throws -> PdfObject? {
 		guard let byteRange = try objectByteRange(for: objectIdentifier) else { return nil }
-		return try object(range: byteRange)
+		return try object(layout: byteRange)
 	}
 	
-	public var allObjectByteRanges: [PdfObjectByteRange] {
-		byteRangeFromObjectOffset.sorted { lhs, rhs in
+	public var allObjectByteRanges: [PdfObjectLayout] {
+		objectLayoutFromOffset.sorted { lhs, rhs in
 			if lhs.value.objectIdentifier.number == rhs.value.objectIdentifier.number {
 				return lhs.value.range.lowerBound < rhs.value.range.lowerBound
 			}

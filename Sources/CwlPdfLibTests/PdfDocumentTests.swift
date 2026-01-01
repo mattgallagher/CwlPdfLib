@@ -63,7 +63,7 @@ struct PdfDocumentTests {
 		let document = try PdfDocument(source: PdfDataSource(Data(contentsOf: fileURL, options: .mappedIfSafe)))
 		
 		#expect(document.xrefTables.count == 2)
-		#expect(document.byteRangeFromObjectOffset.count == 105)
+		#expect(document.objectLayoutFromOffset.count == 105)
 		
 		var size = 0
 		if case .integer(let value) = document.trailer["Size"] {
