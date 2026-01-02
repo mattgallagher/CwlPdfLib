@@ -1,35 +1,10 @@
-// CwlPdfLib. Copyright © 2025 Matt Gallagher. See LICENSE file for usage permissions.
+// CwlPdfParser. Copyright © 2025 Matt Gallagher. See LICENSE file for usage permissions.
 
-import Foundation
-
-public struct PdfDocument: Sendable {
-	private let source: any PdfSource
-	let header: PdfHeader
-	let trailer: PdfDictionary
+public struct PdfObjectList: Sendable {
+	let source: any PdfSource
 	let xrefTables: [PdfXRefTable]
 	let objectLayoutFromOffset: [Int: PdfObjectLayout]
-	let startXrefAndEof: PdfStartXrefAndEof
-
-	public init(source: any PdfSource) throws {
-		self.source = source
-		
-		var buffer = PdfSourceBuffer()
-		try self.source.seek(to: 0, buffer: &buffer)
-		self.header = try self.source.parseContext(lineCount: 1, buffer: &buffer) { context in
-			try PdfHeader.parse(context: &context)
-		}
-		
-		try self.source.seek(to: self.source.length, buffer: &buffer)
-		self.startXrefAndEof = try self.source.parseContext(lineCount: 3, reverse: true, buffer: &buffer) { context in
-			try PdfStartXrefAndEof.parse(context: &context)
-		}
-		
-		(self.xrefTables, self.trailer, self.objectLayoutFromOffset) = try PdfXRefTable.parseXrefTables(
-			source: self.source,
-			firstXrefRange: self.startXrefAndEof.range
-		)
-	}
-
+	
 	public func objectByteRange(for objectIdentifier: PdfObjectIdentifier) throws -> PdfObjectLayout? {
 		for table in xrefTables {
 			guard let location = table.objectLocations[objectIdentifier] else { continue }
@@ -44,7 +19,7 @@ public struct PdfDocument: Sendable {
 	public func object(layout: PdfObjectLayout) throws -> PdfObject {
 		return try source.parseContext(range: layout.range) { context in
 			context.objectIdentifier = layout.objectIdentifier
-			return try PdfObject.parseIndirect(document: self, context: &context)
+			return try PdfObject.parseIndirect(objects: self, context: &context)
 		}
 	}
 	
@@ -62,4 +37,3 @@ public struct PdfDocument: Sendable {
 		}.map { $0.value }
 	}
 }
-

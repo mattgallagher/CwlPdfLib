@@ -2,7 +2,7 @@
 
 import Foundation
 
-public struct PdfStream: Sendable {
+public struct PdfStream: Sendable, Hashable {
 	public let dictionary: PdfDictionary
 	public let data: Data
 }
@@ -10,7 +10,7 @@ public struct PdfStream: Sendable {
 extension PdfStream: CustomDebugStringConvertible {
 	public var debugDescription: String {
 		let dataDescription: String
-		if dictionary.isImage(document: nil) {
+		if dictionary.isImage(objects: nil) {
 			dataDescription = "<Image: \(data.count) bytes>"
 		} else {
 			dataDescription = String(data: data, encoding: .utf8) ?? "<unknown: \(data.count) bytes>"
@@ -20,8 +20,8 @@ extension PdfStream: CustomDebugStringConvertible {
 }
 
 public extension PdfDictionary {
-	func isImage(document: PdfDocument?) -> Bool {
-		if let type = try? self[.Type]?.name(document: document), type == .XObject, let subtype = try? self[.Subtype]?.name(document: document) {
+	func isImage(objects: PdfObjectList?) -> Bool {
+		if let type = try? self[.Type]?.name(objects: objects), type == .XObject, let subtype = try? self[.Subtype]?.name(objects: objects) {
 			return subtype == .Image
 		} else {
 			return false

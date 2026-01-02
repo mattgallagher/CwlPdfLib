@@ -10,7 +10,7 @@ extension PdfObject: PdfContextParseable {
 		return object
 	}
 	
-	static func parseIndirect(document: PdfDocument, context: inout PdfParseContext) throws -> PdfObject {
+	static func parseIndirect(objects: PdfObjectList?, context: inout PdfParseContext) throws -> PdfObject {
 		try context.nextToken()
 		let number = try context.naturalNumber()
 		try context.nextToken()
@@ -31,13 +31,13 @@ extension PdfObject: PdfContextParseable {
 			}
 			try context.readEndOfLine()
 			
-			let filters: [String] = if dictionary.isImage(document: document) {
+			let filters: [String] = if dictionary.isImage(objects: objects) {
 				[]
 			} else {
 				switch dictionary["Filter"] {
 				case nil: []
 				case .name(let string): [string]
-				case .array(let array): try array.compactMap { try $0.name(document: document) }
+				case .array(let array): try array.compactMap { try $0.name(objects: objects) }
 				default: throw PdfParseError(context: context, failure: .unexpectedToken)
 				}
 			}
