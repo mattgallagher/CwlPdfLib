@@ -5,7 +5,7 @@ public struct PdfObjectList: Sendable {
 	let xrefTables: [PdfXRefTable]
 	let objectLayoutFromOffset: [Int: PdfObjectLayout]
 	
-	public func objectByteRange(for objectIdentifier: PdfObjectIdentifier) throws -> PdfObjectLayout? {
+	public func objectLayout(for objectIdentifier: PdfObjectIdentifier) throws -> PdfObjectLayout? {
 		for table in xrefTables {
 			guard let location = table.objectLocations[objectIdentifier] else { continue }
 			guard let layout = objectLayoutFromOffset[location] else {
@@ -24,8 +24,8 @@ public struct PdfObjectList: Sendable {
 	}
 	
 	public func object(for objectIdentifier: PdfObjectIdentifier) throws -> PdfObject? {
-		guard let byteRange = try objectByteRange(for: objectIdentifier) else { return nil }
-		return try object(layout: byteRange)
+		guard let layout = try objectLayout(for: objectIdentifier) else { return nil }
+		return try object(layout: layout)
 	}
 	
 	public var allObjectByteRanges: [PdfObjectLayout] {

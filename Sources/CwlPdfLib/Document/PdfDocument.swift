@@ -38,17 +38,21 @@ public struct PdfDocument: Sendable {
 			throw PdfParseError(failure: .expectedPageTree)
 		}
 		
-		self.pages = try allPages(pageTree: pageTreeRoot, objects: objects)
+		self.pages = try allPages(pageTree: pageTreeRoot, objects: objects, offset: 0)
+	}
+	
+	public func page(for objectLayout: PdfObjectLayout) -> PdfPage? {
+		return pages.first(where: { $0.objectLayout == objectLayout })
 	}
 }
 
-func allPages(pageTree: PdfDictionary, objects: PdfObjectList) throws -> [PdfPage] {
+func allPages(pageTree: PdfDictionary, objects: PdfObjectList, offset: Int) throws -> [PdfPage] {
 	guard let kids = try pageTree[.Kids]?.array(objects: objects) else {
 		throw PdfParseError(failure: .expectedArray)
 	}
 	
 	var pages = [PdfPage]()
-	for (index, kid) in kids.enumerated() {
+	for kid in kids {
 		guard case .reference(let objectIdentifier) = kid else {
 			throw PdfParseError(failure: .expectedIndirectObject)
 		}
@@ -60,9 +64,11 @@ func allPages(pageTree: PdfDictionary, objects: PdfObjectList) throws -> [PdfPag
 		}
 		switch type {
 		case .Page:
-			pages.append(PdfPage(pageIndex: index, objectIdentifier: objectIdentifier, pageDictionary: dictionary))
+			if let objectLayout = try objects.objectLayout(for: objectIdentifier) {
+				pages.append(PdfPage(pageIndex: pages.count + offset, objectLayout: objectLayout, pageDictionary: dictionary))
+			}
 		case .Pages:
-			pages.append(contentsOf: try allPages(pageTree: dictionary, objects: objects))
+			pages.append(contentsOf: try allPages(pageTree: dictionary, objects: objects, offset: pages.count + offset))
 		default:
 			throw PdfParseError(failure: .expectedPageTree)
 		}

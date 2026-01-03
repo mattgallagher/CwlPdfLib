@@ -2,6 +2,7 @@
 
 import Compression
 import Foundation
+import zlib
 
 extension PdfParseContext {
 	mutating func decode(length: Int, filters: [String], decodeParams: PdfObject?) throws -> Data {
@@ -18,7 +19,12 @@ extension PdfParseContext {
 			case "CCITTFaxDecode", "CCF": throw PdfParseError(context: self, failure: .unsupportedFilter)
 			case "Crypt": throw PdfParseError(context: self, failure: .unsupportedFilter)
 			case "DCTDecode", "DCT": throw PdfParseError(context: self, failure: .unsupportedFilter)
-			case "FlateDecode", "Fl": data = try (data.dropFirst(2) as NSData).decompressed(using: .zlib) as Data
+			case "FlateDecode", "Fl":
+				if data.first == 0x78 {
+					data = try (data.dropFirst(2) as NSData).decompressed(using: .zlib) as Data
+				} else {
+					data = try (data as NSData).decompressed(using: .zlib) as Data
+				}
 			case "JBIG2Decode": throw PdfParseError(context: self, failure: .unsupportedFilter)
 			case "JPXDecode": throw PdfParseError(context: self, failure: .unsupportedFilter)
 			case "LZWDecode", "LZW": throw PdfParseError(context: self, failure: .unsupportedFilter)

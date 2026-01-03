@@ -11,13 +11,11 @@ public struct PdfObjectLayout: Sendable, Hashable, Identifiable {
 	public let range: Range<Int>
 	public let revision: Int
 	
-	public var id: Int {
-		range.lowerBound
-	}
+	public var id: PdfObjectLayout { self }
 }
 
 extension PdfObjectLayout: CustomDebugStringConvertible {
 	public var debugDescription: String {
-		"Obj #\(objectIdentifier.number) \(objectIdentifier.generation).\(revision)"
+		"Obj #\(objectIdentifier.number)\(objectIdentifier.generation > 0 ? " gen \(objectIdentifier.generation)" : "")\(revision > 0 ? " rev \(revision + 1)" : "")"
 	}
 }
