@@ -62,14 +62,14 @@ struct PdfDocumentTests {
 		let fileURL = try #require(Bundle.module.url(forResource: "Fixtures/three-page-images-annots.pdf", withExtension: nil))
 		let document = try PdfDocument(source: PdfDataSource(Data(contentsOf: fileURL, options: .mappedIfSafe)))
 		
-		#expect(document.xrefTables.count == 2)
-		#expect(document.objectLayoutFromOffset.count == 105)
+		#expect(document.objects.xrefTables.count == 2)
+		#expect(document.objects.objectLayoutFromOffset.count == 105)
 		
 		var size = 0
 		if case .integer(let value) = document.trailer["Size"] {
 			size = value
 		}
-		#expect(size == (document.xrefTables.flatMap { $0.objectLocations.keys.map { $0.number } }.max() ?? 0) + 1)
+		#expect(size == (document.objects.xrefTables.flatMap { $0.objectLocations.keys.map { $0.number } }.max() ?? 0) + 1)
 	}
 	
 	@Test(arguments: [

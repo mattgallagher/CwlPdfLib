@@ -53,7 +53,7 @@ public struct OffsetSlice<Base: RandomAccessCollection>: RandomAccessCollection 
 			return nil
 		}
 		let result = self[reslice: startIndex..<(startIndex + length)]
-		self = self.dropFirst(length)
+		self = dropFirst(length)
 		return result
 	}
 	
@@ -71,7 +71,7 @@ extension OffsetSlice: RangeReplaceableCollection where Base: RangeReplaceableCo
 		self.init(Base(), bounds: 0..<0, offset: 0)
 	}
 	
-	public mutating func replaceSubrange<C>(_ subrange: Range<Int>, with newElements: C) where C : Collection, Base.Element == C.Element {
+	public mutating func replaceSubrange<C>(_ subrange: Range<Int>, with newElements: C) where C: Collection, Base.Element == C.Element {
 		underlying.replaceSubrange(rangeToBase(subrange), with: newElements)
 	}
 	

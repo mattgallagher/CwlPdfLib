@@ -42,6 +42,7 @@ extension PdfParseError: CustomNSError {
 	public var errorCode: Int {
 		failure.rawValue
 	}
+	
 	public var errorUserInfo: [String: Any] {
 		var info: [String: Any] = [:]
 		if let objectIdentifier = objectIdentifier {

@@ -24,7 +24,7 @@ public struct PdfDocument: Sendable {
 		
 		let (xrefTables, trailer, objectLayoutFromOffset) = try PdfXRefTable.parseXrefTables(
 			source: source,
-			firstXrefRange: self.startXrefAndEof.range
+			firstXrefRange: startXrefAndEof.range
 		)
 
 		self.trailer = trailer
@@ -68,7 +68,7 @@ func allPages(pageTree: PdfDictionary, objects: PdfObjectList, offset: Int) thro
 				pages.append(PdfPage(pageIndex: pages.count + offset, objectLayout: objectLayout, pageDictionary: dictionary))
 			}
 		case .Pages:
-			pages.append(contentsOf: try allPages(pageTree: dictionary, objects: objects, offset: pages.count + offset))
+			try pages.append(contentsOf: allPages(pageTree: dictionary, objects: objects, offset: pages.count + offset))
 		default:
 			throw PdfParseError(failure: .expectedPageTree)
 		}

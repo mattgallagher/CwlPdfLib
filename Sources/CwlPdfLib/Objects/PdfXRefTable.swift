@@ -39,7 +39,7 @@ extension PdfXRefTable: PdfContextParseable {
 				if context.identifier(equals: .f) || location == 0 {
 					continue
 				} else if context.identifier(equals: .n) {
-						locations[PdfObjectIdentifier(number: number, generation: generation)] = location
+					locations[PdfObjectIdentifier(number: number, generation: generation)] = location
 				} else {
 					throw PdfParseError(context: context, failure: .unexpectedToken)
 				}

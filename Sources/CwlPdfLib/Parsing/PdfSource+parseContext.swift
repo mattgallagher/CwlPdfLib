@@ -2,7 +2,7 @@
 
 extension PdfSource {
 	func parseContext<Output>(range: Range<Int>, handler: (inout PdfParseContext) throws -> Output) throws -> Output {
-		return try self.bytes(in: range) { buffer in
+		return try bytes(in: range) { buffer in
 			var context = PdfParseContext(slice: buffer[...], token: nil)
 			return try handler(&context)
 		}
@@ -68,9 +68,9 @@ extension PdfSource {
 }
 
 private extension PdfSource {
-	 func advance<Context>(context: inout Context, limit: Int? = nil, reverse: Bool, includeLast: Bool, buffer: inout PdfSourceBuffer, until condition: (UInt8, inout Context) -> Bool) throws -> Range<Int> {
+	func advance<Context>(context: inout Context, limit: Int? = nil, reverse: Bool, includeLast: Bool, buffer: inout PdfSourceBuffer, until condition: (UInt8, inout Context) -> Bool) throws -> Range<Int> {
 		let start = buffer.offset
-		let limit = reverse ? max(buffer.offset - (limit ?? buffer.offset), 0) : min(buffer.offset + (limit ?? self.length), self.length)
+		let limit = reverse ? max(buffer.offset - (limit ?? buffer.offset), 0) : min(buffer.offset + (limit ?? length), length)
 		var byte: UInt8 = 0
 		var didReadEndByte = true
 		var count = 0
@@ -175,4 +175,3 @@ private struct EndOfLineContext {
 		return false
 	}
 }
-

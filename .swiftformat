@@ -1,0 +1,20 @@
+--commas inline
+--disable emptyBraces, extensionAccessControl
+--funcattributes prev-line
+--ifdef no-indent
+--indent tab
+--indentstrings true
+--modifierorder open, public, internal, fileprivate, private, override, convenience, required
+--nospaceoperators ...,..<
+--patternlet inline
+--self init-only
+--smarttabs disabled
+--stripunusedargs closure-only
+--tabwidth 3
+--typeblanklines preserve
+--typeattributes prev-line
+--trimwhitespace nonblank-lines
+--wraparguments before-first
+--wrapconditions preserve
+--wrapcollections before-first
+--yodaswap literals-only

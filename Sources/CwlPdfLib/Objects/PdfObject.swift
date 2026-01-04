@@ -151,13 +151,13 @@ extension PdfObjectIdentifier {
 
 extension PdfDictionary {
 	func recursivelyResolve(objects: PdfObjectList?) throws -> PdfDictionary? {
-		try PdfDictionary(uniqueKeysWithValues: self.compactMap { key, value in try value.recursivelyResolve(objects: objects).map { (key, $0) } })
+		try PdfDictionary(uniqueKeysWithValues: compactMap { key, value in try value.recursivelyResolve(objects: objects).map { (key, $0) } })
 	}
 }
 
 extension PdfArray {
 	func recursivelyResolve(objects: PdfObjectList?) throws -> PdfArray? {
-		try PdfArray(self.compactMap { try $0.recursivelyResolve(objects: objects) })
+		try PdfArray(compactMap { try $0.recursivelyResolve(objects: objects) })
 	}
 }
 
@@ -181,15 +181,15 @@ extension PdfObject: CustomDebugStringConvertible {
 }
 
 private extension Data {
-	 func hexString() -> String {
-		  var chars: [UInt8] = []
-		  chars.reserveCapacity(count * 2)
-		  for byte in self {
-			  chars.append(hexFromNybble(nybble: byte / 16))
-			  chars.append(hexFromNybble(nybble: byte % 16))
-		  }
-		  return String(bytes: chars, encoding: .utf8)!
-	 }
+	func hexString() -> String {
+		var chars: [UInt8] = []
+		chars.reserveCapacity(count * 2)
+		for byte in self {
+			chars.append(hexFromNybble(nybble: byte / 16))
+			chars.append(hexFromNybble(nybble: byte % 16))
+		}
+		return String(bytes: chars, encoding: .utf8)!
+	}
 	
 	func hexFromNybble(nybble: UInt8) -> UInt8 {
 		if nybble < 10 {

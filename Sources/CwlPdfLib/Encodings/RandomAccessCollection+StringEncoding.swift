@@ -9,15 +9,15 @@ extension RandomAccessCollection where Element == UInt8 {
 
 	func pdfText() -> String {
 		// Check for UTF-16BE BOM
-		if self.starts(with: [0xFE, 0xFF]), let result = String(bytes: self.dropFirst(2), encoding: .utf16BigEndian) {
+		if starts(with: [0xFE, 0xFF]), let result = String(bytes: dropFirst(2), encoding: .utf16BigEndian) {
 			return result
 		}
 		// Check for UTF-16LE BOM
-		else if self.starts(with: [0xFF, 0xFE]), let result = String(bytes: self.dropFirst(2), encoding: .utf16LittleEndian) {
+		else if starts(with: [0xFF, 0xFE]), let result = String(bytes: dropFirst(2), encoding: .utf16LittleEndian) {
 			return result
 		}
 		// Check for UTF-8 BOM
-		else if self.starts(with: [0xEF, 0xBB, 0xBF]), let result = String(bytes: self.dropFirst(3), encoding: .utf8) {
+		else if starts(with: [0xEF, 0xBB, 0xBF]), let result = String(bytes: dropFirst(3), encoding: .utf8) {
 			return result
 		}
 		// Use PDFDocEncoding

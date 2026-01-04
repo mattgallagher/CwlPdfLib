@@ -64,7 +64,7 @@ public final class PdfFileSource: PdfSource {
 	
 	private func refillBuffer(containing index: Int, reverse: Bool, buffer: inout PdfSourceBuffer) throws {
 		let start = max(0, index - (reverse ? Self.bufferSize - 1 : 0))
-		let count = min(Self.bufferSize, (reverse ? index - start + 1 : length - start))
+		let count = min(Self.bufferSize, reverse ? index - start + 1 : length - start)
 		buffer.buffer = try read(fromOffset: UInt64(start), length: count)
 		buffer.bufferStart = start
 	}
