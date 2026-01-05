@@ -20,7 +20,7 @@ extension PdfXRefTable: PdfContextParseable {
 			try context.nextToken()
 			if context.identifier(equals: .trailer) {
 				// parse trailer dictionary
-				let object = try PdfObject.parseNext(context: &context)
+				let object = try PdfObject.parse(context: &context)
 				guard case .dictionary(let dictionary) = object else {
 					throw PdfParseError(context: context, failure: .expectedDictionary)
 				}

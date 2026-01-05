@@ -12,6 +12,7 @@ public enum PdfParseFailure: Int, Sendable {
 	case expectedIdentifierNotFound
 	case expectedNaturalNumber
 	case expectedObject
+	case expectedOperator
 	case expectedPageTree
 	case expectedType
 	case endOfFile

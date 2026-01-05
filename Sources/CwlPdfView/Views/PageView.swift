@@ -8,7 +8,7 @@ struct PageView: View {
 	var body: some View {
 		VStack {
 			Canvas { context, size in
-				var rect = page.pageRect?.cgRect ?? CGRect(x: 0, y: 0, width: 612, height: 792)
+				var rect = page.pageRect(objects: document.pdf.objects)?.cgRect ?? CGRect(x: 0, y: 0, width: 612, height: 792)
 				rect.origin = .zero
 				
 				// Calculate scale factor to fit the page within the available size

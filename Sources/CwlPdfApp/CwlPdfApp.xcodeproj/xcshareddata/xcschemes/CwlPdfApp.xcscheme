@@ -30,7 +30,7 @@
       shouldUseLaunchSchemeArgsEnv = "YES">
       <TestPlans>
          <TestPlanReference
-            reference = "container:CwlPdfApp.xctestplan"
+            reference = "container:CwlPdfApp/CwlPdfApp.xctestplan"
             default = "YES">
          </TestPlanReference>
       </TestPlans>
