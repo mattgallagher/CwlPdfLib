@@ -1,6 +1,6 @@
 # CwlPdfLib Agent Guidelines
 
-## Build, Lint, and Test Commands
+## Build and Test Commands
 
 ### Building the Package
 ```bash
@@ -28,13 +28,29 @@ To run tests with code coverage:
 swift test --enable-code-coverage
 ```
 
-### Formatting
-Code formatting is handled by swiftformat:
+## Code Style Guidelines
+
+### Code Formatting
+
+- Do NOT use the swift built-in "swift format" command.
+
+- DO use swiftformat as follows:
+
 ```bash
-swiftformat format --swiftversion 6 --config .swiftformat "Sources/CwlPdfParser/Document/PdfDocument.swift"
+swiftformat --swiftversion 6 --config .swiftformat "Sources/CwlPdfParser/Document/PdfDocument.swift"
 ```
 
-## Code Style Guidelines
+- All Swift files should start with the header line:
+```swift
+// CwlPdfLib. Copyright © 2026 Matt Gallagher. See LICENSE file for usage permissions.
+```
+
+- Tab indentation with 3 spaces
+- Empty lines must contain the correct tab indentation for their scope (do not trim
+  whitespace from empty lines)
+- Consistent spacing around operators
+- Type and function attributes should be on previous line
+- Property attributes should be on the same line
 
 ### Swift Language Conventions
 - Use Swift 6+ features and syntax
@@ -58,10 +74,6 @@ swiftformat format --swiftversion 6 --config .swiftformat "Sources/CwlPdfParser/
 - Include clear comments on PDF-specific functionality
 - Use JSDoc-style documentation for public APIs
 - Document complex parsing logic with inline comments
-- Swift files should start with the header line:
-```swift
-// CwlPdfLib. Copyright © 2026 Matt Gallagher. See LICENSE file for usage permissions.
-```
 
 ### Error Handling
 - Use the `PdfParseError` type to bundle context with the error reason, given by `PdfParseFailure`.
@@ -81,23 +93,17 @@ swiftformat format --swiftversion 6 --config .swiftformat "Sources/CwlPdfParser/
 - Verify parsing of headers, xref tables, trailers, and streams
 - Validate object extraction from various PDF structures
 
-### Code Formatting
-- Never horizontally align content
-- Use swiftformat for consistent formatting
-- Follow the .swiftformat configuration:
-  - Tab indentation with 3 spaces
-  - No trailing commas in arrays and dictionaries
-  - Consistent spacing around operators
-  - Type attribute placement before line (prev-line)
-  - Function attributes on previous line
-
 ## Package Structure
 
-### File Organization
-- This is a Swift Package
-- Most logic should be kept in the `CwlPdfParser` module but all views should
-  be kept out of this module
+- This project is a Swift Package
 - The files in `CwlPdfApp` are not built as part of the Swift Package
+
+### PDF handling
+- Most logic should be kept in the `CwlPdfParser` module but all views should be kept out of
+  this module
+- `CwlPdfParser` should not use CoreGraphics types but its own types that closely resemble
+  CoreGraphics (e.g. `PdfRect` instead of `CGRect`). In the view, these types can be
+  extended to convert to CoreGraphics types.
 - Structure files by PDF component (Document, Page, Stream, etc.)
 - Organize tests by functionality (PdfDocumentTests, PdfFileSourceTests, etc.)
 

@@ -6,7 +6,7 @@ import SwiftUI
 public struct PdfBrowserView: View {
 	@Binding var document: PdfFileDocument
 	@State var selection: SidebarSelection?
-	@State var sidebarContent: SidebarContent = .objects
+	@State var sidebarContent: SidebarContent = .pages
 	
 	public init(document: Binding<PdfFileDocument>) {
 		self._document = document
@@ -26,8 +26,8 @@ public struct PdfBrowserView: View {
 			.toolbar {
 				ToolbarItemGroup(placement: .principal) {
 					Picker("Sidebar content", selection: $sidebarContent.pickerSelection) {
-						Label("Objects", systemImage: "shippingbox").tag(SidebarContent.objects)
 						Label("Pages", systemImage: "book.pages").tag(SidebarContent.pages)
+						Label("Objects", systemImage: "shippingbox").tag(SidebarContent.objects)
 					}
 					.pickerStyle(.segmented)
 				}
@@ -43,6 +43,11 @@ public struct PdfBrowserView: View {
 					Text("Page not found")
 				}
 			case nil: Text("Nothing selected")
+			}
+		}
+		.onAppear {
+			if let firstPage = document.pdf.pages.first?.id {
+				selection = .page(firstPage)
 			}
 		}
 		.animation(.default, value: sidebarContent.sidebarVisibility)

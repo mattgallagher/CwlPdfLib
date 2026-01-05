@@ -1,0 +1,31 @@
+// CwlPdfParser. Copyright © 2025 Matt Gallagher. See LICENSE file for usage permissions.
+
+public struct PdfRect {
+	public let x: Double
+	public let y: Double
+	public let width: Double
+	public let height: Double
+
+	public init(x: Double, y: Double, width: Double, height: Double) {
+		self.x = x
+		self.y = y
+		self.width = width
+		self.height = height
+	}
+	
+	public init?(array: PdfArray) {
+		// PDF arrays for rectangles are [x1, y1, x2, y2]
+		// Convert to CoreGraphics coordinates where (0,0) is bottom-left of page
+		guard array.count == 4 else { return nil }
+		
+		let x1 = (try? array[0].real(objects: nil))?.flatMap { $0 } ?? 0
+		let y1 = (try? array[1].real(objects: nil))?.flatMap { $0 } ?? 0
+		let x2 = (try? array[2].real(objects: nil))?.flatMap { $0 } ?? 0
+		let y2 = (try? array[3].real(objects: nil))?.flatMap { $0 } ?? 0
+		
+		let width = x2 - x1
+		let height = y2 - y1
+		
+		self.init(x: x1, y: y1, width: width, height: height)
+	}
+}
