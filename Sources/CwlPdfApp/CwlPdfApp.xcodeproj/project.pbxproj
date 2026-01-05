@@ -19,6 +19,7 @@
 		C953BF782EAC987700010E86 /* Exceptions for "CwlPdfApp" folder in "CwlPdfApp" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
+				CwlPdfApp.xctestplan,
 				Info.plist,
 			);
 			target = C953BF6B2EAC987600010E86 /* CwlPdfApp */;

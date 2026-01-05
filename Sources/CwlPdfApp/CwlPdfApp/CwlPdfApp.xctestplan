@@ -1,0 +1,30 @@
+{
+  "configurations" : [
+    {
+      "id" : "AE52C758-C849-496F-BD75-204399FADA6D",
+      "name" : "Test Scheme Action",
+      "options" : {
+
+      }
+    }
+  ],
+  "defaultOptions" : {
+    "codeCoverage" : false,
+    "performanceAntipatternCheckerEnabled" : true,
+    "targetForVariableExpansion" : {
+      "containerPath" : "container:CwlPdfApp.xcodeproj",
+      "identifier" : "C953BF6B2EAC987600010E86",
+      "name" : "CwlPdfApp"
+    }
+  },
+  "testTargets" : [
+    {
+      "target" : {
+        "containerPath" : "container:..\/..",
+        "identifier" : "CwlPdfLibTests",
+        "name" : "CwlPdfLibTests"
+      }
+    }
+  ],
+  "version" : 1
+}
