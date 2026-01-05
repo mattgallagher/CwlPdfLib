@@ -3,7 +3,7 @@
 import Foundation
 import Testing
 
-@testable import CwlPdfLib
+@testable import CwlPdfParser
 
 struct PdfDocumentTests {
 	@Test(arguments: [
@@ -58,7 +58,7 @@ struct PdfDocumentTests {
 	}
 	
 	@Test
-	func `GIVEN a pdf file with multiple xref tables WHEN PdfDocument.init THEN xref tables extracted, object ends calculated and size is max objNum plus one`() throws {
+	func `GIVEN a pdf file with multiple xref tables WHEN PdfDocument.init THEN xref tables extracted, all objects extracted and size is max objNum plus one`() throws {
 		let fileURL = try #require(Bundle.module.url(forResource: "Fixtures/three-page-images-annots.pdf", withExtension: nil))
 		let document = try PdfDocument(source: PdfDataSource(Data(contentsOf: fileURL, options: .mappedIfSafe)))
 		

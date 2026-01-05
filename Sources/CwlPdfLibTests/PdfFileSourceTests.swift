@@ -3,7 +3,7 @@
 import Foundation
 import Testing
 
-@testable import CwlPdfLib
+@testable import CwlPdfParser
 
 struct PdfFileSourceTests {
 	@Test(arguments: [

@@ -42,7 +42,7 @@ public struct PdfDocument: Sendable {
 	}
 	
 	public func page(for objectLayout: PdfObjectLayout) -> PdfPage? {
-		return pages.first(where: { $0.objectLayout == objectLayout })
+		pages.first(where: { $0.objectLayout == objectLayout })
 	}
 }
 

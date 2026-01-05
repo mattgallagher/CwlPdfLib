@@ -10,17 +10,24 @@ let package = Package(
 		// Products define the executables and libraries a package produces, making them visible to other packages.
 		.library(
 			name: "CwlPdfLib",
-			targets: ["CwlPdfLib"]),
+			targets: ["CwlPdfParser", "CwlPdfView"])
 	],
 	targets: [
 		// Targets are the basic building blocks of a package, defining a module or a test suite.
 		// Targets can depend on other targets in this package and products from dependencies.
 		.target(
-			name: "CwlPdfLib",
+			name: "CwlPdfParser"
+		),
+		.target(
+			name: "CwlPdfView",
+			dependencies: ["CwlPdfParser"],
+			swiftSettings: [
+				 .defaultIsolation(MainActor.self)
+			]
 		),
 		.testTarget(
 			name: "CwlPdfLibTests",
-			dependencies: ["CwlPdfLib"],
+			dependencies: ["CwlPdfParser"],
 			resources: [.copy("Fixtures")]
 		)
 	]
