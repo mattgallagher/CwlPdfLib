@@ -51,6 +51,15 @@ func allPages(pageTree: PdfDictionary, objects: PdfObjectList, offset: Int) thro
 		throw PdfParseError(failure: .expectedArray)
 	}
 	
+	// Default to standard US Letter size if no default dimensions found
+	let cropBox =
+		(
+			try? pageTree[.CropBox]?.array(objects: objects) ??
+			pageTree[.MediaBox]?.array(objects: objects)
+		).flatMap {
+			PdfRect(array: $0, objects: objects)
+		} ?? PdfRect(x: 0, y: 0, width: 612, height: 792)
+	
 	var pages = [PdfPage]()
 	for kid in kids {
 		guard case .reference(let objectIdentifier) = kid else {
@@ -65,7 +74,15 @@ func allPages(pageTree: PdfDictionary, objects: PdfObjectList, offset: Int) thro
 		switch type {
 		case .Page:
 			if let objectLayout = try objects.objectLayout(for: objectIdentifier) {
-				pages.append(PdfPage(pageIndex: pages.count + offset, objectLayout: objectLayout, pageDictionary: dictionary))
+				pages
+					.append(
+						PdfPage(
+							pageIndex: pages.count + offset,
+							objectLayout: objectLayout,
+							pageDictionary: dictionary,
+							cropBox: cropBox
+						)
+					)
 			}
 		case .Pages:
 			try pages.append(contentsOf: allPages(pageTree: dictionary, objects: objects, offset: pages.count + offset))

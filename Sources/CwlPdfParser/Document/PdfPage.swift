@@ -6,32 +6,42 @@ public struct PdfPage: Sendable, Hashable, Identifiable {
 	public let pageIndex: Int
 	public let objectLayout: PdfObjectLayout
 	public let pageDictionary: PdfDictionary
+	public let cropBox: PdfRect
 	
 	public var id: PdfObjectLayout {
 		objectLayout
 	}
 	
 	/// Returns the page rectangle in PDF coordinates (typically CropBox or MediaBox)
-	public func pageRect(objects: PdfObjectList?) -> PdfRect? {
+	public func pageRect(objects: PdfObjectList?) -> PdfRect {
 		// Try to get CropBox first (PDF specification preference)
-		if let cropBox = try? pageDictionary["CropBox"]?.array(objects: objects), let rect = PdfRect(array: cropBox, objects: objects) {
+		if let cropBox = try? pageDictionary[.CropBox]?.array(objects: objects), let rect = PdfRect(
+			array: cropBox,
+			objects: objects
+		) {
 			return rect
 		}
 		
 		// Fall back to MediaBox if CropBox is not present
-		if let mediaBox = try? pageDictionary["MediaBox"]?.array(objects: objects), let rect = PdfRect(array: mediaBox, objects: objects) {
+		if let mediaBox = try? pageDictionary[.MediaBox]?.array(objects: objects), let rect = PdfRect(
+			array: mediaBox,
+			objects: objects
+		) {
 			return rect
 		}
 		
-		// Default to standard US Letter size if no dimensions found
-		return PdfRect(x: 0, y: 0, width: 612, height: 792)
+		// If the page doesn't provide sizes, use the document size
+		return self.cropBox
 	}
 	
 	public func contentStream(objects: PdfObjectList?) -> PdfContentStream? {
-		guard let contents = try? pageDictionary["Contents"]?.stream(objects: objects) else {
+		guard let contents = try? pageDictionary[.Contents]?.stream(objects: objects) else {
 			return nil
 		}
-		return PdfContentStream(stream: contents, resources: try? pageDictionary["Resources"]?.dictionary(objects: objects))
+		return PdfContentStream(
+			stream: contents,
+			resources: try? pageDictionary[.Resources]?.dictionary(objects: objects)
+		)
 	}
 }
 

@@ -69,15 +69,6 @@ public extension PdfObject {
 		}
 	}
 
-	func number(objects: PdfObjectList?) throws -> Double? {
-		switch self {
-		case .integer(let integer): return Double(integer)
-		case .real(let real): return real
-		case .reference(let reference): return try objects?.object(for: reference)?.number(objects: objects)
-		default: return nil
-		}
-	}
-
 	func isNull(objects: PdfObjectList?) throws -> Bool {
 		switch self {
 		case .null: return true
@@ -96,6 +87,7 @@ public extension PdfObject {
 
 	func real(objects: PdfObjectList?) throws -> Double? {
 		switch self {
+		case .integer(let integer): return Double(integer)
 		case .real(let real): return real
 		case .reference(let reference): return try objects?.object(for: reference)?.real(objects: objects)
 		default: return nil

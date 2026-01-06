@@ -1,6 +1,6 @@
 // CwlPdfParser. Copyright © 2025 Matt Gallagher. See LICENSE file for usage permissions.
 
-public struct PdfRect {
+public struct PdfRect: Sendable, Hashable {
 	public let x: Double
 	public let y: Double
 	public let width: Double
