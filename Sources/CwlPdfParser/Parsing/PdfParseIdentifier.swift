@@ -1,6 +1,6 @@
 // CwlPdfLib. Copyright © 2025 Matt Gallagher. See LICENSE file for usage permissions.
 
-public enum PdfIdentifier: String {
+public enum PdfParseIdentifier: String {
 	case endobj
 	case endstream
 	case f

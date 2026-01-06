@@ -50,13 +50,13 @@ extension PdfParseContext {
 		return value
 	}
 	
-	func identifier(token: PdfToken? = nil, equals identifier: PdfIdentifier, else failure: PdfParseFailure) throws {
+	func identifier(token: PdfToken? = nil, equals identifier: PdfParseIdentifier, else failure: PdfParseFailure) throws {
 		guard case .identifier(let range) = token ?? self.token, slice[reslice: range].elementsEqual(identifier.rawValue.utf8) else {
 			throw PdfParseError(context: self, failure: failure)
 		}
 	}
 	
-	func identifier(token: PdfToken? = nil, equals identifier: PdfIdentifier) -> Bool {
+	func identifier(token: PdfToken? = nil, equals identifier: PdfParseIdentifier) -> Bool {
 		guard case .identifier(let range) = token ?? self.token, slice[reslice: range].elementsEqual(identifier.rawValue.utf8) else {
 			return false
 		}

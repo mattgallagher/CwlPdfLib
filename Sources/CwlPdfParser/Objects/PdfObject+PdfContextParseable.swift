@@ -114,7 +114,7 @@ extension PdfObject: PdfContextParseable {
 			case .hex(let bytes, _, _):
 				element = .object(.string(bytes, hex: true))
 			case .identifier(let range):
-				if context.slice[reslice: range].elementsEqual(PdfIdentifier.R.rawValue.utf8) {
+				if context.slice[reslice: range].elementsEqual(PdfParseIdentifier.R.rawValue.utf8) {
 					guard
 						let generationToken = stack.popLast(),
 						case .object(.integer(let generation)) = generationToken,

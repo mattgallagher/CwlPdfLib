@@ -21,12 +21,14 @@ public enum PdfParseFailure: Int, Sendable {
 	case missingLength
 	case missingEndOfScope
 	case missingLayoutForObject
+	case missingRequiredParameters	
 	case pageNotFound
 	case objectEndedUnexpectedly
 	case objectNotFound
 	case startXrefNotFound
 	case unexpectedToken
 	case unknownFilter
+	case unknownOperator
 	case unsupportedFilter
 	case xrefNotFound
 }

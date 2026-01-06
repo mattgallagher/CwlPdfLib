@@ -23,7 +23,7 @@ struct PageView: View {
 				context.fill(path, with: .color(.white))
 				context.clip(to: path)
 				
-				page.render(in: context)
+				page.render(in: context, objects: document.pdf.objects)
 			}
 			.shadow(color: Color.black.opacity(0.1), radius: 4, x: 0, y: 2)
 			.padding(8)
