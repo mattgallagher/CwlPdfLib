@@ -39,7 +39,11 @@ extension PdfOperator {
 				}
 				switch operatorIdentifier {
 				case .`'`:
-					return PdfOperator.`'`
+					guard
+						let text = try? stack.popLast()?.string(objects: nil)?.pdfText() else {
+						throw PdfParseError(context: context, failure: .missingRequiredParameters)
+					}
+					return PdfOperator.`'`(text)
 				case .`"`:
 					guard
 						let text = try? stack.popLast()?.string(objects: nil)?.pdfText(),
@@ -310,7 +314,18 @@ extension PdfOperator {
 					}
 					return PdfOperator.Tj(string)
 				case .TJ:
-					return PdfOperator.TJ(stack)
+					guard let elements = try? stack.popLast()?.array(objects: nil) else {
+						throw PdfParseError(context: context, failure: .missingRequiredParameters)
+					} 
+					var result = [TJElement]()
+					for element in elements {
+						if let text = try? element.string(objects: nil)?.pdfText() {
+							result.append(.text(text))
+						} else if let offset = try? element.real(objects: nil) {
+							result.append(.offset(offset))
+						}
+					}
+					return PdfOperator.TJ(result)
 				case .TL:
 					guard let leading = try? stack.popLast()?.real(objects: nil) else {
 						throw PdfParseError(context: context, failure: .missingRequiredParameters)

@@ -80,7 +80,7 @@ func allPages(pageTree: PdfDictionary, objects: PdfObjectList, offset: Int) thro
 							pageIndex: pages.count + offset,
 							objectLayout: objectLayout,
 							pageDictionary: dictionary,
-							cropBox: cropBox
+							documentPageSize: cropBox
 						)
 					)
 			}

@@ -6,7 +6,7 @@ public struct PdfPage: Sendable, Hashable, Identifiable {
 	public let pageIndex: Int
 	public let objectLayout: PdfObjectLayout
 	public let pageDictionary: PdfDictionary
-	public let cropBox: PdfRect
+	public let documentPageSize: PdfRect
 	
 	public var id: PdfObjectLayout {
 		objectLayout
@@ -31,7 +31,7 @@ public struct PdfPage: Sendable, Hashable, Identifiable {
 		}
 		
 		// If the page doesn't provide sizes, use the document size
-		return self.cropBox
+		return self.documentPageSize
 	}
 	
 	public func contentStream(objects: PdfObjectList?) -> PdfContentStream? {
@@ -47,6 +47,6 @@ public struct PdfPage: Sendable, Hashable, Identifiable {
 
 extension PdfPage: CustomDebugStringConvertible {
 	public var debugDescription: String {
-		"Page \(pageIndex + 1), \(objectLayout.objectIdentifier.debugDescription)"
+		"Page \(pageIndex + 1)"
 	}
 }

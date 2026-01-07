@@ -24,25 +24,25 @@ public typealias PdfNumberTree = [(key: Int, value: PdfObject)]
 public extension PdfObject {
 	func array(objects: PdfObjectList?) throws -> PdfArray? {
 		switch self {
-		case .array(let array): return array
-		case .reference(let reference): return try objects?.object(for: reference)?.array(objects: objects)
-		default: return nil
+		case .array(let array): array
+		case .reference(let reference): try objects?.object(for: reference)?.array(objects: objects)
+		default: nil
 		}
 	}
 	
 	func boolean(objects: PdfObjectList?) throws -> Bool? {
 		switch self {
-		case .boolean(let boolean): return boolean
-		case .reference(let reference): return try objects?.object(for: reference)?.boolean(objects: objects)
-		default: return nil
+		case .boolean(let boolean): boolean
+		case .reference(let reference): try objects?.object(for: reference)?.boolean(objects: objects)
+		default: nil
 		}
 	}
 	
 	func dictionary(objects: PdfObjectList?) throws -> PdfDictionary? {
 		switch self {
-		case .dictionary(let dictionary): return dictionary
-		case .reference(let reference): return try objects?.object(for: reference)?.dictionary(objects: objects)
-		default: return nil
+		case .dictionary(let dictionary): dictionary
+		case .reference(let reference): try objects?.object(for: reference)?.dictionary(objects: objects)
+		default: nil
 		}
 	}
 	
@@ -55,78 +55,78 @@ public extension PdfObject {
 
 	func integer(objects: PdfObjectList?) throws -> Int? {
 		switch self {
-		case .integer(let integer): return integer
-		case .reference(let reference): return try objects?.object(for: reference)?.integer(objects: objects)
-		default: return nil
+		case .integer(let integer): integer
+		case .reference(let reference): try objects?.object(for: reference)?.integer(objects: objects)
+		default: nil
 		}
 	}
 
 	func name(objects: PdfObjectList?) throws -> String? {
 		switch self {
-		case .name(let name): return name
-		case .reference(let reference): return try objects?.object(for: reference)?.name(objects: objects)
-		default: return nil
+		case .name(let name): name
+		case .reference(let reference): try objects?.object(for: reference)?.name(objects: objects)
+		default: nil
 		}
 	}
 
 	func isNull(objects: PdfObjectList?) throws -> Bool {
 		switch self {
-		case .null: return true
-		case .reference(let reference): return try objects?.object(for: reference)?.isNull(objects: objects) ?? true
-		default: return false
+		case .null: true
+		case .reference(let reference): try objects?.object(for: reference)?.isNull(objects: objects) ?? true
+		default: false
 		}
 	}
 
 	func pdfText(objects: PdfObjectList?) throws -> String? {
 		switch self {
-		case .string(let string, _): return string.pdfText()
-		case .reference(let reference): return try objects?.object(for: reference)?.pdfText(objects: objects)
-		default: return nil
+		case .string(let string, _): string.pdfText()
+		case .reference(let reference): try objects?.object(for: reference)?.pdfText(objects: objects)
+		default: nil
 		}
 	}
 
 	func real(objects: PdfObjectList?) throws -> Double? {
 		switch self {
-		case .integer(let integer): return Double(integer)
-		case .real(let real): return real
-		case .reference(let reference): return try objects?.object(for: reference)?.real(objects: objects)
-		default: return nil
+		case .integer(let integer): Double(integer)
+		case .real(let real): real
+		case .reference(let reference): try objects?.object(for: reference)?.real(objects: objects)
+		default: nil
 		}
 	}
 	
 	var reference: PdfObjectIdentifier? {
 		switch self {
-		case .reference(let objectIdentifier): return objectIdentifier
-		default: return nil
+		case .reference(let objectIdentifier): objectIdentifier
+		default: nil
 		}
 	}
 
 	func stream(objects: PdfObjectList?) throws -> PdfStream? {
 		switch self {
-		case .stream(let stream): return stream
-		case .reference(let reference): return try objects?.object(for: reference)?.stream(objects: objects)
-		default: return nil
+		case .stream(let stream): stream
+		case .reference(let reference): try objects?.object(for: reference)?.stream(objects: objects)
+		default: nil
 		}
 	}
 	
 	func string(objects: PdfObjectList?) throws -> Data? {
 		switch self {
-		case .string(let string, _): return string
-		case .reference(let reference): return try objects?.object(for: reference)?.string(objects: objects)
-		default: return nil
+		case .string(let string, _): string
+		case .reference(let reference): try objects?.object(for: reference)?.string(objects: objects)
+		default: nil
 		}
 	}
 	
 	func recursivelyResolve(objects: PdfObjectList?) throws -> PdfObject? {
 		switch self {
 		case .array(let elements):
-			return try elements.recursivelyResolve(objects: objects).map { .array($0) }
+			try elements.recursivelyResolve(objects: objects).map { .array($0) }
 		case .dictionary(let dictionary):
-			return try dictionary.recursivelyResolve(objects: objects).map { .dictionary($0) }
+			try dictionary.recursivelyResolve(objects: objects).map { .dictionary($0) }
 		case .reference(let reference):
-			return try reference.recursivelyResolve(objects: objects)
+			try reference.recursivelyResolve(objects: objects)
 		default:
-			return self
+			self
 		}
 	}
 }
@@ -134,9 +134,9 @@ public extension PdfObject {
 extension PdfObjectIdentifier {
 	func recursivelyResolve(objects: PdfObjectList?) throws -> PdfObject? {
 		if let resolved = try objects?.object(for: self) {
-			return resolved
+			resolved
 		} else {
-			return nil
+			nil
 		}
 	}
 }
@@ -156,18 +156,18 @@ extension PdfArray {
 extension PdfObject: CustomDebugStringConvertible {
 	public var debugDescription: String {
 		switch self {
-		case .array(let array): return array.debugDescription
-		case .boolean(let bool): return bool.description
-		case .dictionary(let dictionary): return dictionary.debugDescription
-		case .identifier(let identifier): return "'\(identifier)'"
-		case .integer(let integer): return integer.description
-		case .name(let name): return "\\\(name)"
-		case .null: return "null"
-		case .real(let real): return real.description
-		case .reference(let reference): return reference.debugDescription
-		case .stream(let stream): return stream.debugDescription
-		case .string(let data, false): return data.pdfText()
-		case .string(let data, true): return "<\(data.hexString())>"
+		case .array(let array): array.debugDescription
+		case .boolean(let bool): bool.description
+		case .dictionary(let dictionary): dictionary.debugDescription
+		case .identifier(let identifier): "'\(identifier)'"
+		case .integer(let integer): integer.description
+		case .name(let name): "\\\(name)"
+		case .null: "null"
+		case .real(let real): real.description
+		case .reference(let reference): reference.debugDescription
+		case .stream(let stream): stream.debugDescription
+		case .string(let data, false): data.pdfText()
+		case .string(let data, true): "<\(data.hexString())>"
 		}
 	}
 }
@@ -185,9 +185,9 @@ private extension Data {
 	
 	func hexFromNybble(nybble: UInt8) -> UInt8 {
 		if nybble < 10 {
-			return ASCII.digit0 + nybble
+			ASCII.digit0 + nybble
 		} else {
-			return ASCII.a + nybble - 10
+			ASCII.a + nybble - 10
 		}
 	}
 }
