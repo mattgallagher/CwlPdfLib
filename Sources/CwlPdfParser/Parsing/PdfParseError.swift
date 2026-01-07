@@ -16,12 +16,13 @@ public enum PdfParseFailure: Int, Sendable {
 	case expectedPageTree
 	case expectedType
 	case endOfFile
+	case endOfRange
 	case headerNotFound
 	case invalidHexDigit
 	case missingLength
 	case missingEndOfScope
 	case missingLayoutForObject
-	case missingRequiredParameters	
+	case missingRequiredParameters
 	case pageNotFound
 	case objectEndedUnexpectedly
 	case objectNotFound

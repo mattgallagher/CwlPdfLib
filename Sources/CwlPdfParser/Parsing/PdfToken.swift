@@ -85,7 +85,7 @@ extension PdfParseContext {
 			case .comment(let range):
 				switch byte {
 				case .carriageReturn, .formFeed, .lineFeed:
-					token = .comment(range.lowerBound..<(slice.startIndex - 1))
+					token = .comment(range.lowerBound..<slice.startIndex)
 					if skipComments {
 						break
 					}
@@ -215,6 +215,9 @@ extension PdfParseContext {
 					token = .string(bytes: bytes + [previous], range: slice.startIndex..<(slice.startIndex))
 				}
 			}
+		}
+		if slice.isEmpty, errorIfEndOfRange {
+			throw PdfParseError(failure: .endOfRange, range: slice.startIndex..<slice.endIndex)
 		}
 	}
 }

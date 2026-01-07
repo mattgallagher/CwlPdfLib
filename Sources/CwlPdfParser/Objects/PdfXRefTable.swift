@@ -47,23 +47,46 @@ extension PdfXRefTable: PdfContextParseable {
 		} while true
 	}
 	
-	static func parseXrefTables(source: any PdfSource, firstXrefRange: Range<Int>) throws -> ([PdfXRefTable], PdfDictionary, [Int: PdfObjectLayout]) {
-		var finalObjectCutoff: Int?
+	static func parseXrefTables(source: any PdfSource, firstXrefRange: Range<Int>, initialXrefTableLimit: Int = 16384) throws -> ([PdfXRefTable], PdfDictionary, [Int: PdfObjectLayout]) {
 		var xrefTables = [PdfXRefTable]()
 		var nextRange = firstXrefRange
 		var revisions = [PdfObjectIdentifier: Int]()
+		
 		repeat {
-			let nextTable = try source.parseContext(range: nextRange) { context in
-				try PdfXRefTable.parse(context: &context)
+			if nextRange.count > initialXrefTableLimit {
+				nextRange = nextRange.lowerBound..<nextRange.lowerBound + initialXrefTableLimit
 			}
+			
+			let nextTable: PdfXRefTable
+			repeat {
+				do {
+					nextTable = try source.parseContext(range: nextRange) { context in
+						context.errorIfEndOfRange = true
+						return try PdfXRefTable.parse(context: &context)
+					}
+					break
+				} catch let error as PdfParseError where error.failure == .endOfRange {
+					if nextRange.upperBound == firstXrefRange.endIndex {
+						throw PdfParseError(failure: .xrefNotFound)
+					}
+					nextRange = nextRange.lowerBound..<min(
+						nextRange.lowerBound + nextRange.count * 4,
+						firstXrefRange.endIndex
+					)
+					continue
+				}
+			} while true 
+			
 			xrefTables.append(nextTable)
-			if finalObjectCutoff == nil, !nextTable.objectLocations.isEmpty {
-				finalObjectCutoff = nextRange.lowerBound
-			}
 			guard case .integer(let previousStart) = nextTable.trailer[.Prev] else {
 				break
 			}
-			nextRange = previousStart..<nextRange.startIndex
+			
+			if previousStart > nextRange.startIndex {
+				nextRange = previousStart..<firstXrefRange.endIndex
+			} else {
+				nextRange = previousStart..<nextRange.startIndex
+			}
 		} while true
 		
 		guard let trailerDictionary = xrefTables.first?.trailer else {
@@ -71,13 +94,11 @@ extension PdfXRefTable: PdfContextParseable {
 		}
 		
 		var objectRanges = [Int: PdfObjectLayout]()
-		if let finalObjectCutoff {
-			let allObjectByteRanges = xrefTables.flatMap { $0.objectLocations }.sorted { $0.value < $1.value }
-			for (previous, next) in zip(allObjectByteRanges, [allObjectByteRanges.dropFirst(), [(PdfObjectIdentifier(number: 0, generation: 0), finalObjectCutoff)]].joined()) {
-				let revision = revisions[previous.key].map { $0 + 1 } ?? 0
-				objectRanges[previous.value] = PdfObjectLayout(objectIdentifier: previous.key, range: previous.value..<next.value, revision: revision)
-				revisions[previous.key] = revision
-			}
+		let allObjectByteRanges = xrefTables.flatMap { $0.objectLocations }.sorted { $0.value < $1.value }
+		for (previous, next) in zip(allObjectByteRanges, [allObjectByteRanges.dropFirst(), [(PdfObjectIdentifier(number: 0, generation: 0), firstXrefRange.upperBound)]].joined()) {
+			let revision = revisions[previous.key].map { $0 + 1 } ?? 0
+			objectRanges[previous.value] = PdfObjectLayout(objectIdentifier: previous.key, range: previous.value..<next.value, revision: revision)
+			revisions[previous.key] = revision
 		}
 		
 		return (xrefTables, trailerDictionary, objectRanges)

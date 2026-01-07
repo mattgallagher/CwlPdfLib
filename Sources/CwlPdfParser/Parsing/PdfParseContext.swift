@@ -6,6 +6,7 @@ struct PdfParseContext {
 	var slice: OffsetSlice<UnsafeRawBufferPointer>
 	var objectIdentifier: PdfObjectIdentifier?
 	var skipComments = true
+	var errorIfEndOfRange = false
 	var token: PdfToken?
 	var tokenStart: Int?
 }

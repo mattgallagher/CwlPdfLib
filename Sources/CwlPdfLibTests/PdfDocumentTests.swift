@@ -72,6 +72,28 @@ struct PdfDocumentTests {
 		#expect(size == (document.objects.xrefTables.flatMap { $0.objectLocations.keys.map { $0.number } }.max() ?? 0) + 1)
 	}
 	
+	@Test
+	func `GIVEN a pdf and a low initial xref table limit WHEN xref tables read THEN retries with larger reads succeed`() throws {
+		let fileURL = try #require(Bundle.module.url(forResource: "Fixtures/three-page-images-annots.pdf", withExtension: nil))
+
+		let source = try PdfDataSource(Data(contentsOf: fileURL, options: .mappedIfSafe))
+		var buffer = PdfSourceBuffer()
+		try source.seek(to: source.length, buffer: &buffer)
+		let startXrefAndEof = try source.parseContext(lineCount: 3, reverse: true, buffer: &buffer) { context in
+			try PdfStartXrefAndEof.parse(context: &context)
+		}
+		
+		let (xrefTables, trailer, objectLayoutFromOffset) = try PdfXRefTable.parseXrefTables(
+			source: source,
+			firstXrefRange: startXrefAndEof.range,
+			initialXrefTableLimit: 20
+		)
+
+		#expect(xrefTables.count == 2)
+		#expect(objectLayoutFromOffset.count == 105)
+		#expect(trailer.count == 6)
+	}
+	
 	@Test(arguments: [
 		("blank-page.pdf", [
 			"ID": PdfObject.array([.string(Data(hexString: "edb254fca2ae46d92dad520df17ccad1")!, hex: true), .string(Data(hexString: "edb254fca2ae46d92dad520df17ccad1")!, hex: true)]),
