@@ -21,7 +21,7 @@ struct TextPosition {
 }
 
 extension CGContext {
-	func showPdfText(_ text: Data, state: TextState, position: inout TextPosition) {
+	func showText(_ text: Data, state: TextState, position: inout TextPosition) {
 		var chars = Array(text.pdfTextToString().utf16)
 		var glyphs = Array<CGGlyph>(repeating: 0, count: chars.count)
 		var advances = [CGPoint](repeating: .zero, count: chars.count )
@@ -63,13 +63,13 @@ extension PdfPage {
 				case .`'`(let text):
 					textPosition.lineMatrix = textPosition.lineMatrix.translatedBy(x: 0, y: -textState.leading)
 					textPosition.textMatrix = textPosition.lineMatrix
-					context.showPdfText(text, state: textState, position: &textPosition)
+					context.showText(text, state: textState, position: &textPosition)
 				case .`"`(let text, let cSpacing, let wSpacing):
 					textState.charSpace = cSpacing
 					textState.wordSpace = wSpacing
 					textPosition.lineMatrix = textPosition.lineMatrix.translatedBy(x: 0, y: -textState.leading)
 					textPosition.textMatrix = textPosition.lineMatrix
-					context.showPdfText(text, state: textState, position: &textPosition)
+					context.showText(text, state: textState, position: &textPosition)
 				case .B:
 					context.fillPath(using: .winding)
 					context.strokePath()
@@ -227,14 +227,14 @@ extension PdfPage {
 							.map { CTFontCreateWithGraphicsFont($0, 1.0, nil, nil) }
 					}
 				case .Tj(let text):
-					context.showPdfText(text, state: textState, position: &textPosition)
+					context.showText(text, state: textState, position: &textPosition)
 				case .TJ(let array):
 					for item in array {
 						switch item {
 						case .offset(let offset):
 							textPosition.textMatrix.tx -= offset / 1000
 						case .text(let text):
-							context.showPdfText(text, state: textState, position: &textPosition)
+							context.showText(text, state: textState, position: &textPosition)
 						}
 					}
 				case .TL(let lead):

@@ -6,6 +6,14 @@ extension RandomAccessCollection where Element == UInt8 {
 	func utf8() -> String {
 		String(decoding: self, as: UTF8.self)
 	}
+	
+	var asBigEndianUInt32: UInt32 {
+		var code: UInt32 = 0
+		for byte in self.prefix(4) {
+			code = (code << 8) + UInt32(byte)
+		}
+		return code
+	}
 }
 
 public extension RandomAccessCollection where Element == UInt8 {

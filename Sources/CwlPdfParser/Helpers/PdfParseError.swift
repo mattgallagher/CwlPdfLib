@@ -33,6 +33,8 @@ public enum PdfParseFailure: Int, Sendable {
 	case unknownOperator
 	case unsupportedFilter
 	case unsupportedFontSubtype
+	case unsupportedCMap
+	case invalidCMapData
 	case xrefNotFound
 }
 
@@ -51,13 +53,13 @@ extension PdfParseError: CustomNSError {
 	
 	public var errorUserInfo: [String: Any] {
 		var info: [String: Any] = [:]
-		if let objectIdentifier = objectIdentifier {
+		if let objectIdentifier {
 			info["objectIdentifier"] = objectIdentifier
 		}
-		if let range = range {
+		if let range {
 			info["range"] = range
 		}
-		if let underlying = underlying {
+		if let underlying {
 			info["underlying"] = underlying
 		}
 		return info
