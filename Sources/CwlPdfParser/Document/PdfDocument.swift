@@ -3,7 +3,7 @@
 import Foundation
 
 public struct PdfDocument: Sendable {
-	public let objects: PdfObjectList
+	public let lookup: PdfObjectLookup
 	public let pages: [PdfPage]
 
 	let header: PdfHeader
@@ -28,17 +28,17 @@ public struct PdfDocument: Sendable {
 		)
 
 		self.trailer = trailer
-		self.objects = PdfObjectList(source: source, xrefTables: xrefTables, objectLayoutFromOffset: objectLayoutFromOffset)
+		self.lookup = PdfObjectLookup(source: source, xrefTables: xrefTables, objectLayoutFromOffset: objectLayoutFromOffset)
 		
-		guard let catalog = try trailer[.Root]?.dictionary(objects: objects) else {
+		guard let catalog = trailer[.Root]?.dictionary(lookup: lookup) else {
 			throw PdfParseError(failure: .expectedCatalog)
 		}
 
-		guard let pageTreeRoot = try catalog[.Pages]?.dictionary(objects: objects) else {
+		guard let pageTreeRoot = catalog[.Pages]?.dictionary(lookup: lookup) else {
 			throw PdfParseError(failure: .expectedPageTree)
 		}
 		
-		self.pages = try allPages(pageTree: pageTreeRoot, objects: objects, offset: 0)
+		self.pages = try allPages(pageTree: pageTreeRoot, lookup: lookup, offset: 0)
 	}
 	
 	public func page(for objectLayout: PdfObjectLayout) -> PdfPage? {
@@ -46,18 +46,18 @@ public struct PdfDocument: Sendable {
 	}
 }
 
-func allPages(pageTree: PdfDictionary, objects: PdfObjectList, offset: Int) throws -> [PdfPage] {
-	guard let kids = try pageTree[.Kids]?.array(objects: objects) else {
+func allPages(pageTree: PdfDictionary, lookup: PdfObjectLookup, offset: Int) throws -> [PdfPage] {
+	guard let kids = pageTree[.Kids]?.array(lookup: lookup) else {
 		throw PdfParseError(failure: .expectedArray)
 	}
 	
 	// Default to standard US Letter size if no default dimensions found
 	let cropBox =
 		(
-			try? pageTree[.CropBox]?.array(objects: objects) ??
-			pageTree[.MediaBox]?.array(objects: objects)
+			pageTree[.CropBox]?.array(lookup: lookup) ??
+			pageTree[.MediaBox]?.array(lookup: lookup)
 		).flatMap {
-			PdfRect(array: $0, objects: objects)
+			PdfRect(array: $0, lookup: lookup)
 		} ?? PdfRect(x: 0, y: 0, width: 612, height: 792)
 	
 	var pages = [PdfPage]()
@@ -65,15 +65,15 @@ func allPages(pageTree: PdfDictionary, objects: PdfObjectList, offset: Int) thro
 		guard case .reference(let objectIdentifier) = kid else {
 			throw PdfParseError(failure: .expectedIndirectObject)
 		}
-		guard let dictionary = try? kid.dictionary(objects: objects) else {
+		guard let dictionary = kid.dictionary(lookup: lookup) else {
 			throw PdfParseError(failure: .expectedDictionary)
 		}
-		guard let type = try? dictionary[.Type]?.name(objects: objects) else {
+		guard let type = dictionary[.Type]?.name(lookup: lookup) else {
 			throw PdfParseError(failure: .expectedType)
 		}
 		switch type {
 		case .Page:
-			if let objectLayout = try objects.objectLayout(for: objectIdentifier) {
+			if let objectLayout = try lookup.objectLayout(for: objectIdentifier) {
 				pages
 					.append(
 						PdfPage(
@@ -85,7 +85,7 @@ func allPages(pageTree: PdfDictionary, objects: PdfObjectList, offset: Int) thro
 					)
 			}
 		case .Pages:
-			try pages.append(contentsOf: allPages(pageTree: dictionary, objects: objects, offset: pages.count + offset))
+			try pages.append(contentsOf: allPages(pageTree: dictionary, lookup: lookup, offset: pages.count + offset))
 		default:
 			throw PdfParseError(failure: .expectedPageTree)
 		}

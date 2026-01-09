@@ -9,7 +9,7 @@ extension RandomAccessCollection where Element == UInt8 {
 }
 
 public extension RandomAccessCollection where Element == UInt8 {
-	func pdfText() -> String {
+	func pdfTextToString() -> String {
 		// Check for UTF-16BE BOM
 		if starts(with: [0xFE, 0xFF]), let result = String(bytes: dropFirst(2), encoding: .utf16BigEndian) {
 			return result
@@ -28,7 +28,7 @@ public extension RandomAccessCollection where Element == UInt8 {
 }
 
 extension String {
-	func pdfData() -> Data {
+	func toPdfText() -> Data {
 		Data(unicodeScalars.map(unicodeScalarToPdfDocEncoding))
 	}
 }

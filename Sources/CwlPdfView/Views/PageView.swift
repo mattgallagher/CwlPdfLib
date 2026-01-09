@@ -8,7 +8,7 @@ struct PageView: View {
 	var body: some View {
 		VStack {
 			Canvas { context, size in
-				var rect = page.pageRect(objects: document.pdf.objects).cgRect
+				var rect = page.pageRect(lookup: document.pdf.lookup).cgRect
 				rect.origin = .zero
 				
 				// Calculate scale factor to fit the page within the available size
@@ -25,7 +25,7 @@ struct PageView: View {
 				context.clip(to: path)
 				
 				context.withCGContext { cgContext in
-					page.render(in: cgContext, objects: document.pdf.objects)
+					page.render(in: cgContext, lookup: document.pdf.lookup)
 				}
 			}
 			.shadow(color: Color.black.opacity(0.1), radius: 4, x: 0, y: 2)

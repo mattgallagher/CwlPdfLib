@@ -63,11 +63,11 @@ struct PdfObjectParsingTests {
 				"blank-page.pdf",
 				PdfObjectIdentifier(number: 6, generation: 0),
 				PdfObject.dictionary([
-					"Title": .string("Untitled".pdfData()),
-					"Producer": .string("macOS Version 15.4.1 (Build 24E263) Quartz PDFContext".pdfData()),
-					"Creator": .string("TextEdit".pdfData()),
-					"CreationDate": .string("D:20250515100510Z00'00'".pdfData()),
-					"ModDate": .string("D:20250515100510Z00'00'".pdfData())
+					"Title": .string("Untitled".toPdfText()),
+					"Producer": .string("macOS Version 15.4.1 (Build 24E263) Quartz PDFContext".toPdfText()),
+					"Creator": .string("TextEdit".toPdfText()),
+					"CreationDate": .string("D:20250515100510Z00'00'".toPdfText()),
+					"ModDate": .string("D:20250515100510Z00'00'".toPdfText())
 				])
 			)
 		]
@@ -76,7 +76,7 @@ struct PdfObjectParsingTests {
 		let fileURL = try #require(Bundle.module.url(forResource: "Fixtures/\(filename)", withExtension: nil))
 		let document = try PdfDocument(source: PdfDataSource(Data(contentsOf: fileURL, options: .mappedIfSafe)))
 		
-		let object = try document.objects.object(for: objectIdentifier)
+		let object = try document.lookup.object(for: objectIdentifier)
 		
 		#expect(object == matches)
 	}

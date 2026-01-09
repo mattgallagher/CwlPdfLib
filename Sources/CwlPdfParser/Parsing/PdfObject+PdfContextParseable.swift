@@ -10,19 +10,29 @@ extension PdfObject: PdfContextParseable {
 		return object
 	}
 	
-	static func parseIndirect(objects: PdfObjectList?, context: inout PdfParseContext) throws -> PdfObject {
-		try context.nextToken()
-		let number = try context.naturalNumber()
-		try context.nextToken()
-		let generation = try context.naturalNumber()
+	static func parseIndirect(lookup: PdfObjectLookup?, context: inout PdfParseContext) throws -> PdfObject {
+		let number = try PdfToken
+			.parse(context: &context)
+			.requireNaturalNumber(context: &context)
+
+		let generation = try PdfToken
+			.parse(context: &context)
+			.requireNaturalNumber(context: &context)
+		
 		guard number == context.objectIdentifier?.number, generation == context.objectIdentifier?.generation else {
 			throw PdfParseError(context: context, failure: .objectNotFound)
 		}
-		try context.nextToken()
-		try context.identifier(equals: .obj, else: .expectedIdentifierNotFound)
+		
+		try PdfToken
+			.parse(context: &context)
+			.requireIdentifier(context: &context, equals: .obj, else: .expectedIdentifierNotFound)
+		
 		var object = try PdfObject.parse(context: &context)
-		try context.nextToken()
-		if context.identifier(equals: .stream) {
+		
+		var token = try PdfToken
+			.parse(context: &context)
+		
+		if token.isIdentifier(context: context, equals: .stream) {
 			guard case .dictionary(let dictionary) = object else {
 				throw PdfParseError(context: context, failure: .expectedDictionary)
 			}
@@ -31,24 +41,29 @@ extension PdfObject: PdfContextParseable {
 			}
 			try context.readEndOfLine()
 			
-			let filters: [String] = if dictionary.isImage(objects: objects) {
+			let filters: [String] = if dictionary.isImage(lookup: lookup) {
 				[]
 			} else {
 				switch dictionary["Filter"] {
 				case nil: []
 				case .name(let string): [string]
-				case .array(let array): try array.compactMap { try $0.name(objects: objects) }
+				case .array(let array): array.compactMap { $0.name(lookup: lookup) }
 				default: throw PdfParseError(context: context, failure: .unexpectedToken)
 				}
 			}
 			
 			let data = try context.decode(length: length, filters: filters, decodeParams: dictionary["DecodeParms"])
 			object = .stream(PdfStream(dictionary: dictionary, data: data))
-			try context.nextToken()
-			try context.identifier(equals: .endstream, else: .expectedIdentifierNotFound)
-			try context.nextToken()
+			
+			try PdfToken
+				.parse(context: &context)
+				.requireIdentifier(context: &context, equals: .endstream, else: .expectedIdentifierNotFound)
+			
+			token = try PdfToken
+				.parse(context: &context)
 		}
-		try context.identifier(equals: .endobj, else: .expectedIdentifierNotFound)
+		
+		try token.requireIdentifier(context: &context, equals: .endobj, else: .expectedIdentifierNotFound)
 		return object
 	}
 	
@@ -56,8 +71,7 @@ extension PdfObject: PdfContextParseable {
 		var stack = [ParseStackElement]()
 		
 		repeat {
-			try context.nextToken()
-			guard let token = context.token else {
+			guard let token = try PdfToken.parseNext(context: &context) else {
 				if stack.isEmpty {
 					return nil
 				} else {
@@ -112,7 +126,7 @@ extension PdfObject: PdfContextParseable {
 			case .dictionaryOpen:
 				element = .dictionaryOpen
 			case .hex(let bytes, _, _):
-				element = .object(.string(bytes, hex: true))
+				element = .object(.string(bytes))
 			case .identifier(let range):
 				if context.slice[reslice: range].elementsEqual(PdfParseIdentifier.R.rawValue.utf8) {
 					guard
@@ -134,7 +148,7 @@ extension PdfObject: PdfContextParseable {
 			case .real(let sign, let value, _):
 				element = .object(.real(sign * value))
 			case .string(let bytes, let range):
-				element = .object(.string(bytes + context.data(range: range), hex: false))
+				element = .object(.string(bytes + context.data(range: range)))
 			case .closeAngle, .openAngle, .stringEscape, .stringOctal:
 				// These types are internal only and returned only if an end-of-range is
 				// encountered, unexpectedly.

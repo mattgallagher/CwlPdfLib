@@ -3,7 +3,7 @@
 extension PdfSource {
 	func parseContext<Output>(range: Range<Int>, handler: (inout PdfParseContext) throws -> Output) throws -> Output {
 		return try bytes(in: range) { buffer in
-			var context = PdfParseContext(slice: buffer[...], token: nil)
+			var context = PdfParseContext(slice: buffer[...])
 			return try handler(&context)
 		}
 	}
@@ -11,7 +11,7 @@ extension PdfSource {
 	func parseContext<Output, S: BidirectionalCollection>(untilMatch pattern: S, limit: Int? = nil, reverse: Bool = false, buffer: inout PdfSourceBuffer, handler: (inout PdfParseContext) throws -> Output) throws -> Output where S.Element == UInt8, S.Index == Int {
 		guard !pattern.isEmpty else {
 			let buffer = UnsafeRawBufferPointer(start: nil, count: 0)
-			var context = PdfParseContext(slice: OffsetSlice(buffer, bounds: 0..<0, offset: 0), token: nil)
+			var context = PdfParseContext(slice: OffsetSlice(buffer, bounds: 0..<0, offset: 0))
 			return try handler(&context)
 		}
 		

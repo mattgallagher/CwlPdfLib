@@ -1,6 +1,6 @@
 // CwlPdfParser. Copyright © 2025 Matt Gallagher. See LICENSE file for usage permissions.
 
-public struct PdfObjectList: Sendable {
+public struct PdfObjectLookup: Sendable {
 	let source: any PdfSource
 	let xrefTables: [PdfXRefTable]
 	let objectLayoutFromOffset: [Int: PdfObjectLayout]
@@ -19,7 +19,7 @@ public struct PdfObjectList: Sendable {
 	public func object(layout: PdfObjectLayout) throws -> PdfObject {
 		return try source.parseContext(range: layout.range) { context in
 			context.objectIdentifier = layout.objectIdentifier
-			return try PdfObject.parseIndirect(objects: self, context: &context)
+			return try PdfObject.parseIndirect(lookup: self, context: &context)
 		}
 	}
 	

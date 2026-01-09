@@ -13,19 +13,19 @@ public struct PdfPage: Sendable, Hashable, Identifiable {
 	}
 	
 	/// Returns the page rectangle in PDF coordinates (typically CropBox or MediaBox)
-	public func pageRect(objects: PdfObjectList?) -> PdfRect {
+	public func pageRect(lookup: PdfObjectLookup?) -> PdfRect {
 		// Try to get CropBox first (PDF specification preference)
-		if let cropBox = try? pageDictionary[.CropBox]?.array(objects: objects), let rect = PdfRect(
+		if let cropBox = pageDictionary[.CropBox]?.array(lookup: lookup), let rect = PdfRect(
 			array: cropBox,
-			objects: objects
+			lookup: lookup
 		) {
 			return rect
 		}
 		
 		// Fall back to MediaBox if CropBox is not present
-		if let mediaBox = try? pageDictionary[.MediaBox]?.array(objects: objects), let rect = PdfRect(
+		if let mediaBox = pageDictionary[.MediaBox]?.array(lookup: lookup), let rect = PdfRect(
 			array: mediaBox,
-			objects: objects
+			lookup: lookup
 		) {
 			return rect
 		}
@@ -34,13 +34,13 @@ public struct PdfPage: Sendable, Hashable, Identifiable {
 		return self.documentPageSize
 	}
 	
-	public func contentStream(objects: PdfObjectList?) -> PdfContentStream? {
-		guard let contents = try? pageDictionary[.Contents]?.stream(objects: objects) else {
+	public func contentStream(lookup: PdfObjectLookup?) -> PdfContentStream? {
+		guard let contents = pageDictionary[.Contents]?.stream(lookup: lookup) else {
 			return nil
 		}
 		return PdfContentStream(
 			stream: contents,
-			resources: try? pageDictionary[.Resources]?.dictionary(objects: objects)
+			resources: pageDictionary[.Resources]?.dictionary(lookup: lookup)
 		)
 	}
 }

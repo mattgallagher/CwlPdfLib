@@ -15,6 +15,7 @@ public enum PdfParseFailure: Int, Sendable {
 	case expectedOperator
 	case expectedPageTree
 	case expectedType
+	case expectedToken
 	case endOfFile
 	case endOfRange
 	case headerNotFound
@@ -31,6 +32,7 @@ public enum PdfParseFailure: Int, Sendable {
 	case unknownFilter
 	case unknownOperator
 	case unsupportedFilter
+	case unsupportedFontSubtype
 	case xrefNotFound
 }
 

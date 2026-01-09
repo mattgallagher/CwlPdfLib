@@ -14,7 +14,7 @@ struct PdfOperatorParsingTests {
 		let fileURL = try #require(Bundle.module.url(forResource: "Fixtures/\(filename)", withExtension: nil))
 		let document = try PdfDocument(source: PdfDataSource(Data(contentsOf: fileURL, options: .mappedIfSafe)))
 		let page = try #require(document.pages.first)
-		let contentStream = try #require(page.contentStream(objects: document.objects))
+		let contentStream = try #require(page.contentStream(lookup: document.objects))
 		
 		var parsed = [PdfOperator]()
 		try contentStream.parse { op in
@@ -66,7 +66,7 @@ func textShapesShadingOperators() -> [PdfOperator] {
 		CwlPdfParser.PdfOperator.BT,
 		CwlPdfParser.PdfOperator.Tm(48.0, 0.0, 0.0, 48.0, 0.0, 0.0),
 		CwlPdfParser.PdfOperator.Tf("TT1", 1.0),
-		CwlPdfParser.PdfOperator.Tj("A line of text"),
+		CwlPdfParser.PdfOperator.Tj("A line of text".toPdfText()),
 		CwlPdfParser.PdfOperator.ET,
 		CwlPdfParser.PdfOperator.Q,
 		CwlPdfParser.PdfOperator.EMC,

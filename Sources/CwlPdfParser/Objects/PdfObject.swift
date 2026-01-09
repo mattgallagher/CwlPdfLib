@@ -13,7 +13,7 @@ public enum PdfObject: Sendable, Hashable {
 	case real(Double)
 	case reference(PdfObjectIdentifier)
 	case stream(PdfStream)
-	case string(Data, hex: Bool = false)
+	case string(Data)
 }
 
 public typealias PdfArray = [PdfObject]
@@ -22,26 +22,26 @@ public typealias PdfNameTree = [(String, value: PdfObject)]
 public typealias PdfNumberTree = [(key: Int, value: PdfObject)]
 
 public extension PdfObject {
-	func array(objects: PdfObjectList?) throws -> PdfArray? {
+	func array(lookup: PdfObjectLookup?) -> PdfArray? {
 		switch self {
 		case .array(let array): array
-		case .reference(let reference): try objects?.object(for: reference)?.array(objects: objects)
+		case .reference(let reference): try? lookup?.object(for: reference)?.array(lookup: lookup)
 		default: nil
 		}
 	}
 	
-	func boolean(objects: PdfObjectList?) throws -> Bool? {
+	func boolean(lookup: PdfObjectLookup?) -> Bool? {
 		switch self {
 		case .boolean(let boolean): boolean
-		case .reference(let reference): try objects?.object(for: reference)?.boolean(objects: objects)
+		case .reference(let reference): try? lookup?.object(for: reference)?.boolean(lookup: lookup)
 		default: nil
 		}
 	}
 	
-	func dictionary(objects: PdfObjectList?) throws -> PdfDictionary? {
+	func dictionary(lookup: PdfObjectLookup?) -> PdfDictionary? {
 		switch self {
 		case .dictionary(let dictionary): dictionary
-		case .reference(let reference): try objects?.object(for: reference)?.dictionary(objects: objects)
+		case .reference(let reference): try? lookup?.object(for: reference)?.dictionary(lookup: lookup)
 		default: nil
 		}
 	}
@@ -53,43 +53,43 @@ public extension PdfObject {
 		return string
 	}
 
-	func integer(objects: PdfObjectList?) throws -> Int? {
+	func integer(lookup: PdfObjectLookup?) -> Int? {
 		switch self {
 		case .integer(let integer): integer
-		case .reference(let reference): try objects?.object(for: reference)?.integer(objects: objects)
+		case .reference(let reference): try? lookup?.object(for: reference)?.integer(lookup: lookup)
 		default: nil
 		}
 	}
 
-	func name(objects: PdfObjectList?) throws -> String? {
+	func name(lookup: PdfObjectLookup?) -> String? {
 		switch self {
 		case .name(let name): name
-		case .reference(let reference): try objects?.object(for: reference)?.name(objects: objects)
+		case .reference(let reference): try? lookup?.object(for: reference)?.name(lookup: lookup)
 		default: nil
 		}
 	}
 
-	func isNull(objects: PdfObjectList?) throws -> Bool {
+	func isNull(lookup: PdfObjectLookup?) -> Bool {
 		switch self {
 		case .null: true
-		case .reference(let reference): try objects?.object(for: reference)?.isNull(objects: objects) ?? true
+		case .reference(let reference): (try? lookup?.object(for: reference)?.isNull(lookup: lookup)) ?? true
 		default: false
 		}
 	}
 
-	func pdfText(objects: PdfObjectList?) throws -> String? {
+	func pdfText(lookup: PdfObjectLookup?) -> String? {
 		switch self {
-		case .string(let string, _): string.pdfText()
-		case .reference(let reference): try objects?.object(for: reference)?.pdfText(objects: objects)
+		case .string(let string): string.pdfTextToString()
+		case .reference(let reference): try? lookup?.object(for: reference)?.pdfText(lookup: lookup)
 		default: nil
 		}
 	}
 
-	func real(objects: PdfObjectList?) throws -> Double? {
+	func real(lookup: PdfObjectLookup?) -> Double? {
 		switch self {
 		case .integer(let integer): Double(integer)
 		case .real(let real): real
-		case .reference(let reference): try objects?.object(for: reference)?.real(objects: objects)
+		case .reference(let reference): try? lookup?.object(for: reference)?.real(lookup: lookup)
 		default: nil
 		}
 	}
@@ -101,30 +101,30 @@ public extension PdfObject {
 		}
 	}
 
-	func stream(objects: PdfObjectList?) throws -> PdfStream? {
+	func stream(lookup: PdfObjectLookup?) -> PdfStream? {
 		switch self {
 		case .stream(let stream): stream
-		case .reference(let reference): try objects?.object(for: reference)?.stream(objects: objects)
+		case .reference(let reference): try? lookup?.object(for: reference)?.stream(lookup: lookup)
 		default: nil
 		}
 	}
 	
-	func string(objects: PdfObjectList?) throws -> Data? {
+	func string(lookup: PdfObjectLookup?) -> Data? {
 		switch self {
-		case .string(let string, _): string
-		case .reference(let reference): try objects?.object(for: reference)?.string(objects: objects)
+		case .string(let string): string
+		case .reference(let reference): try? lookup?.object(for: reference)?.string(lookup: lookup)
 		default: nil
 		}
 	}
 	
-	func recursivelyResolve(objects: PdfObjectList?) throws -> PdfObject? {
+	func recursivelyResolve(lookup: PdfObjectLookup?) -> PdfObject? {
 		switch self {
 		case .array(let elements):
-			try elements.recursivelyResolve(objects: objects).map { .array($0) }
+			elements.recursivelyResolve(lookup: lookup).map { .array($0) }
 		case .dictionary(let dictionary):
-			try dictionary.recursivelyResolve(objects: objects).map { .dictionary($0) }
+			dictionary.recursivelyResolve(lookup: lookup).map { .dictionary($0) }
 		case .reference(let reference):
-			try reference.recursivelyResolve(objects: objects)
+			reference.recursivelyResolve(lookup: lookup)
 		default:
 			self
 		}
@@ -132,8 +132,8 @@ public extension PdfObject {
 }
 
 extension PdfObjectIdentifier {
-	func recursivelyResolve(objects: PdfObjectList?) throws -> PdfObject? {
-		if let resolved = try objects?.object(for: self) {
+	func recursivelyResolve(lookup: PdfObjectLookup?) -> PdfObject? {
+		if let resolved = try? lookup?.object(for: self) {
 			resolved
 		} else {
 			nil
@@ -142,14 +142,20 @@ extension PdfObjectIdentifier {
 }
 
 extension PdfDictionary {
-	func recursivelyResolve(objects: PdfObjectList?) throws -> PdfDictionary? {
-		try PdfDictionary(uniqueKeysWithValues: compactMap { key, value in try value.recursivelyResolve(objects: objects).map { (key, $0) } })
+	func recursivelyResolve(lookup: PdfObjectLookup?) -> PdfDictionary? {
+		PdfDictionary(uniqueKeysWithValues: compactMap { key, value in
+			if key != "Parent", key != "Prev", key != "P" {
+				value.recursivelyResolve(lookup: lookup).map { (key, $0) }
+			} else {
+				(key, value)
+			}
+		})
 	}
 }
 
 extension PdfArray {
-	func recursivelyResolve(objects: PdfObjectList?) throws -> PdfArray? {
-		try PdfArray(compactMap { try $0.recursivelyResolve(objects: objects) })
+	func recursivelyResolve(lookup: PdfObjectLookup?) -> PdfArray? {
+		PdfArray(compactMap { $0.recursivelyResolve(lookup: lookup) })
 	}
 }
 
@@ -166,8 +172,7 @@ extension PdfObject: CustomDebugStringConvertible {
 		case .real(let real): real.description
 		case .reference(let reference): reference.debugDescription
 		case .stream(let stream): stream.debugDescription
-		case .string(let data, false): data.pdfText()
-		case .string(let data, true): "<\(data.hexString())>"
+		case .string(let data): data.pdfTextToString()
 		}
 	}
 }

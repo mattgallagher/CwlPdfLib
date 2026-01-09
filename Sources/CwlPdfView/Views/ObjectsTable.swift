@@ -8,7 +8,7 @@ struct ObjectsTable: View {
 	@Binding var selection: SidebarSelection?
 	
 	var body: some View {
-		Table(document.pdf.objects.allObjectByteRanges, selection: $selection.objectlayout) {
+		Table(document.pdf.lookup.allObjectByteRanges, selection: $selection.objectlayout) {
 			TableColumn("Objects", value: \.debugDescription)
 		}
 	}

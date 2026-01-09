@@ -62,14 +62,14 @@ struct PdfDocumentTests {
 		let fileURL = try #require(Bundle.module.url(forResource: "Fixtures/three-page-images-annots.pdf", withExtension: nil))
 		let document = try PdfDocument(source: PdfDataSource(Data(contentsOf: fileURL, options: .mappedIfSafe)))
 		
-		#expect(document.objects.xrefTables.count == 2)
-		#expect(document.objects.objectLayoutFromOffset.count == 105)
+		#expect(document.lookup.xrefTables.count == 2)
+		#expect(document.lookup.objectLayoutFromOffset.count == 105)
 		
 		var size = 0
 		if case .integer(let value) = document.trailer["Size"] {
 			size = value
 		}
-		#expect(size == (document.objects.xrefTables.flatMap { $0.objectLocations.keys.map { $0.number } }.max() ?? 0) + 1)
+		#expect(size == (document.lookup.xrefTables.flatMap { $0.objectLocations.keys.map { $0.number } }.max() ?? 0) + 1)
 	}
 	
 	@Test
@@ -96,13 +96,13 @@ struct PdfDocumentTests {
 	
 	@Test(arguments: [
 		("blank-page.pdf", [
-			"ID": PdfObject.array([.string(Data(hexString: "edb254fca2ae46d92dad520df17ccad1")!, hex: true), .string(Data(hexString: "edb254fca2ae46d92dad520df17ccad1")!, hex: true)]),
+			"ID": PdfObject.array([.string(Data(hexString: "edb254fca2ae46d92dad520df17ccad1")!), .string(Data(hexString: "edb254fca2ae46d92dad520df17ccad1")!)]),
 			"Info": PdfObject.reference(PdfObjectIdentifier(number: 6, generation: 0)),
 			"Root": PdfObject.reference(PdfObjectIdentifier(number: 5, generation: 0)),
 			"Size": PdfObject.integer(7)
 		]),
 		("single-text-line.pdf", [
-			"ID": PdfObject.array([.string(Data(hexString: "5571570d6c27c2b8042a720ce493221a")!, hex: true), .string(Data(hexString: "5571570d6c27c2b8042a720ce493221a")!, hex: true)]),
+			"ID": PdfObject.array([.string(Data(hexString: "5571570d6c27c2b8042a720ce493221a")!), .string(Data(hexString: "5571570d6c27c2b8042a720ce493221a")!)]),
 			"Info": PdfObject.reference(PdfObjectIdentifier(number: 11, generation: 0)),
 			"Root": PdfObject.reference(PdfObjectIdentifier(number: 8, generation: 0)),
 			"Size": PdfObject.integer(12)

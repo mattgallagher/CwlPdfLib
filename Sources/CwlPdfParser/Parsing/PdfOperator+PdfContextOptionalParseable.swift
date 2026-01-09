@@ -1,26 +1,6 @@
 // CwlPdfParser. Copyright © 2025 Matt Gallagher. See LICENSE file for usage permissions.
 
-import Foundation
-
-public struct PdfContentStream {
-	let stream: PdfStream
-	let resources: PdfDictionary?
-	
-	public func parse(_ visitor: (PdfOperator) -> Bool) throws {
-		try stream.data.parseContext { context in
-			repeat {
-				guard let nextOperator = try PdfOperator.parseNext(context: &context) else {
-					return
-				}
-				if !visitor(nextOperator) {
-					return
-				}
-			} while true
-		}
-	}
-}
-
-extension PdfOperator {
+extension PdfOperator: PdfContextOptionalParseable {
 	static func parseNext(context: inout PdfParseContext) throws -> PdfOperator? {
 		var stack = [PdfObject]()
 		
@@ -40,15 +20,15 @@ extension PdfOperator {
 				switch operatorIdentifier {
 				case .`'`:
 					guard
-						let text = try? stack.popLast()?.string(objects: nil)?.pdfText() else {
+						let text = stack.popLast()?.string(lookup: nil) else {
 						throw PdfParseError(context: context, failure: .missingRequiredParameters)
 					}
 					return PdfOperator.`'`(text)
 				case .`"`:
 					guard
-						let text = try? stack.popLast()?.string(objects: nil)?.pdfText(),
-						let cSpacing = try? stack.popLast()?.real(objects: nil),
-						let wSpacing = try? stack.popLast()?.real(objects: nil) else {
+						let text = stack.popLast()?.string(lookup: nil),
+						let cSpacing = stack.popLast()?.real(lookup: nil),
+						let wSpacing = stack.popLast()?.real(lookup: nil) else {
 						throw PdfParseError(context: context, failure: .missingRequiredParameters)
 					}
 					return PdfOperator.`"`(text, cSpacing, wSpacing)
@@ -62,15 +42,15 @@ extension PdfOperator {
 					return PdfOperator.`b*`
 				case .BDC:
 					guard
-						let properties = try? stack.popLast()?.dictionary(objects: nil),
-						let tag = try? stack.popLast()?.name(objects: nil) else {
+						let properties = stack.popLast()?.dictionary(lookup: nil),
+						let tag = stack.popLast()?.name(lookup: nil) else {
 						throw PdfParseError(context: context, failure: .missingRequiredParameters)
 					}
 					return PdfOperator.BDC(properties, tag)
 				case .BI:
 					return PdfOperator.BI
 				case .BMC:
-					guard let tag = try? stack.popLast()?.name(objects: nil) else {
+					guard let tag = stack.popLast()?.name(lookup: nil) else {
 						throw PdfParseError(context: context, failure: .missingRequiredParameters)
 					}
 					return PdfOperator.BMC(tag)
@@ -80,56 +60,56 @@ extension PdfOperator {
 					return PdfOperator.BX
 				case .c:
 					guard
-						let y3 = try? stack.popLast()?.real(objects: nil),
-						let x3 = try? stack.popLast()?.real(objects: nil),
-						let y2 = try? stack.popLast()?.real(objects: nil),
-						let x2 = try? stack.popLast()?.real(objects: nil),
-						let y1 = try? stack.popLast()?.real(objects: nil),
-						let x1 = try? stack.popLast()?.real(objects: nil) else {
+						let y3 = stack.popLast()?.real(lookup: nil),
+						let x3 = stack.popLast()?.real(lookup: nil),
+						let y2 = stack.popLast()?.real(lookup: nil),
+						let x2 = stack.popLast()?.real(lookup: nil),
+						let y1 = stack.popLast()?.real(lookup: nil),
+						let x1 = stack.popLast()?.real(lookup: nil) else {
 						throw PdfParseError(context: context, failure: .missingRequiredParameters)
 					}
 					return PdfOperator.c(x1, y1, x2, y2, x3, y3)
 				case .cm:
 					guard
-						let ty = try? stack.popLast()?.real(objects: nil),
-						let tx = try? stack.popLast()?.real(objects: nil),
-						let d = try? stack.popLast()?.real(objects: nil),
-						let c = try? stack.popLast()?.real(objects: nil),
-						let b = try? stack.popLast()?.real(objects: nil),
-						let a = try? stack.popLast()?.real(objects: nil) else {
+						let ty = stack.popLast()?.real(lookup: nil),
+						let tx = stack.popLast()?.real(lookup: nil),
+						let d = stack.popLast()?.real(lookup: nil),
+						let c = stack.popLast()?.real(lookup: nil),
+						let b = stack.popLast()?.real(lookup: nil),
+						let a = stack.popLast()?.real(lookup: nil) else {
 						throw PdfParseError(context: context, failure: .missingRequiredParameters)
 					}
 					return PdfOperator.cm(a, b, c, d, tx, ty)
 				case .CS:
-					guard let name = try? stack.popLast()?.name(objects: nil) else {
+					guard let name = stack.popLast()?.name(lookup: nil) else {
 						throw PdfParseError(context: context, failure: .missingRequiredParameters)
 					}
 					return PdfOperator.CS(name)
 				case .cs:
-					guard let name = try? stack.popLast()?.name(objects: nil) else {
+					guard let name = stack.popLast()?.name(lookup: nil) else {
 						throw PdfParseError(context: context, failure: .missingRequiredParameters)
 					}
 					return PdfOperator.cs(name)
 				case .d:
 					guard
-						let dashPhase = try? stack.popLast()?.real(objects: nil) else {
+						let dashPhase = stack.popLast()?.real(lookup: nil) else {
 						throw PdfParseError(context: context, failure: .missingRequiredParameters)
 					}
-					let dashArray = stack.compactMap { try? $0.real(objects: nil) }
+					let dashArray = stack.compactMap { $0.real(lookup: nil) }
 					return PdfOperator.d(dashPhase, dashArray)
 				case .d0:
 					return PdfOperator.d0
 				case .d1:
 					return PdfOperator.d1
 				case .Do:
-					guard let name = try? stack.popLast()?.name(objects: nil) else {
+					guard let name = stack.popLast()?.name(lookup: nil) else {
 						throw PdfParseError(context: context, failure: .missingRequiredParameters)
 					}
 					return PdfOperator.Do(name)
 				case .DP:
 					guard
-						let properties = try? stack.popLast()?.dictionary(objects: nil),
-						let tag = try? stack.popLast()?.name(objects: nil) else {
+						let properties = stack.popLast()?.dictionary(lookup: nil),
+						let tag = stack.popLast()?.name(lookup: nil) else {
 						throw PdfParseError(context: context, failure: .missingRequiredParameters)
 					}
 					return PdfOperator.DP(properties, tag)
@@ -148,24 +128,24 @@ extension PdfOperator {
 				case .`f*`:
 					return PdfOperator.`f*`
 				case .G:
-					guard let gray = try? stack.popLast()?.real(objects: nil) else {
+					guard let gray = stack.popLast()?.real(lookup: nil) else {
 						throw PdfParseError(context: context, failure: .missingRequiredParameters)
 					}
 					return PdfOperator.G(gray)
 				case .g:
-					guard let gray = try? stack.popLast()?.real(objects: nil) else {
+					guard let gray = stack.popLast()?.real(lookup: nil) else {
 						throw PdfParseError(context: context, failure: .missingRequiredParameters)
 					}
 					return PdfOperator.g(gray)
 				case .gs:
-					guard let name = try? stack.popLast()?.name(objects: nil) else {
+					guard let name = stack.popLast()?.name(lookup: nil) else {
 						throw PdfParseError(context: context, failure: .missingRequiredParameters)
 					}
 					return PdfOperator.gs(name)
 				case .h:
 					return PdfOperator.h
 				case .i:
-					guard let flatness = try? stack.popLast()?.real(objects: nil) else {
+					guard let flatness = stack.popLast()?.real(lookup: nil) else {
 						throw PdfParseError(context: context, failure: .missingRequiredParameters)
 					}
 					return PdfOperator.i(flatness)
@@ -173,55 +153,55 @@ extension PdfOperator {
 					return PdfOperator.ID
 				case .J:
 					guard
-						let style = try? stack.popLast()?.integer(objects: nil) else {
+						let style = stack.popLast()?.integer(lookup: nil) else {
 						throw PdfParseError(context: context, failure: .missingRequiredParameters)
 					}
 					return PdfOperator.J(style)
 				case .j:
 					guard
-						let style = try? stack.popLast()?.integer(objects: nil) else {
+						let style = stack.popLast()?.integer(lookup: nil) else {
 						throw PdfParseError(context: context, failure: .missingRequiredParameters)
 					}
 					return PdfOperator.j(style)
 				case .K:
 					guard
-						let k = try? stack.popLast()?.real(objects: nil),
-						let y = try? stack.popLast()?.real(objects: nil),
-						let m = try? stack.popLast()?.real(objects: nil),
-						let c = try? stack.popLast()?.real(objects: nil) else {
+						let k = stack.popLast()?.real(lookup: nil),
+						let y = stack.popLast()?.real(lookup: nil),
+						let m = stack.popLast()?.real(lookup: nil),
+						let c = stack.popLast()?.real(lookup: nil) else {
 						throw PdfParseError(context: context, failure: .missingRequiredParameters)
 					}
 					return PdfOperator.K(c, m, y, k)
 				case .k:
 					guard
-						let k = try? stack.popLast()?.real(objects: nil),
-						let y = try? stack.popLast()?.real(objects: nil),
-						let m = try? stack.popLast()?.real(objects: nil),
-						let c = try? stack.popLast()?.real(objects: nil) else {
+						let k = stack.popLast()?.real(lookup: nil),
+						let y = stack.popLast()?.real(lookup: nil),
+						let m = stack.popLast()?.real(lookup: nil),
+						let c = stack.popLast()?.real(lookup: nil) else {
 						throw PdfParseError(context: context, failure: .missingRequiredParameters)
 					}
 					return PdfOperator.k(c, m, y, k)
 				case .l:
 					guard
-						let y = try? stack.popLast()?.real(objects: nil),
-						let x = try? stack.popLast()?.real(objects: nil) else {
+						let y = stack.popLast()?.real(lookup: nil),
+						let x = stack.popLast()?.real(lookup: nil) else {
 						throw PdfParseError(context: context, failure: .missingRequiredParameters)
 					}
 					return PdfOperator.l(x, y)
 				case .M:
-					guard let miterLimit = try? stack.popLast()?.real(objects: nil) else {
+					guard let miterLimit = stack.popLast()?.real(lookup: nil) else {
 						throw PdfParseError(context: context, failure: .missingRequiredParameters)
 					}
 					return PdfOperator.M(miterLimit)
 				case .m:
 					guard
-						let y = try? stack.popLast()?.real(objects: nil),
-						let x = try? stack.popLast()?.real(objects: nil) else {
+						let y = stack.popLast()?.real(lookup: nil),
+						let x = stack.popLast()?.real(lookup: nil) else {
 						throw PdfParseError(context: context, failure: .missingRequiredParameters)
 					}
 					return PdfOperator.m(x, y)
 				case .MP:
-					guard let tag = try? stack.popLast()?.name(objects: nil) else {
+					guard let tag = stack.popLast()?.name(lookup: nil) else {
 						throw PdfParseError(context: context, failure: .missingRequiredParameters)
 					}
 					return PdfOperator.MP(tag)
@@ -233,31 +213,31 @@ extension PdfOperator {
 					return PdfOperator.Q
 				case .re:
 					guard
-						let height = try? stack.popLast()?.real(objects: nil),
-						let width = try? stack.popLast()?.real(objects: nil),
-						let y = try? stack.popLast()?.real(objects: nil),
-						let x = try? stack.popLast()?.real(objects: nil) else {
+						let height = stack.popLast()?.real(lookup: nil),
+						let width = stack.popLast()?.real(lookup: nil),
+						let y = stack.popLast()?.real(lookup: nil),
+						let x = stack.popLast()?.real(lookup: nil) else {
 						throw PdfParseError(context: context, failure: .missingRequiredParameters)
 					}
 					return PdfOperator.re(x, y, width, height)
 				case .RG:
 					guard
-						let b = try? stack.popLast()?.real(objects: nil),
-						let g = try? stack.popLast()?.real(objects: nil),
-						let r = try? stack.popLast()?.real(objects: nil) else {
+						let b = stack.popLast()?.real(lookup: nil),
+						let g = stack.popLast()?.real(lookup: nil),
+						let r = stack.popLast()?.real(lookup: nil) else {
 						throw PdfParseError(context: context, failure: .missingRequiredParameters)
 					}
 					return PdfOperator.RG(r, g, b)
 				case .rg:
 					guard
-						let b = try? stack.popLast()?.real(objects: nil),
-						let g = try? stack.popLast()?.real(objects: nil),
-						let r = try? stack.popLast()?.real(objects: nil) else {
+						let b = stack.popLast()?.real(lookup: nil),
+						let g = stack.popLast()?.real(lookup: nil),
+						let r = stack.popLast()?.real(lookup: nil) else {
 						throw PdfParseError(context: context, failure: .missingRequiredParameters)
 					}
 					return PdfOperator.rg(r, g, b)
 				case .ri:
-					guard let name = try? stack.popLast()?.name(objects: nil) else {
+					guard let name = stack.popLast()?.name(lookup: nil) else {
 						throw PdfParseError(context: context, failure: .missingRequiredParameters)
 					}
 					return PdfOperator.ri(name)
@@ -266,100 +246,100 @@ extension PdfOperator {
 				case .s:
 					return PdfOperator.s
 				case .SC:
-					let colorArray = stack.compactMap { try? $0.real(objects: nil) }
+					let colorArray = stack.compactMap { $0.real(lookup: nil) }
 					return PdfOperator.SC(colorArray)
 				case .sc:
-					let colorArray = stack.compactMap { try? $0.real(objects: nil) }
+					let colorArray = stack.compactMap { $0.real(lookup: nil) }
 					return PdfOperator.sc(colorArray)
 				case .SCN:
-					let colorArray = stack.compactMap { try? $0.real(objects: nil) }
+					let colorArray = stack.compactMap { $0.real(lookup: nil) }
 					return PdfOperator.SCN(colorArray)
 				case .scn:
-					let colorArray = stack.compactMap { try? $0.real(objects: nil) }
+					let colorArray = stack.compactMap { $0.real(lookup: nil) }
 					return PdfOperator.scn(colorArray)
 				case .sh:
-					guard let name = try? stack.popLast()?.name(objects: nil) else {
+					guard let name = stack.popLast()?.name(lookup: nil) else {
 						throw PdfParseError(context: context, failure: .missingRequiredParameters)
 					}
 					return PdfOperator.sh(name)
 				case .Tc:
-					guard let charSpacing = try? stack.popLast()?.real(objects: nil) else {
+					guard let charSpacing = stack.popLast()?.real(lookup: nil) else {
 						throw PdfParseError(context: context, failure: .missingRequiredParameters)
 					}
 					return PdfOperator.Tc(charSpacing)
 				case .Td:
 					guard
-						let y = try? stack.popLast()?.real(objects: nil),
-						let x = try? stack.popLast()?.real(objects: nil) else {
+						let y = stack.popLast()?.real(lookup: nil),
+						let x = stack.popLast()?.real(lookup: nil) else {
 						throw PdfParseError(context: context, failure: .missingRequiredParameters)
 					}
 					return PdfOperator.Td(x, y)
 				case .TD:
 					guard
-						let y = try? stack.popLast()?.real(objects: nil),
-						let x = try? stack.popLast()?.real(objects: nil) else {
+						let y = stack.popLast()?.real(lookup: nil),
+						let x = stack.popLast()?.real(lookup: nil) else {
 						throw PdfParseError(context: context, failure: .missingRequiredParameters)
 					}
 					return PdfOperator.TD(x, y)
 				case .Tf:
 					guard
-						let size = try? stack.popLast()?.real(objects: nil),
-						let name = try? stack.popLast()?.name(objects: nil) else {
+						let size = stack.popLast()?.real(lookup: nil),
+						let name = stack.popLast()?.name(lookup: nil) else {
 						throw PdfParseError(context: context, failure: .missingRequiredParameters)
 					}
 					return PdfOperator.Tf(name, size)
 				case .Tj:
-					guard let string = try? stack.popLast()?.string(objects: nil)?.pdfText() else {
+					guard let string = stack.popLast()?.string(lookup: nil) else {
 						throw PdfParseError(context: context, failure: .missingRequiredParameters)
 					}
 					return PdfOperator.Tj(string)
 				case .TJ:
-					guard let elements = try? stack.popLast()?.array(objects: nil) else {
+					guard let elements = stack.popLast()?.array(lookup: nil) else {
 						throw PdfParseError(context: context, failure: .missingRequiredParameters)
 					} 
 					var result = [TJElement]()
 					for element in elements {
-						if let text = try? element.string(objects: nil)?.pdfText() {
+						if let text = element.string(lookup: nil) {
 							result.append(.text(text))
-						} else if let offset = try? element.real(objects: nil) {
+						} else if let offset = element.real(lookup: nil) {
 							result.append(.offset(offset))
 						}
 					}
 					return PdfOperator.TJ(result)
 				case .TL:
-					guard let leading = try? stack.popLast()?.real(objects: nil) else {
+					guard let leading = stack.popLast()?.real(lookup: nil) else {
 						throw PdfParseError(context: context, failure: .missingRequiredParameters)
 					}
 					return PdfOperator.TL(leading)
 				case .Tm:
 					guard
-						let f = try? stack.popLast()?.real(objects: nil),
-						let e = try? stack.popLast()?.real(objects: nil),
-						let d = try? stack.popLast()?.real(objects: nil),
-						let c = try? stack.popLast()?.real(objects: nil),
-						let b = try? stack.popLast()?.real(objects: nil),
-						let a = try? stack.popLast()?.real(objects: nil) else {
+						let f = stack.popLast()?.real(lookup: nil),
+						let e = stack.popLast()?.real(lookup: nil),
+						let d = stack.popLast()?.real(lookup: nil),
+						let c = stack.popLast()?.real(lookup: nil),
+						let b = stack.popLast()?.real(lookup: nil),
+						let a = stack.popLast()?.real(lookup: nil) else {
 						throw PdfParseError(context: context, failure: .missingRequiredParameters)
 					}
 					return PdfOperator.Tm(a, b, c, d, e, f)
 				case .Tr:
 					guard
-						let mode = try? stack.popLast()?.integer(objects: nil) else {
+						let mode = stack.popLast()?.integer(lookup: nil) else {
 						throw PdfParseError(context: context, failure: .missingRequiredParameters)
 					}
 					return PdfOperator.Tr(mode)
 				case .Ts:
-					guard let rise = try? stack.popLast()?.real(objects: nil) else {
+					guard let rise = stack.popLast()?.real(lookup: nil) else {
 						throw PdfParseError(context: context, failure: .missingRequiredParameters)
 					}
 					return PdfOperator.Ts(rise)
 				case .Tw:
-					guard let wordSpacing = try? stack.popLast()?.real(objects: nil) else {
+					guard let wordSpacing = stack.popLast()?.real(lookup: nil) else {
 						throw PdfParseError(context: context, failure: .missingRequiredParameters)
 					}
 					return PdfOperator.Tw(wordSpacing)
 				case .Tz:
-					guard let scale = try? stack.popLast()?.real(objects: nil) else {
+					guard let scale = stack.popLast()?.real(lookup: nil) else {
 						throw PdfParseError(context: context, failure: .missingRequiredParameters)
 					}
 					return PdfOperator.Tz(scale)
@@ -367,15 +347,15 @@ extension PdfOperator {
 					return PdfOperator.`T*`
 				case .v:
 					guard
-						let y3 = try? stack.popLast()?.real(objects: nil),
-						let x3 = try? stack.popLast()?.real(objects: nil),
-						let y2 = try? stack.popLast()?.real(objects: nil),
-						let x2 = try? stack.popLast()?.real(objects: nil) else {
+						let y3 = stack.popLast()?.real(lookup: nil),
+						let x3 = stack.popLast()?.real(lookup: nil),
+						let y2 = stack.popLast()?.real(lookup: nil),
+						let x2 = stack.popLast()?.real(lookup: nil) else {
 						throw PdfParseError(context: context, failure: .missingRequiredParameters)
 					}
 					return PdfOperator.v(x2, y2, x3, y3)
 				case .w:
-					guard let lineWidth = try? stack.popLast()?.real(objects: nil) else {
+					guard let lineWidth = stack.popLast()?.real(lookup: nil) else {
 						throw PdfParseError(context: context, failure: .missingRequiredParameters)
 					}
 					return PdfOperator.w(lineWidth)
@@ -385,10 +365,10 @@ extension PdfOperator {
 					return PdfOperator.`W*`
 				case .y:
 					guard
-						let y3 = try? stack.popLast()?.real(objects: nil),
-						let x3 = try? stack.popLast()?.real(objects: nil),
-						let y2 = try? stack.popLast()?.real(objects: nil),
-						let x2 = try? stack.popLast()?.real(objects: nil) else {
+						let y3 = stack.popLast()?.real(lookup: nil),
+						let x3 = stack.popLast()?.real(lookup: nil),
+						let y2 = stack.popLast()?.real(lookup: nil),
+						let x2 = stack.popLast()?.real(lookup: nil) else {
 						throw PdfParseError(context: context, failure: .missingRequiredParameters)
 					}
 					return PdfOperator.y(x2, y2, x3, y3)
@@ -397,16 +377,6 @@ extension PdfOperator {
 				stack.append(object)
 			}
 		} while true
-	}
-}
-
-extension Data {
-	func parseContext<Output>(handler: (inout PdfParseContext) throws -> Output) throws -> Output {
-		return try withUnsafeBytes { bufferPointer in
-			let buffer = OffsetSlice(bufferPointer, bounds: bufferPointer.indices, offset: 0)
-			var context = PdfParseContext(slice: buffer[...], token: nil)
-			return try handler(&context)
-		}
 	}
 }
 

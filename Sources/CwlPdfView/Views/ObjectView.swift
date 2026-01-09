@@ -12,14 +12,14 @@ struct ObjectView: View {
 		self._document = document
 		self.layout = layout
 		self.result = Result {
-			try document.wrappedValue.pdf.objects.object(layout: layout)
+			try document.wrappedValue.pdf.lookup.object(layout: layout)
 		}
 	}
 	
 	var body: some View {
 		switch result {
 		case .success(let object):
-			if case .stream(let pdfStream) = object, pdfStream.dictionary.isImage(objects: nil), let image = NSImage(data: pdfStream.data) {
+			if case .stream(let pdfStream) = object, pdfStream.dictionary.isImage(lookup: nil), let image = NSImage(data: pdfStream.data) {
 				Text(verbatim: pdfStream.dictionary.debugDescription)
 				Image(nsImage: image).resizable().aspectRatio(nil, contentMode: .fit)
 			} else {

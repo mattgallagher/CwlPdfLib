@@ -9,7 +9,7 @@ struct TextState {
 	var wordSpace: CGFloat = 0
 	var horizontalScale: CGFloat = 100
 	var leading: CGFloat = 0
-	var font: CTFont = CTFont(.system, size: 12)
+	var font: PdfFont<CTFont>?
 	var fontSize: CGFloat = 12
 	var renderMode: Int = 0
 	var rise: CGFloat = 0
@@ -21,38 +21,36 @@ struct TextPosition {
 }
 
 extension CGContext {
-	func showPdfText(_ text: String, state: inout TextState, position: inout TextPosition) {
-		var chars = Array(text.utf16)
+	func showPdfText(_ text: Data, state: TextState, position: inout TextPosition) {
+		var chars = Array(text.pdfTextToString().utf16)
 		var glyphs = Array<CGGlyph>(repeating: 0, count: chars.count)
 		var advances = [CGPoint](repeating: .zero, count: chars.count )
-		CTFontGetGlyphsForCharacters(state.font, &chars, &glyphs, chars.count)
-		let total = advances.withUnsafeMutableBufferPointer { bufferPointer in
+		let ctFont = state.font?.platformFont ?? CTFontCreateWithName("Helvetica" as CFString, 1, nil)
+		CTFontGetGlyphsForCharacters(ctFont, &chars, &glyphs, chars.count)
+		advances.withUnsafeMutableBufferPointer { bufferPointer in
 			bufferPointer.withMemoryRebound(to: CGSize.self) { buffer in
-				CTFontGetAdvancesForGlyphs(state.font, .horizontal, glyphs, buffer.baseAddress!, chars.count)
+				_ = CTFontGetAdvancesForGlyphs(ctFont, .horizontal, glyphs, buffer.baseAddress!, chars.count)
 			}
 		}
 		var x: CGFloat = 0
 		for i in 0..<chars.count {
 			let advance = advances[i].x
 			advances[i] = CGPoint(x: x, y: state.rise)
-			x += advance * state.horizontalScale / 100 + state.charSpace + (
+			x += advance * state.fontSize * state.horizontalScale / 100 + state.charSpace + (
 				chars[i] == 0x0020 ? state.wordSpace : 0
 			)
 		}
 		saveGState()
-		concatenate(position.textMatrix)
-		CTFontDrawGlyphs(state.font, glyphs, advances, chars.count, self)
+		concatenate(position.textMatrix.scaledBy(x: state.fontSize, y: state.fontSize))
+		CTFontDrawGlyphs(ctFont, glyphs, advances, chars.count, self)
 		restoreGState()
-		position.textMatrix = CGAffineTransform(translationX: total, y: 0).concatenating(position.textMatrix)
-	}
-	
-	func nextTextLine(state: inout TextState, position: inout TextPosition) {
+		position.textMatrix = CGAffineTransform(translationX: x, y: 0).concatenating(position.textMatrix)
 	}
 }
 
 extension PdfPage {
-	func render(in context: CGContext, objects: PdfObjectList?) {
-		guard let contentStream = self.contentStream(objects: objects) else {
+	func render(in context: CGContext, lookup: PdfObjectLookup?) {
+		guard let contentStream = self.contentStream(lookup: lookup) else {
 			return
 		}
 		
@@ -63,14 +61,15 @@ extension PdfPage {
 			try contentStream.parse { op in
 				switch op {
 				case .`'`(let text):
-					context.nextTextLine(state: &textState, position: &textPosition)
-					context.showPdfText(text, state: &textState, position: &textPosition)
+					textPosition.lineMatrix = textPosition.lineMatrix.translatedBy(x: 0, y: -textState.leading)
+					textPosition.textMatrix = textPosition.lineMatrix
+					context.showPdfText(text, state: textState, position: &textPosition)
 				case .`"`(let text, let cSpacing, let wSpacing):
 					textState.charSpace = cSpacing
 					textState.wordSpace = wSpacing
-					
-					context.nextTextLine(state: &textState, position: &textPosition)
-					context.showPdfText(text, state: &textState, position: &textPosition)
+					textPosition.lineMatrix = textPosition.lineMatrix.translatedBy(x: 0, y: -textState.leading)
+					textPosition.textMatrix = textPosition.lineMatrix
+					context.showPdfText(text, state: textState, position: &textPosition)
 				case .B:
 					context.fillPath(using: .winding)
 					context.strokePath()
@@ -102,14 +101,7 @@ extension PdfPage {
 						control2: CGPoint(x: CGFloat(x2), y: CGFloat(y2))
 					)
 				case .cm(let a, let b, let c, let d, let tx, let ty):
-					let transform = CGAffineTransform(
-						a: CGFloat(a),
-						b: CGFloat(b),
-						c: CGFloat(c),
-						d: CGFloat(d),
-						tx: CGFloat(tx),
-						ty: CGFloat(ty)
-					)
+					let transform = CGAffineTransform(a: a, b: b, c: c, d: d, tx: tx, ty: ty)
 					context.concatenate(transform)
 				case .CS(_):
 					break
@@ -215,35 +207,41 @@ extension PdfPage {
 				case .Tc(let spacing):
 					textState.charSpace = spacing
 				case .Td(let tx, let ty):
-					textPosition.textMatrix = textPosition.textMatrix.translatedBy(x: CGFloat(tx), y: CGFloat(ty))
+					textPosition.lineMatrix = textPosition.lineMatrix.translatedBy(x: tx, y: ty)
+					textPosition.textMatrix = textPosition.lineMatrix
 				case .TD(let tx, let ty):
-					textPosition.lineMatrix = textPosition.lineMatrix.translatedBy(x: CGFloat(tx), y: 0)
 					textState.leading = -CGFloat(ty)
-				case .Tf(_, let size):
-					textState.font = CTFont(.system, size: size)
+					textPosition.lineMatrix = textPosition.lineMatrix.translatedBy(x: tx, y: ty)
+					textPosition.textMatrix = textPosition.lineMatrix
+				case .Tf(let fontKey, let size):
 					textState.fontSize = size
+					guard
+						let fontDictionary = contentStream.resolveResource(category: .Font, key: fontKey, lookup: lookup)
+					else {
+						textState.font = nil
+						break
+					}
+					textState.font = try? PdfFont(fontDictionary: fontDictionary, lookup: lookup) { data in
+						CGDataProvider(data: data as CFData)
+							.flatMap(CGFont.init)
+							.map { CTFontCreateWithGraphicsFont($0, 1.0, nil, nil) }
+					}
 				case .Tj(let text):
-					context.showPdfText(text, state: &textState, position: &textPosition)
+					context.showPdfText(text, state: textState, position: &textPosition)
 				case .TJ(let array):
 					for item in array {
 						switch item {
 						case .offset(let offset):
-							textPosition.textMatrix.tx += offset * textState.fontSize / CGFloat(1000)
+							textPosition.textMatrix.tx -= offset / 1000
 						case .text(let text):
-							context.showPdfText(text, state: &textState, position: &textPosition)
+							context.showPdfText(text, state: textState, position: &textPosition)
 						}
 					}
 				case .TL(let lead):
 					textState.leading = lead
 				case .Tm(let a, let b, let c, let d, let tx, let ty):
-					textPosition.textMatrix = CGAffineTransform(
-						a: CGFloat(a),
-						b: CGFloat(b),
-						c: CGFloat(c),
-						d: CGFloat(d),
-						tx: CGFloat(tx),
-						ty: CGFloat(ty)
-					)
+					textPosition.lineMatrix = CGAffineTransform(a: a, b: b, c: c, d: d, tx: tx, ty: ty)
+					textPosition.textMatrix = CGAffineTransform(a: a, b: b, c: c, d: d, tx: tx, ty: ty)
 				case .Tr(let mode):
 					if let mode = CGTextDrawingMode(rawValue: Int32(mode)) {
 						context.setTextDrawingMode(mode)
@@ -255,7 +253,8 @@ extension PdfPage {
 				case .Tz(let scaling):
 					textState.horizontalScale = CGFloat(scaling)
 				case .`T*`:
-					context.nextTextLine(state: &textState, position: &textPosition)
+					textPosition.lineMatrix = textPosition.lineMatrix.translatedBy(x: 0, y: -textState.leading)
+					textPosition.textMatrix = textPosition.lineMatrix
 				case .v(let x2, let y2, let x3, let y3):
 					context.addCurve(
 						to: CGPoint(x: CGFloat(x3), y: CGFloat(y3)),
@@ -280,5 +279,20 @@ extension PdfPage {
 		} catch {
 			print(error)
 		}
+	}
+}
+
+extension PdfDictionary {
+	func ctFont(lookup: PdfObjectLookup?) -> CTFont {
+		guard
+			let fontDescriptor = self[.FontDescriptor]?.dictionary(lookup: lookup),
+			let fontStream = (fontDescriptor[.FontFile3] ?? fontDescriptor[.FontFile2] ?? fontDescriptor[.FontFile])?.stream(lookup: lookup),
+			let provider = CGDataProvider(data: fontStream.data as CFData),
+			let cgFont = CGFont(provider)
+		else {
+			let postScriptName = "Helvetica" // derived from /BaseFont
+			return CTFontCreateWithName(postScriptName as CFString, 1.0, nil)
+		}
+		return CTFontCreateWithGraphicsFont(cgFont, 1.0, nil, nil)
 	}
 }

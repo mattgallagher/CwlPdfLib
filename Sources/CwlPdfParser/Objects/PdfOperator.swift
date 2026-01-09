@@ -5,8 +5,8 @@ import Foundation
 /// Represents a single PDF content stream operator and its operands.
 /// The enum cases are named exactly as the operator symbols defined in Annex A of ISO 32000‑2.
 public enum PdfOperator: Sendable, Equatable {
-	case `'`(String) // move to next line and show text
-	case `"`(String, Double, Double) // Set word and character spacing, move to next line and show text
+	case `'`(Data) // move to next line and show text
+	case `"`(Data, Double, Double) // Set word and character spacing, move to next line and show text
 	case B // fill, stroke
 	case `B*` // eofill, stroke
 	case b // closepath, fill, stroke
@@ -64,7 +64,7 @@ public enum PdfOperator: Sendable, Equatable {
 	case Td(Double, Double) // move text position
 	case TD(Double, Double) // move text position and set leading
 	case Tf(String, Double) // set text font and size
-	case Tj(String) // show text
+	case Tj(Data) // show text
 	case TJ([TJElement]) // show text with individual glyph adjustments
 	case TL(Double) // set text leading
 	case Tm(Double, Double, Double, Double, Double, Double) // set text matrix
@@ -81,6 +81,6 @@ public enum PdfOperator: Sendable, Equatable {
 }
 
 public enum TJElement: Sendable, Equatable {
-	case text(String)
+	case text(Data)
 	case offset(Double)
 }
