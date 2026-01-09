@@ -20,34 +20,6 @@ struct TextPosition {
 	var lineMatrix = CGAffineTransform.identity
 }
 
-extension CGContext {
-	func showText(_ text: Data, state: TextState, position: inout TextPosition) {
-		var chars = Array(text.pdfTextToString().utf16)
-		var glyphs = Array<CGGlyph>(repeating: 0, count: chars.count)
-		var advances = [CGPoint](repeating: .zero, count: chars.count )
-		let ctFont = state.font?.platformFont ?? CTFontCreateWithName("Helvetica" as CFString, 1, nil)
-		CTFontGetGlyphsForCharacters(ctFont, &chars, &glyphs, chars.count)
-		advances.withUnsafeMutableBufferPointer { bufferPointer in
-			bufferPointer.withMemoryRebound(to: CGSize.self) { buffer in
-				_ = CTFontGetAdvancesForGlyphs(ctFont, .horizontal, glyphs, buffer.baseAddress!, chars.count)
-			}
-		}
-		var x: CGFloat = 0
-		for i in 0..<chars.count {
-			let advance = advances[i].x
-			advances[i] = CGPoint(x: x, y: state.rise)
-			x += advance * state.fontSize * state.horizontalScale / 100 + state.charSpace + (
-				chars[i] == 0x0020 ? state.wordSpace : 0
-			)
-		}
-		saveGState()
-		concatenate(position.textMatrix.scaledBy(x: state.fontSize, y: state.fontSize))
-		CTFontDrawGlyphs(ctFont, glyphs, advances, chars.count, self)
-		restoreGState()
-		position.textMatrix = CGAffineTransform(translationX: x, y: 0).concatenating(position.textMatrix)
-	}
-}
-
 extension PdfPage {
 	func render(in context: CGContext, lookup: PdfObjectLookup?) {
 		guard let contentStream = self.contentStream(lookup: lookup) else {

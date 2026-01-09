@@ -264,13 +264,13 @@ public struct PdfFont<PlatformFont> {
 			var mappings = [CMapMapping]()
 			while let token = try PdfObject.parseNext(context: &context) {
 				switch token {
-				case .identifier(CMapIdentifier.WMode.rawValue):
+				case .identifier(.WMode):
 					if let mode = try PdfObject.parseNext(context: &context)?.integer(lookup: nil), mode == 1 {
 						writingMode = .vertical
 					}
-				case .identifier(CMapIdentifier.begincodespacerange.rawValue):
+				case .identifier(.begincodespacerange):
 					while let token = try PdfObject.parseNext(context: &context) {
-						if token == .identifier(CMapIdentifier.endcodespacerange.rawValue) {
+						if token == .identifier(.endcodespacerange) {
 							break
 						}
 						guard
@@ -286,9 +286,9 @@ public struct PdfFont<PlatformFont> {
 							)
 						)
 					}
-				case .identifier(CMapIdentifier.begincidchar.rawValue):
+				case .identifier(.begincidchar):
 					while let token = try PdfObject.parseNext(context: &context) {
-						if token == .identifier(CMapIdentifier.endcidchar.rawValue) {
+						if token == .identifier(.endcidchar) {
 							break
 						}
 						guard
@@ -299,9 +299,9 @@ public struct PdfFont<PlatformFont> {
 						}
 						mappings.append(.single(code: code.asBigEndianUInt32, cid: UInt32(cid)))
 					}
-				case .identifier(CMapIdentifier.begincidrange.rawValue):
+				case .identifier(.begincidrange):
 					while let token = try PdfObject.parseNext(context: &context) {
-						if token == .identifier(CMapIdentifier.endcidrange.rawValue) {
+						if token == .identifier(.endcidrange) {
 							break
 						}
 						guard
@@ -341,16 +341,15 @@ public struct PdfFont<PlatformFont> {
 			return nil
 		}
 		
-		var codeSpaceRanges: [CodeSpaceRange] = []
-		var mappings: [UnicodeMapping] = []
-		
-		try stream.data.parseContext { context in
+		let (codeSpaceRanges, mappings) = try stream.data.parseContext { context in
+			var codeSpaceRanges: [CodeSpaceRange] = []
+			var mappings: [UnicodeMapping] = []
 			while let token = try PdfObject.parseNext(context: &context) {
 				switch token {
 				case .identifier(.begincodespacerange):
 					while let token = try PdfObject.parseNext(context: &context) {
 						if token.identifier == .endcodespacerange {
-							return
+							break
 						}
 						
 						guard
@@ -375,7 +374,7 @@ public struct PdfFont<PlatformFont> {
 					while true {
 						let peek = try PdfObject.parseNext(context: &context)
 						if peek?.identifier == .endbfchar {
-							return
+							break
 						}
 						
 						guard
@@ -396,7 +395,7 @@ public struct PdfFont<PlatformFont> {
 					while true {
 						let peek = try PdfObject.parseNext(context: &context)
 						if peek?.identifier == .endbfrange {
-							return
+							break
 						}
 						
 						guard
@@ -411,18 +410,14 @@ public struct PdfFont<PlatformFont> {
 						
 						let third = try PdfObject.parseNext(context: &context)
 						
-						if let startUnicodeData = third?.string(lookup: nil) {
-							let scalars = Self.decodeUnicodeScalars(startUnicodeData)
-							guard scalars.count == 1 else { continue }
-							
+						if let value = third?.string(lookup: nil)?.asBigEndianUInt32, let scalar = UnicodeScalar(value) {
 							mappings.append(
 								.range(
 									startCode...endCode,
-									startScalar: scalars[0]
+									startScalar: scalar
 								)
 							)
-						}
-						else if case .array(let array)? = third {
+						} else if case .array(let array)? = third {
 							var code = startCode
 							
 							for entry in array {
@@ -437,6 +432,8 @@ public struct PdfFont<PlatformFont> {
 					continue
 				}
 			}
+			
+			return (codeSpaceRanges, mappings)
 		}
 		
 		return ToUnicodeCMap(
@@ -671,13 +668,29 @@ public struct PdfFont<PlatformFont> {
 	}
 	
 	static func decodeUnicodeScalars(_ data: Data) -> [UnicodeScalar] {
-		data.withUnsafeBytes { bufferPointer in
-			bufferPointer.withMemoryRebound(to: UInt16.self) { rebound in
-				rebound.compactMap { value in
-					UnicodeScalar(UInt32(value))
-				}
-			}
-		}
+
+		 // PDF ToUnicode uses UTF-16BE by spec
+		 guard data.count >= 2, data.count % 2 == 0 else {
+			  return []
+		 }
+
+		 var scalars: [UnicodeScalar] = []
+		 scalars.reserveCapacity(data.count / 2)
+
+		 var index = data.startIndex
+
+		 while index < data.endIndex {
+			  let hi = UInt16(data[index]) << 8
+			  let lo = UInt16(data[index + 1])
+			  let value = hi | lo
+			  index += 2
+
+			  if let scalar = UnicodeScalar(value) {
+					scalars.append(scalar)
+			  }
+		 }
+
+		 return scalars
 	}
 }
 
@@ -715,15 +728,30 @@ public struct EncodingDictionary {
 }
 
 public enum BaseEncoding: String {
-	case Standard
-	case WinAnsi
-	case MacRoman
-	case MacExpert
+	case ExpertEncoding
+	case MacExpertEncoding
+	case MacRomanEncoding
+	case StandardEncoding
+	case SymbolEncoding
+	case WinAnsiEncoding
+	case ZapfDingbatsEncoding
+	
+	public var glyphNames: [String?] {
+		switch self {
+		case .ExpertEncoding: FontEncodingGlyphNames.Expert
+		case .MacExpertEncoding: FontEncodingGlyphNames.MacExpert
+		case .MacRomanEncoding: FontEncodingGlyphNames.MacRoman
+		case .StandardEncoding: FontEncodingGlyphNames.Standard
+		case .SymbolEncoding: FontEncodingGlyphNames.Symbol
+		case .WinAnsiEncoding: FontEncodingGlyphNames.WinAnsi
+		case .ZapfDingbatsEncoding: FontEncodingGlyphNames.ZapfDingbats
+		}
+	}
 }
 
 public struct CompositeFontData {
-	let cmap: CMap // Encoding entry
-	let descendantFont: CIDFontData
+	public let cmap: CMap // Encoding entry
+	public let descendantFont: CIDFontData
 }
 
 public struct CIDFontData {
@@ -795,14 +823,4 @@ public typealias CIDRange = ClosedRange<UInt32>
 public enum CIDToGIDMap {
 	case identity
 	case mapped([UInt16]) // index = CID, value = GID
-}
-
-public enum CMapIdentifier: String {
-	case begincodespacerange
-	case endcodespacerange
-	case begincidchar
-	case endcidchar
-	case begincidrange
-	case endcidrange
-	case WMode
 }
