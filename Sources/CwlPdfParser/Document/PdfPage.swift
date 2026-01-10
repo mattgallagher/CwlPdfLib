@@ -41,6 +41,7 @@ public struct PdfPage: Sendable, Hashable, Identifiable {
 		return PdfContentStream(
 			stream: contents,
 			resources: pageDictionary[.Resources]?.dictionary(lookup: lookup),
+			annotationRect: nil,
 			lookup: lookup
 		)
 	}

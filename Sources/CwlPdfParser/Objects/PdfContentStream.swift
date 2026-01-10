@@ -14,7 +14,7 @@ public struct PdfContentStream {
 		self.resources = resources ?? stream.dictionary[.Resources]?.dictionary(lookup: lookup)
 		self.annotationRect = annotationRect
 		
-		if stream.dictionary[.Subtype]?.string(lookup: lookup)?.pdfTextToString() == .Form {
+		if stream.dictionary[.Subtype]?.name(lookup: lookup) == .Form {
 			self.bbox = stream
 				.dictionary[.BBox]?
 				.array(lookup: lookup)

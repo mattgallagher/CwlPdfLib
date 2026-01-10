@@ -22,16 +22,13 @@ struct TextPosition {
 
 extension PdfContentStream {
 	func render(in context: CGContext, lookup: PdfObjectLookup?) {
-		let needGStateRestore = bbox != nil || matrix != nil
-		if needGStateRestore {
-			context.saveGState()
+		context.saveGState()
+		
+		if let contextTransform {
+			context.concatenate(contextTransform)
 		}
 		
-		if let matrix = matrix {
-			context.concatenate(matrix.cgAffineTransform)
-		}
-		
-		if let bbox = bbox {
+		if let bbox {
 			context.addRect(bbox.cgRect)
 			context.clip()
 		}
@@ -116,6 +113,7 @@ extension PdfContentStream {
 						let formContentStream = PdfContentStream(
 							stream: xobjectStream,
 							resources: nil,
+							annotationRect: nil,
 							lookup: lookup
 						)
 						formContentStream.render(in: context, lookup: lookup)
@@ -284,9 +282,25 @@ extension PdfContentStream {
 			print(error)
 		}
 
-		if needGStateRestore {
-			context.restoreGState()
+		context.restoreGState()
+	}
+	
+	var contextTransform: CGAffineTransform? {
+		guard let rect = annotationRect?.cgRect, let bbox = bbox?.cgRect else {
+			return matrix?.cgAffineTransform
 		}
+		let matrix = matrix?.cgAffineTransform ?? .identity
+		let transformedBBox = bbox.applying(matrix)
+		let scaleX = rect.width / transformedBBox.width
+		let scaleY = rect.height / transformedBBox.height
+		let translateX = rect.minX - transformedBBox.minX * scaleX
+		let translateY = rect.minY - transformedBBox.minY * scaleY
+		
+		var AA = CGAffineTransform.identity
+		AA = AA.translatedBy(x: translateX, y: translateY)
+		AA = AA.scaledBy(x: scaleX, y: scaleY)
+		AA = AA.concatenating(matrix)
+		return AA
 	}
 }
 
