@@ -53,6 +53,12 @@ public struct PdfGState: Sendable {
 	/// Text knockout flag
 	public let textKnockout: Bool?
 
+	/// Soft mask for transparency
+	public let softMask: PdfSMask?
+
+	/// Whether SMask was explicitly set to /None (to clear a previous mask)
+	public let softMaskNone: Bool
+
 	public init(dictionary: PdfDictionary, lookup: PdfObjectLookup?) {
 		self.strokingAlpha = dictionary[.CA]?.real(lookup: lookup)
 		self.nonStrokingAlpha = dictionary[.ca]?.real(lookup: lookup)
@@ -89,6 +95,24 @@ public struct PdfGState: Sendable {
 		self.flatness = dictionary[.FL]?.real(lookup: lookup)
 		self.alphaIsShape = dictionary[.AIS]?.boolean(lookup: lookup)
 		self.textKnockout = dictionary[.TK]?.boolean(lookup: lookup)
+
+		// Parse SMask
+		if let smaskObj = dictionary[.SMask] {
+			if smaskObj.name(lookup: lookup) == .None {
+				// SMask /None explicitly clears the soft mask
+				self.softMask = nil
+				self.softMaskNone = true
+			} else if let smaskDict = smaskObj.dictionary(lookup: lookup) {
+				self.softMask = PdfSMask(dictionary: smaskDict, lookup: lookup)
+				self.softMaskNone = false
+			} else {
+				self.softMask = nil
+				self.softMaskNone = false
+			}
+		} else {
+			self.softMask = nil
+			self.softMaskNone = false
+		}
 	}
 }
 

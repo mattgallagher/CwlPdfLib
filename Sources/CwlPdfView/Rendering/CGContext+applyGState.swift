@@ -3,16 +3,37 @@
 import CwlPdfParser
 import CoreGraphics
 
+/// Tracks the active soft mask state during rendering.
+struct RenderState {
+	var activeSoftMask: CGImage?
+	var softMaskBounds: CGRect?
+	var colorState = ColorState()
+
+	mutating func applySoftMask(_ smaskData: PdfSMask?, lookup: PdfObjectLookup?) {
+		if let smaskData, let result = smaskData.createMaskImage(lookup: lookup) {
+			activeSoftMask = result.image
+			softMaskBounds = result.bounds
+		} else {
+			clearSoftMask()
+		}
+	}
+
+	mutating func clearSoftMask() {
+		activeSoftMask = nil
+		softMaskBounds = nil
+	}
+}
+
 extension CGContext {
-	func apply(_ gstate: PdfGState, colorState: inout ColorState) {
+	func apply(_ gstate: PdfGState, renderState: inout RenderState, lookup: PdfObjectLookup?) {
 		if let alpha = gstate.strokingAlpha {
-			colorState.strokeAlpha = CGFloat(alpha)
-			colorState.applyStrokeColor(to: self)
+			renderState.colorState.strokeAlpha = CGFloat(alpha)
+			renderState.colorState.applyStrokeColor(to: self)
 		}
 
 		if let alpha = gstate.nonStrokingAlpha {
-			colorState.fillAlpha = CGFloat(alpha)
-			colorState.applyFillColor(to: self)
+			renderState.colorState.fillAlpha = CGFloat(alpha)
+			renderState.colorState.applyFillColor(to: self)
 		}
 
 		if let blendMode = gstate.blendMode {
@@ -54,6 +75,19 @@ extension CGContext {
 		if let flatness = gstate.flatness {
 			setFlatness(CGFloat(flatness))
 		}
+
+		// Handle soft mask
+		if gstate.softMaskNone {
+			renderState.clearSoftMask()
+			// Note: clearing clip requires restoreGState; we track but can't undo immediately
+		} else if let smaskData = gstate.softMask {
+			renderState.applySoftMask(smaskData, lookup: lookup)
+			// Apply the mask as a clip to the current graphics context
+			if let mask = renderState.activeSoftMask, let bounds = renderState.softMaskBounds {
+				clip(to: bounds, mask: mask)
+			}
+		}
+		// If neither softMaskNone nor softMask, inherit from parent (no change to renderState)
 	}
 }
 

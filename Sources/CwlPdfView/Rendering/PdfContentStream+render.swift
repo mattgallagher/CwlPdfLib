@@ -17,12 +17,11 @@ extension PdfContentStream {
 			context.clip()
 		}
 		
+		var renderState = RenderState()
+		var renderStateStack = [RenderState]()
+		
 		var textState = TextState()
-		textState.lookup = lookup
 		var textPosition = TextPosition()
-
-		var colorStack = [ColorState]()
-		var colorState = ColorState()
 		
 		do {
 			try parse { op in
@@ -30,13 +29,13 @@ extension PdfContentStream {
 				case .`'`(let text):
 					textPosition.lineMatrix = textPosition.lineMatrix.translatedBy(x: 0, y: -textState.leading)
 					textPosition.textMatrix = textPosition.lineMatrix
-					context.showText(text, state: textState, position: &textPosition)
+					context.showText(text, state: textState, position: &textPosition, lookup: lookup)
 				case .`"`(let text, let cSpacing, let wSpacing):
 					textState.charSpace = cSpacing
 					textState.wordSpace = wSpacing
 					textPosition.lineMatrix = textPosition.lineMatrix.translatedBy(x: 0, y: -textState.leading)
 					textPosition.textMatrix = textPosition.lineMatrix
-					context.showText(text, state: textState, position: &textPosition)
+					context.showText(text, state: textState, position: &textPosition, lookup: lookup)
 				case .B:
 					context.drawPath(using: .fillStroke)
 				case .`B*`:
@@ -68,21 +67,21 @@ extension PdfContentStream {
 					context.concatenate(transform)
 				case .CS(let name):
 					if let deviceColorSpace = PdfColorSpace(name: name) {
-						colorState.strokeColorSpace = deviceColorSpace
+						renderState.colorState.strokeColorSpace = deviceColorSpace
 					} else if
 						let colorSpaceArray = resolveResourceArray(category: .ColorSpace, key: name, lookup: lookup),
 						let colorSpace = PdfColorSpace.parse(.array(colorSpaceArray), lookup: lookup)
 					{
-						colorState.strokeColorSpace = colorSpace
+						renderState.colorState.strokeColorSpace = colorSpace
 					}
 				case .cs(let name):
 					if let deviceColorSpace = PdfColorSpace(name: name) {
-						colorState.fillColorSpace = deviceColorSpace
+						renderState.colorState.fillColorSpace = deviceColorSpace
 					} else if
 						let colorSpaceArray = resolveResourceArray(category: .ColorSpace, key: name, lookup: lookup),
 						let colorSpace = PdfColorSpace.parse(.array(colorSpaceArray), lookup: lookup)
 					{
-						colorState.fillColorSpace = colorSpace
+						renderState.colorState.fillColorSpace = colorSpace
 					}
 				case .d(let phase, let array):
 					let dashArray = array.map { CGFloat($0) }
@@ -138,11 +137,11 @@ extension PdfContentStream {
 				case .`f*`:
 					context.fillPath(using: .evenOdd)
 				case .G(let gray):
-					colorState.setStrokeGray(CGFloat(gray))
-					colorState.applyStrokeColor(to: context)
+					renderState.colorState.setStrokeGray(CGFloat(gray))
+					renderState.colorState.applyStrokeColor(to: context)
 				case .g(let gray):
-					colorState.setFillGray(CGFloat(gray))
-					colorState.applyFillColor(to: context)
+					renderState.colorState.setFillGray(CGFloat(gray))
+					renderState.colorState.applyFillColor(to: context)
 				case .gs(let name):
 					guard let gstateDictionary = resolveResourceDictionary(
 						category: .ExtGState,
@@ -152,7 +151,7 @@ extension PdfContentStream {
 						break
 					}
 					let gstate = PdfGState(dictionary: gstateDictionary, lookup: lookup)
-					context.apply(gstate, colorState: &colorState)
+					context.apply(gstate, renderState: &renderState, lookup: lookup)
 				case .h:
 					context.closePath()
 				case .i(_):
@@ -176,11 +175,11 @@ extension PdfContentStream {
 					}
 					context.setLineJoin(lineJoin)
 				case .K(let c, let m, let y, let k):
-					colorState.setStrokeCMYK(CGFloat(c), CGFloat(m), CGFloat(y), CGFloat(k))
-					colorState.applyStrokeColor(to: context)
+					renderState.colorState.setStrokeCMYK(CGFloat(c), CGFloat(m), CGFloat(y), CGFloat(k))
+					renderState.colorState.applyStrokeColor(to: context)
 				case .k(let c, let m, let y, let k):
-					colorState.setFillCMYK(CGFloat(c), CGFloat(m), CGFloat(y), CGFloat(k))
-					colorState.applyFillColor(to: context)
+					renderState.colorState.setFillCMYK(CGFloat(c), CGFloat(m), CGFloat(y), CGFloat(k))
+					renderState.colorState.applyFillColor(to: context)
 				case .l(let x, let y):
 					context.addLine(to: CGPoint(x: CGFloat(x), y: CGFloat(y)))
 				case .M(let limit):
@@ -193,18 +192,18 @@ extension PdfContentStream {
 					context.beginPath()
 				case .q:
 					context.saveGState()
-					colorStack.append(colorState)
+					renderStateStack.append(renderState)
 				case .Q:
-					colorState = colorStack.popLast() ?? ColorState()
+					renderState = renderStateStack.popLast() ?? RenderState()
 					context.restoreGState()
 				case .re(let x, let y, let w, let h):
 					context.addRect(CGRect(x: CGFloat(x), y: CGFloat(y), width: CGFloat(w), height: CGFloat(h)))
 				case .RG(let r, let g, let b):
-					colorState.setStrokeRGB(CGFloat(r), CGFloat(g), CGFloat(b))
-					colorState.applyStrokeColor(to: context)
+					renderState.colorState.setStrokeRGB(CGFloat(r), CGFloat(g), CGFloat(b))
+					renderState.colorState.applyStrokeColor(to: context)
 				case .rg(let r, let g, let b):
-					colorState.setFillRGB(CGFloat(r), CGFloat(g), CGFloat(b))
-					colorState.applyFillColor(to: context)
+					renderState.colorState.setFillRGB(CGFloat(r), CGFloat(g), CGFloat(b))
+					renderState.colorState.applyFillColor(to: context)
 				case .ri(_):
 					break
 				case .S:
@@ -213,17 +212,17 @@ extension PdfContentStream {
 					context.closePath()
 					context.strokePath()
 				case .SC(let colors):
-					colorState.setStrokeColor(colors.map { CGFloat($0) })
-					colorState.applyStrokeColor(to: context)
+					renderState.colorState.setStrokeColor(colors.map { CGFloat($0) })
+					renderState.colorState.applyStrokeColor(to: context)
 				case .sc(let colors):
-					colorState.setFillColor(colors.map { CGFloat($0) })
-					colorState.applyFillColor(to: context)
+					renderState.colorState.setFillColor(colors.map { CGFloat($0) })
+					renderState.colorState.applyFillColor(to: context)
 				case .SCN(let colors):
-					colorState.setStrokeColor(colors.map { CGFloat($0) })
-					colorState.applyStrokeColor(to: context)
+					renderState.colorState.setStrokeColor(colors.map { CGFloat($0) })
+					renderState.colorState.applyStrokeColor(to: context)
 				case .scn(let colors):
-					colorState.setFillColor(colors.map { CGFloat($0) })
-					colorState.applyFillColor(to: context)
+					renderState.colorState.setFillColor(colors.map { CGFloat($0) })
+					renderState.colorState.applyFillColor(to: context)
 				case .sh(_):
 					break
 				case .Tc(let spacing):
@@ -249,7 +248,7 @@ extension PdfContentStream {
 							.map { CTFontCreateWithGraphicsFont($0, 1.0, nil, nil) }
 					}
 				case .Tj(let text):
-					context.showText(text, state: textState, position: &textPosition)
+					context.showText(text, state: textState, position: &textPosition, lookup: lookup)
 				case .TJ(let array):
 					for item in array {
 						switch item {
@@ -260,7 +259,7 @@ extension PdfContentStream {
 							let translation = CGAffineTransform(translationX: displacement, y: 0)
 							textPosition.textMatrix = translation.concatenating(textPosition.textMatrix)
 						case .text(let text):
-							context.showText(text, state: textState, position: &textPosition)
+							context.showText(text, state: textState, position: &textPosition, lookup: lookup)
 						}
 					}
 				case .TL(let lead):

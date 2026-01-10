@@ -14,7 +14,6 @@ struct TextState {
 	var fontSize: CGFloat = 12
 	var renderMode: Int = 0
 	var rise: CGFloat = 0
-	var lookup: PdfObjectLookup?
 }
 
 struct TextPosition {
@@ -23,12 +22,12 @@ struct TextPosition {
 }
 
 extension CGContext {
-	func showText(_ data: Data, state: TextState, position: inout TextPosition) {
+	func showText(_ data: Data, state: TextState, position: inout TextPosition, lookup: PdfObjectLookup?) {
 		guard let pdfFont = state.font else { return }
 
 		// Handle Type3 fonts
 		if case .type3(let type3Data) = pdfFont.kind {
-			drawType3Text(data, font: pdfFont, type3Data: type3Data, state: state, position: &position)
+			drawType3Text(data, font: pdfFont, type3Data: type3Data, state: state, position: &position, lookup: lookup)
 			return
 		}
 
@@ -45,7 +44,8 @@ extension CGContext {
 		font: PdfFont<CTFont>,
 		type3Data: Type3FontData,
 		state: TextState,
-		position: inout TextPosition
+		position: inout TextPosition,
+		lookup: PdfObjectLookup?
 	) {
 		let fontSize = state.fontSize
 		let fontMatrix = font.common.fontMatrix.cgAffineTransform
@@ -61,7 +61,7 @@ extension CGContext {
 			guard let glyphName else { continue }
 
 			// Look up CharProc stream
-			guard let charProcStream = type3Data.charProcs[glyphName]?.stream(lookup: state.lookup) else {
+			guard let charProcStream = type3Data.charProcs[glyphName]?.stream(lookup: lookup) else {
 				continue
 			}
 
@@ -82,9 +82,9 @@ extension CGContext {
 				stream: charProcStream,
 				resources: type3Data.resources,
 				annotationRect: nil,
-				lookup: state.lookup
+				lookup: lookup
 			)
-			charProcContentStream.render(in: self, lookup: state.lookup)
+			charProcContentStream.render(in: self, lookup: lookup)
 
 			restoreGState()
 

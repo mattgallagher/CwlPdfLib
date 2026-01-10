@@ -110,6 +110,15 @@ public extension String {
 	static let WMode = "WMode"
 	static let XObject = "XObject"
 
+	// SMask dictionary keys
+	static let S = "S"
+	static let G = "G"
+	static let BC = "BC"
+	static let TR = "TR"
+	static let Group = "Group"
+	static let Alpha = "Alpha"
+	static let Luminosity = "Luminosity"
+
 	// ExtGState keys
 	static let CA = "CA"
 	static let ca = "ca"
