@@ -1,4 +1,4 @@
-// CwlPdfParser. Copyright © 2025 Matt Gallagher. See LICENSE file for usage permissions.
+// CwlPdfLib. Copyright © 2025 Matt Gallagher. See LICENSE file for usage permissions.
 
 public struct PdfObjectLayout: Sendable, Hashable, Identifiable {
 	public init(objectIdentifier: PdfObjectIdentifier, range: Range<Int>, revision: Int) {

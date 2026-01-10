@@ -1,6 +1,7 @@
 // CwlPdfLib. Copyright © 2025 Matt Gallagher. See LICENSE file for usage permissions.
 
 import Foundation
+import CommonCrypto
 
 public enum PdfObject: Sendable, Hashable {
 	case array(PdfArray)
@@ -77,14 +78,6 @@ public extension PdfObject {
 		}
 	}
 
-	func pdfText(lookup: PdfObjectLookup?) -> String? {
-		switch self {
-		case .string(let string): string.pdfTextToString()
-		case .reference(let reference): try? lookup?.object(for: reference)?.pdfText(lookup: lookup)
-		default: nil
-		}
-	}
-
 	func real(lookup: PdfObjectLookup?) -> Double? {
 		switch self {
 		case .integer(let integer): Double(integer)
@@ -110,10 +103,27 @@ public extension PdfObject {
 	}
 	
 	func string(lookup: PdfObjectLookup?) -> Data? {
+		string(lookup: lookup, objectId: nil)
+	}
+
+	/// Get string data with optional decryption.
+	/// - Parameters:
+	///   - lookup: The object lookup for resolving references and accessing decryption
+	///   - objectId: The object ID for decryption context (used when the string is part of a known object)
+	/// - Returns: The (decrypted) string data, or nil if this is not a string
+	func string(lookup: PdfObjectLookup?, objectId: PdfObjectIdentifier?) -> Data? {
 		switch self {
-		case .string(let string): string
-		case .reference(let reference): try? lookup?.object(for: reference)?.string(lookup: lookup)
-		default: nil
+		case .string(let data):
+			// Decrypt if we have a decryption handler and object ID
+			if let decryption = lookup?.decryption, let objectId {
+				return try? decryption.decryptString(data: data, objectId: objectId)
+			}
+			return data
+		case .reference(let reference):
+			// When resolving a reference, use the reference's ID for decryption
+			return try? lookup?.object(for: reference)?.string(lookup: lookup, objectId: reference)
+		default:
+			return nil
 		}
 	}
 	

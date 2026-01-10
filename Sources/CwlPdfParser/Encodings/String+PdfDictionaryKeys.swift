@@ -1,4 +1,4 @@
-// CwlPdfParser. Copyright © 2025 Matt Gallagher. See LICENSE file for usage permissions.
+// CwlPdfLib. Copyright © 2025 Matt Gallagher. See LICENSE file for usage permissions.
 
 public extension String {
 	static let Ascent = "Ascent"
@@ -78,4 +78,29 @@ public extension String {
 	static let Width = "Width"
 	static let Widths = "Widths"
 	static let XObject = "XObject"
+
+	// Encryption dictionary keys
+	static let Encrypt = "Encrypt"
+	static let V = "V"
+	static let R = "R"
+	static let O = "O"
+	static let U = "U"
+	static let OE = "OE"
+	static let UE = "UE"
+	static let P = "P"
+	static let Perms = "Perms"
+	static let EncryptMetadata = "EncryptMetadata"
+	static let CF = "CF"
+	static let StmF = "StmF"
+	static let StrF = "StrF"
+	static let EFF = "EFF"
+	static let CFM = "CFM"
+	static let AuthEvent = "AuthEvent"
+	static let ID = "ID"
+	static let Standard = "Standard"
+	static let StdCF = "StdCF"
+	static let AESV2 = "AESV2"
+	static let AESV3 = "AESV3"
+	static let None = "None"
+	static let DocOpen = "DocOpen"
 }

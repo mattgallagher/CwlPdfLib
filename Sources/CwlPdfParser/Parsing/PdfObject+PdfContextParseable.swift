@@ -1,4 +1,4 @@
-// CwlPdfParser. Copyright © 2025 Matt Gallagher. See LICENSE file for usage permissions.
+// CwlPdfLib. Copyright © 2025 Matt Gallagher. See LICENSE file for usage permissions.
 
 import Foundation
 
@@ -52,7 +52,13 @@ extension PdfObject: PdfContextParseable {
 				}
 			}
 			
-			let data = try context.decode(length: length, filters: filters, decodeParams: dictionary["DecodeParms"])
+			let data = try context.decode(
+			length: length,
+			filters: filters,
+			decodeParams: dictionary["DecodeParms"],
+			decryption: lookup?.decryption,
+			objectId: context.objectIdentifier
+		)
 			object = .stream(PdfStream(dictionary: dictionary, data: data))
 			
 			try PdfToken

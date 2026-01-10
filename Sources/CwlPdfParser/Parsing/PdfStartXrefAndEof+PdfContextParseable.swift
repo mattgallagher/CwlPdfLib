@@ -1,4 +1,4 @@
-// CwlPdfParser. Copyright © 2025 Matt Gallagher. See LICENSE file for usage permissions.
+// CwlPdfLib. Copyright © 2025 Matt Gallagher. See LICENSE file for usage permissions.
 
 extension PdfStartXrefAndEof: PdfContextParseable {
 	static func parse(context: inout PdfParseContext) throws -> PdfStartXrefAndEof {

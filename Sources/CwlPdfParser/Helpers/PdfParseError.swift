@@ -36,6 +36,11 @@ public enum PdfParseFailure: Int, Sendable {
 	case unsupportedCMap
 	case invalidCMapData
 	case xrefNotFound
+	case invalidPassword
+	case passwordRequired
+	case unsupportedEncryption
+	case decryptionFailed
+	case missingDocumentId
 }
 
 public struct PdfParseError: Error {

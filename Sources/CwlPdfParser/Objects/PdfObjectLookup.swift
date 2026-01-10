@@ -1,9 +1,12 @@
-// CwlPdfParser. Copyright © 2025 Matt Gallagher. See LICENSE file for usage permissions.
+// CwlPdfLib. Copyright © 2025 Matt Gallagher. See LICENSE file for usage permissions.
 
 public struct PdfObjectLookup: Sendable {
 	let source: any PdfSource
 	let xrefTables: [PdfXRefTable]
 	let objectLayoutFromOffset: [Int: PdfObjectLayout]
+
+	/// Decryption handler for encrypted documents. Set after initialization when encryption is detected.
+	var decryption: PdfDecryption?
 	
 	public func objectLayout(for objectIdentifier: PdfObjectIdentifier) throws -> PdfObjectLayout? {
 		for table in xrefTables {

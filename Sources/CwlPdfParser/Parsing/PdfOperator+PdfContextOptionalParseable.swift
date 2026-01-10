@@ -1,4 +1,4 @@
-// CwlPdfParser. Copyright © 2025 Matt Gallagher. See LICENSE file for usage permissions.
+// CwlPdfLib. Copyright © 2025 Matt Gallagher. See LICENSE file for usage permissions.
 
 extension PdfOperator: PdfContextOptionalParseable {
 	static func parseNext(context: inout PdfParseContext) throws -> PdfOperator? {
