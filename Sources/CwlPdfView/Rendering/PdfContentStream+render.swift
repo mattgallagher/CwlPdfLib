@@ -20,6 +20,64 @@ struct TextPosition {
 	var lineMatrix = CGAffineTransform.identity
 }
 
+struct ColorState {
+	var strokeRed: CGFloat = 0
+	var strokeGreen: CGFloat = 0
+	var strokeBlue: CGFloat = 0
+	var strokeAlpha: CGFloat = 1
+
+	var fillRed: CGFloat = 0
+	var fillGreen: CGFloat = 0
+	var fillBlue: CGFloat = 0
+	var fillAlpha: CGFloat = 1
+
+	mutating func setStrokeGray(_ gray: CGFloat) {
+		strokeRed = gray
+		strokeGreen = gray
+		strokeBlue = gray
+	}
+
+	mutating func setFillGray(_ gray: CGFloat) {
+		fillRed = gray
+		fillGreen = gray
+		fillBlue = gray
+	}
+
+	mutating func setStrokeRGB(_ r: CGFloat, _ g: CGFloat, _ b: CGFloat) {
+		strokeRed = r
+		strokeGreen = g
+		strokeBlue = b
+	}
+
+	mutating func setFillRGB(_ r: CGFloat, _ g: CGFloat, _ b: CGFloat) {
+		fillRed = r
+		fillGreen = g
+		fillBlue = b
+	}
+
+	mutating func setStrokeCMYK(_ c: CGFloat, _ m: CGFloat, _ y: CGFloat, _ k: CGFloat) {
+		// Simple CMYK to RGB conversion
+		strokeRed = (1 - c) * (1 - k)
+		strokeGreen = (1 - m) * (1 - k)
+		strokeBlue = (1 - y) * (1 - k)
+	}
+
+	mutating func setFillCMYK(_ c: CGFloat, _ m: CGFloat, _ y: CGFloat, _ k: CGFloat) {
+		// Simple CMYK to RGB conversion
+		fillRed = (1 - c) * (1 - k)
+		fillGreen = (1 - m) * (1 - k)
+		fillBlue = (1 - y) * (1 - k)
+	}
+
+	func applyStrokeColor(to context: CGContext) {
+		context.setStrokeColor(CGColor(red: strokeRed, green: strokeGreen, blue: strokeBlue, alpha: strokeAlpha))
+	}
+
+	func applyFillColor(to context: CGContext) {
+		context.setFillColor(CGColor(red: fillRed, green: fillGreen, blue: fillBlue, alpha: fillAlpha))
+	}
+}
+
 extension PdfContentStream {
 	func render(in context: CGContext, lookup: PdfObjectLookup?) {
 		context.saveGState()
@@ -35,6 +93,7 @@ extension PdfContentStream {
 		
 		var textState = TextState()
 		var textPosition = TextPosition()
+		var colorState = ColorState()
 		
 		do {
 			try parse { op in
@@ -136,11 +195,21 @@ extension PdfContentStream {
 				case .`f*`:
 					context.fillPath(using: .evenOdd)
 				case .G(let gray):
-					context.setStrokeColor(CGColor(gray: CGFloat(gray), alpha: 1))
+					colorState.setStrokeGray(CGFloat(gray))
+					colorState.applyStrokeColor(to: context)
 				case .g(let gray):
-					context.setFillColor(CGColor(gray: CGFloat(gray), alpha: 1))
-				case .gs(_):
-					break
+					colorState.setFillGray(CGFloat(gray))
+					colorState.applyFillColor(to: context)
+				case .gs(let name):
+					guard let gstateDictionary = resolveResource(
+						category: .ExtGState,
+						key: name,
+						lookup: lookup
+					) else {
+						break
+					}
+					let gstate = PdfGState(dictionary: gstateDictionary, lookup: lookup)
+					context.apply(gstate, colorState: &colorState)
 				case .h:
 					context.closePath()
 				case .i(_):
@@ -164,9 +233,11 @@ extension PdfContentStream {
 					}
 					context.setLineJoin(lineJoin)
 				case .K(let c, let m, let y, let k):
-					context.setStrokeColor(CGColor(red: CGFloat(1 - c), green: CGFloat(1 - m), blue: CGFloat(1 - y), alpha: CGFloat(1 - k)))
+					colorState.setStrokeCMYK(CGFloat(c), CGFloat(m), CGFloat(y), CGFloat(k))
+					colorState.applyStrokeColor(to: context)
 				case .k(let c, let m, let y, let k):
-					context.setFillColor(CGColor(red: CGFloat(1 - c), green: CGFloat(1 - m), blue: CGFloat(1 - y), alpha: CGFloat(1 - k)))
+					colorState.setFillCMYK(CGFloat(c), CGFloat(m), CGFloat(y), CGFloat(k))
+					colorState.applyFillColor(to: context)
 				case .l(let x, let y):
 					context.addLine(to: CGPoint(x: CGFloat(x), y: CGFloat(y)))
 				case .M(let limit):
@@ -184,9 +255,11 @@ extension PdfContentStream {
 				case .re(let x, let y, let w, let h):
 					context.addRect(CGRect(x: CGFloat(x), y: CGFloat(y), width: CGFloat(w), height: CGFloat(h)))
 				case .RG(let r, let g, let b):
-					context.setStrokeColor(CGColor(red: CGFloat(r), green: CGFloat(g), blue: CGFloat(b), alpha: 1))
+					colorState.setStrokeRGB(CGFloat(r), CGFloat(g), CGFloat(b))
+					colorState.applyStrokeColor(to: context)
 				case .rg(let r, let g, let b):
-					context.setFillColor(CGColor(red: CGFloat(r), green: CGFloat(g), blue: CGFloat(b), alpha: 1))
+					colorState.setFillRGB(CGFloat(r), CGFloat(g), CGFloat(b))
+					colorState.applyFillColor(to: context)
 				case .ri(_):
 					break
 				case .S:
@@ -196,10 +269,12 @@ extension PdfContentStream {
 					context.strokePath()
 				case .SC(let colors):
 					guard colors.count >= 3 else { break }
-					context.setStrokeColor(CGColor(red: colors[0], green: colors[1], blue: colors[2], alpha: 1))
+					colorState.setStrokeRGB(colors[0], colors[1], colors[2])
+					colorState.applyStrokeColor(to: context)
 				case .sc(let colors):
 					guard colors.count >= 3 else { break }
-					context.setFillColor(CGColor(red: colors[0], green: colors[1], blue: colors[2], alpha: 1))
+					colorState.setFillRGB(colors[0], colors[1], colors[2])
+					colorState.applyFillColor(to: context)
 				case .SCN(_):
 					break
 				case .scn(_):
@@ -289,6 +364,7 @@ extension PdfContentStream {
 		guard let rect = annotationRect?.cgRect, let bbox = bbox?.cgRect else {
 			return matrix?.cgAffineTransform
 		}
+		
 		let matrix = matrix?.cgAffineTransform ?? .identity
 		let transformedBBox = bbox.applying(matrix)
 		let scaleX = rect.width / transformedBBox.width
@@ -301,20 +377,5 @@ extension PdfContentStream {
 		AA = AA.scaledBy(x: scaleX, y: scaleY)
 		AA = AA.concatenating(matrix)
 		return AA
-	}
-}
-
-extension PdfDictionary {
-	func ctFont(lookup: PdfObjectLookup?) -> CTFont {
-		guard
-			let fontDescriptor = self[.FontDescriptor]?.dictionary(lookup: lookup),
-			let fontStream = (fontDescriptor[.FontFile3] ?? fontDescriptor[.FontFile2] ?? fontDescriptor[.FontFile])?.stream(lookup: lookup),
-			let provider = CGDataProvider(data: fontStream.data as CFData),
-			let cgFont = CGFont(provider)
-		else {
-			let postScriptName = "Helvetica" // derived from /BaseFont
-			return CTFontCreateWithName(postScriptName as CFString, 1.0, nil)
-		}
-		return CTFontCreateWithGraphicsFont(cgFont, 1.0, nil, nil)
 	}
 }

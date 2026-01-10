@@ -13,8 +13,8 @@ extension PdfPage {
 		
 		for
 			annotation in pageDictionary[.Annots]?
-			.array(lookup: lookup)?
-			.compactMap({ $0.dictionary(lookup: lookup) }) ?? []
+				.array(lookup: lookup)?
+				.compactMap({ $0.dictionary(lookup: lookup) }) ?? []
 		{
 			guard
 				let appearanceStream = annotation[.AP]?.dictionary(lookup: lookup)?[.N]?.stream(lookup: lookup),

@@ -107,4 +107,22 @@ public extension String {
 	static let Widths = "Widths"
 	static let WMode = "WMode"
 	static let XObject = "XObject"
+
+	// ExtGState keys
+	static let CA = "CA"
+	static let ca = "ca"
+	static let BM = "BM"
+	static let LW = "LW"
+	static let LC = "LC"
+	static let LJ = "LJ"
+	static let ML = "ML"
+	static let D = "D"
+	static let RI = "RI"
+	static let OP = "OP"
+	static let op = "op"
+	static let OPM = "OPM"
+	static let SA = "SA"
+	static let AIS = "AIS"
+	static let TK = "TK"
+	static let FL = "FL"
 }
