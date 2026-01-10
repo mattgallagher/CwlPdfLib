@@ -18,8 +18,8 @@ extension CGContext {
 	
 	func drawFallbackUnicode(_ text: Data, state: TextState, position: inout TextPosition) {
 		var chars = Array(text.pdfTextToString().utf16)
-		var glyphs = Array<CGGlyph>(repeating: 0, count: chars.count)
-		var advances = [CGPoint](repeating: .zero, count: chars.count )
+		var glyphs = [CGGlyph](repeating: 0, count: chars.count)
+		var advances = [CGPoint](repeating: .zero, count: chars.count)
 		let ctFont = state.font?.platformFont ?? CTFontCreateWithName("Helvetica" as CFString, 1, nil)
 		CTFontGetGlyphsForCharacters(ctFont, &chars, &glyphs, chars.count)
 		advances.withUnsafeMutableBufferPointer { bufferPointer in
@@ -77,18 +77,16 @@ extension CGContext {
 		var glyphs: [Glyph] = []
 		
 		for cid in codes {
-			let gid: CGGlyph = {
-				switch composite.descendantFont.cidToGIDMap {
-				case .identity, .none:
-					return CGGlyph(cid)
-				case .mapped(let map):
-					return cid < map.count ? CGGlyph(map[Int(cid)]) : 0
-				}
-			}()
+			let gid: CGGlyph = switch composite.descendantFont.cidToGIDMap {
+			case .identity, .none:
+				CGGlyph(cid)
+			case .mapped(let map):
+				cid < map.count ? CGGlyph(map[Int(cid)]) : 0
+			}
 			
 			let width =
-			composite.descendantFont.widths.width(for: cid)
-			?? composite.descendantFont.defaultWidth
+				composite.descendantFont.widths.width(for: cid)
+					?? composite.descendantFont.defaultWidth
 			
 			glyphs.append(Glyph(gid: gid, advance: width, isSpace: cid == 0x20))
 		}
@@ -174,7 +172,6 @@ struct GlyphRun {
 		font: PdfFont<CTFont>,
 		ctFont: CTFont
 	) -> GlyphRun {
-		
 		guard case .simple(let simple) = font.kind else {
 			fatalError("Expected simple font")
 		}
@@ -188,7 +185,7 @@ struct GlyphRun {
 			
 			// --- Width (glyph space)
 			let index = code - simple.firstChar
-			let width: Double = if index >= 0 && index < simple.widths.count {
+			let width: Double = if index >= 0, index < simple.widths.count {
 				simple.widths[index]
 			} else {
 				simple.missingWidth ?? 0
@@ -227,7 +224,6 @@ struct GlyphRun {
 		_ data: Data,
 		font: PdfFont<CTFont>
 	) -> GlyphRun {
-		
 		guard case .composite(let composite) = font.kind else {
 			fatalError("Expected composite font")
 		}
@@ -250,7 +246,7 @@ struct GlyphRun {
 					
 				case .mapped(let map):
 					let index = Int(cid)
-					if index >= 0 && index < map.count {
+					if index >= 0, index < map.count {
 						return CGGlyph(map[index])
 					}
 					return 0
@@ -276,7 +272,7 @@ struct Glyph {
 	let isSpace: Bool
 }
 
-extension Array where Element == (CIDRange, Double) {
+extension [(CIDRange, Double)] {
 	func width(for cid: UInt32) -> Double? {
 		for (range, width) in self where range.contains(cid) {
 			return width
@@ -287,7 +283,7 @@ extension Array where Element == (CIDRange, Double) {
 
 extension BaseEncoding {
 	func glyphName(for code: Int) -> String? {
-		return (0...255).contains(code) ? glyphNames[code] : nil
+		(0...255).contains(code) ? glyphNames[code] : nil
 	}
 }
 

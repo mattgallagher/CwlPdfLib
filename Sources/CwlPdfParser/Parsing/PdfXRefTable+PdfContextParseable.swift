@@ -72,7 +72,7 @@ extension PdfXRefTable: PdfContextParseable {
 					)
 					continue
 				}
-			} while true 
+			} while true
 			
 			xrefTables.append(nextTable)
 			guard case .integer(let previousStart) = nextTable.trailer[.Prev] else {
@@ -91,7 +91,7 @@ extension PdfXRefTable: PdfContextParseable {
 		}
 		
 		var objectRanges = [Int: PdfObjectLayout]()
-		let allObjectByteRanges = xrefTables.flatMap { $0.objectLocations }.sorted { $0.value < $1.value }
+		let allObjectByteRanges = xrefTables.flatMap(\.objectLocations).sorted { $0.value < $1.value }
 		for (previous, next) in zip(allObjectByteRanges, [allObjectByteRanges.dropFirst(), [(PdfObjectIdentifier(number: 0, generation: 0), firstXrefRange.upperBound)]].joined()) {
 			let revision = revisions[previous.key].map { $0 + 1 } ?? 0
 			objectRanges[previous.value] = PdfObjectLayout(objectIdentifier: previous.key, range: previous.value..<next.value, revision: revision)

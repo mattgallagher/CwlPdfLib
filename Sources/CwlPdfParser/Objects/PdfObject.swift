@@ -1,7 +1,7 @@
 // CwlPdfLib. Copyright © 2025 Matt Gallagher. See LICENSE file for usage permissions.
 
-import Foundation
 import CommonCrypto
+import Foundation
 
 public enum PdfObject: Sendable, Hashable {
 	case array(PdfArray)

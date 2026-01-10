@@ -2,7 +2,7 @@
 
 extension PdfSource {
 	func parseContext<Output>(range: Range<Int>, handler: (inout PdfParseContext) throws -> Output) throws -> Output {
-		return try bytes(in: range) { buffer in
+		try bytes(in: range) { buffer in
 			var context = PdfParseContext(slice: buffer[...])
 			return try handler(&context)
 		}
@@ -139,7 +139,7 @@ private struct KMPMatchContext<C: Collection> where C.Element == UInt8, C.Index 
 	}
 	
 	mutating func step(byte: UInt8) -> Bool {
-		while j > 0 && byte != pattern[j] {
+		while j > 0, byte != pattern[j] {
 			j = lps.isEmpty ? 0 : lps[j - 1] // follow failure link
 		}
 		if byte == pattern[j] {

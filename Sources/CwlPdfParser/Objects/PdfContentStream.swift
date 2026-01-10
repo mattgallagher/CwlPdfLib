@@ -3,8 +3,31 @@
 import Foundation
 
 public struct PdfContentStream {
-	let stream: PdfStream
-	let resources: PdfDictionary?
+	public let stream: PdfStream
+	public let resources: PdfDictionary?
+	public let bbox: PdfRect?
+	public let matrix: PdfAffineTransform?
+	public let annotationRect: PdfRect?
+	
+	public init(stream: PdfStream, resources: PdfDictionary?, annotationRect: PdfRect?, lookup: PdfObjectLookup?) {
+		self.stream = stream
+		self.resources = resources ?? stream.dictionary[.Resources]?.dictionary(lookup: lookup)
+		self.annotationRect = annotationRect
+		
+		if stream.dictionary[.Subtype]?.string(lookup: lookup)?.pdfTextToString() == .Form {
+			self.bbox = stream
+				.dictionary[.BBox]?
+				.array(lookup: lookup)
+				.flatMap { PdfRect(array: $0, lookup: lookup) }
+			self.matrix = stream
+				.dictionary[.Matrix]?
+				.array(lookup: lookup)
+				.flatMap { PdfAffineTransform(array: $0, lookup: lookup) }
+		} else {
+			self.bbox = nil
+			self.matrix = nil
+		}
+	}
 	
 	public func parse(_ visitor: (PdfOperator) -> Bool) throws {
 		try stream.data.parseContext { context in

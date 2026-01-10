@@ -53,12 +53,12 @@ extension PdfObject: PdfContextParseable {
 			}
 			
 			let data = try context.decode(
-			length: length,
-			filters: filters,
-			decodeParams: dictionary["DecodeParms"],
-			decryption: lookup?.decryption,
-			objectId: context.objectIdentifier
-		)
+				length: length,
+				filters: filters,
+				decodeParams: dictionary["DecodeParms"],
+				decryption: lookup?.decryption,
+				objectId: context.objectIdentifier
+			)
 			object = .stream(PdfStream(dictionary: dictionary, data: data))
 			
 			try PdfToken

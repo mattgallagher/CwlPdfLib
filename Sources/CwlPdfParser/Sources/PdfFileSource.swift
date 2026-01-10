@@ -70,7 +70,7 @@ public final class PdfFileSource: PdfSource {
 	}
 
 	private func read(fromOffset offset: UInt64, length: Int) throws -> Data {
-		return try fileHandle.withLock {
+		try fileHandle.withLock {
 			try $0.seek(toOffset: offset)
 			return try $0.read(upToCount: length) ?? Data()
 		}

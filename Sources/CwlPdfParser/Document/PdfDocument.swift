@@ -84,7 +84,7 @@ func allPages(pageTree: PdfDictionary, lookup: PdfObjectLookup, offset: Int) thr
 	let cropBox =
 		(
 			pageTree[.CropBox]?.array(lookup: lookup) ??
-			pageTree[.MediaBox]?.array(lookup: lookup)
+				pageTree[.MediaBox]?.array(lookup: lookup)
 		).flatMap {
 			PdfRect(array: $0, lookup: lookup)
 		} ?? PdfRect(x: 0, y: 0, width: 612, height: 792)

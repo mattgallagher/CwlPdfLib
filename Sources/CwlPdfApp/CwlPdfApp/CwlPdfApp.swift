@@ -5,9 +5,9 @@ import SwiftUI
 
 @main
 struct CwlPdfApp: App {
-    var body: some Scene {
-		 DocumentGroup(viewing: PdfFileDocument.self) { file in
-            PdfBrowserView(document: file.$document)
-        }
-    }
+	var body: some Scene {
+		DocumentGroup(viewing: PdfFileDocument.self) { file in
+			PdfBrowserView(document: file.$document)
+		}
+	}
 }

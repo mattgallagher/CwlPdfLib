@@ -83,8 +83,9 @@ public struct PdfDecryption: Sendable {
 		}
 
 		// Get document ID from trailer
-		guard let idArray = trailer[.ID]?.array(lookup: nil),
-		      let documentId = idArray.first?.string(lookup: nil)
+		guard
+			let idArray = trailer[.ID]?.array(lookup: nil),
+			let documentId = idArray.first?.string(lookup: nil)
 		else {
 			throw PdfDecryptionError.missingDocumentId
 		}
@@ -93,15 +94,14 @@ public struct PdfDecryption: Sendable {
 		self.encryptMetadata = encryptDictionary[.EncryptMetadata]?.boolean(lookup: nil) ?? true
 
 		// Determine key length
-		let keyLength: Int
-		if let length = encryptDictionary[.Length]?.integer(lookup: nil) {
-			keyLength = length
+		let keyLength: Int = if let length = encryptDictionary[.Length]?.integer(lookup: nil) {
+			length
 		} else if version == 1 {
-			keyLength = 40
+			40
 		} else if revision >= 5 {
-			keyLength = 256
+			256
 		} else {
-			keyLength = 128
+			128
 		}
 
 		// Parse crypt filters for V4+
@@ -109,12 +109,13 @@ public struct PdfDecryption: Sendable {
 		if version >= 4 {
 			if let cfDict = encryptDictionary[.CF]?.dictionary(lookup: nil) {
 				for (name, filterObj) in cfDict {
-					if let filterDict = filterObj.dictionary(lookup: nil),
-					   let cfm = filterDict[.CFM]?.name(lookup: nil)
+					if
+						let filterDict = filterObj.dictionary(lookup: nil),
+						let cfm = filterDict[.CFM]?.name(lookup: nil)
 					{
 						// Check AuthEvent (only DocOpen is supported)
 						if let authEvent = filterDict[.AuthEvent]?.name(lookup: nil), authEvent != .DocOpen {
-							continue  // Skip non-DocOpen filters
+							continue // Skip non-DocOpen filters
 						}
 						cryptFilters[name] = try Self.parseCryptMethod(cfm, keyLength: keyLength)
 					}
@@ -160,8 +161,9 @@ public struct PdfDecryption: Sendable {
 
 		if revision >= 5 {
 			// AESV3 (R=5,6)
-			guard let ownerEncryption = encryptDictionary[.OE]?.string(lookup: nil),
-			      let userEncryption = encryptDictionary[.UE]?.string(lookup: nil)
+			guard
+				let ownerEncryption = encryptDictionary[.OE]?.string(lookup: nil),
+				let userEncryption = encryptDictionary[.UE]?.string(lookup: nil)
 			else {
 				throw PdfDecryptionError.invalidEncryptionDictionary("Missing OE or UE value for R>=5")
 			}

@@ -215,12 +215,12 @@ extension PdfToken: PdfContextParseable {
 func nybbleFromHex(_ byte: UInt8) -> UInt8? {
 	switch byte {
 	case .a...(.f):
-		return (byte - .a) + 10
+		(byte - .a) + 10
 	case .A...(.F):
-		return (byte - .A) + 10
+		(byte - .A) + 10
 	case .digit0...(.digit9):
-		return byte - .digit0
+		byte - .digit0
 	default:
-		return nil
+		nil
 	}
 }

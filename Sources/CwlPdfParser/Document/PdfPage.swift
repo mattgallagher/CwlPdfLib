@@ -31,7 +31,7 @@ public struct PdfPage: Sendable, Hashable, Identifiable {
 		}
 		
 		// If the page doesn't provide sizes, use the document size
-		return self.documentPageSize
+		return documentPageSize
 	}
 	
 	public func contentStream(lookup: PdfObjectLookup?) -> PdfContentStream? {
@@ -40,7 +40,8 @@ public struct PdfPage: Sendable, Hashable, Identifiable {
 		}
 		return PdfContentStream(
 			stream: contents,
-			resources: pageDictionary[.Resources]?.dictionary(lookup: lookup)
+			resources: pageDictionary[.Resources]?.dictionary(lookup: lookup),
+			lookup: lookup
 		)
 	}
 }

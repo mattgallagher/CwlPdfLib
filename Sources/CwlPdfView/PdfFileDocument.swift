@@ -25,6 +25,6 @@ public nonisolated struct PdfFileDocument: FileDocument {
 	}
 	
 	public func fileWrapper(configuration: WriteConfiguration) throws -> FileWrapper {
-		return .init(regularFileWithContents: data)
+		.init(regularFileWithContents: data)
 	}
 }

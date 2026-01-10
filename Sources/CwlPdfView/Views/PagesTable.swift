@@ -14,7 +14,7 @@ struct PagesTable: View {
 	}
 }
 
-extension Optional<SidebarSelection> {
+extension SidebarSelection? {
 	var page: Set<PdfPage.ID> {
 		get {
 			if case .page(let page) = self {

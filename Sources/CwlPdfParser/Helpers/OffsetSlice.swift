@@ -35,7 +35,7 @@ public struct OffsetSlice<Base: RandomAccessCollection>: RandomAccessCollection 
 	public var count: Int { underlying.count }
 	public var isEmpty: Bool { underlying.isEmpty }
 	public var slice: Slice<Base> {
-		return underlying
+		underlying
 	}
 	
 	public func rangeToBase(_ range: Range<Int>) -> Range<Int> {

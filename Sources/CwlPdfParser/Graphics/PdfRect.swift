@@ -18,10 +18,10 @@ public struct PdfRect: Sendable, Hashable {
 		// Convert to CoreGraphics coordinates where (0,0) is bottom-left of page
 		guard array.count == 4 else { return nil }
 		
-		let x1 = array[0].real(lookup: lookup).flatMap { $0 } ?? 0
-		let y1 = array[1].real(lookup: lookup).flatMap { $0 } ?? 0
-		let x2 = array[2].real(lookup: lookup).flatMap { $0 } ?? 0
-		let y2 = array[3].real(lookup: lookup).flatMap { $0 } ?? 0
+		let x1 = array[0].real(lookup: lookup).flatMap(\.self) ?? 0
+		let y1 = array[1].real(lookup: lookup).flatMap(\.self) ?? 0
+		let x2 = array[2].real(lookup: lookup).flatMap(\.self) ?? 0
+		let y2 = array[3].real(lookup: lookup).flatMap(\.self) ?? 0
 		
 		let width = x2 - x1
 		let height = y2 - y1

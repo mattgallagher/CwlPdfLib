@@ -96,7 +96,7 @@ swiftformat --swiftversion 6 --config .swiftformat "Sources/CwlPdfParser/Documen
 ## Package Structure
 
 - This project is a Swift Package
-- The files in `CwlPdfApp` are not built as part of the Swift Package
+- The files in `CwlPdfApp` should be ignored. DO NOT build or try to run `CwlPdfApp`.
 
 ### PDF handling
 - Most logic should be kept in the `CwlPdfParser` module but all views should be kept out of

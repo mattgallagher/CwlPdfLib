@@ -14,7 +14,7 @@ struct ObjectsTable: View {
 	}
 }
 
-extension Optional<SidebarSelection> {
+extension SidebarSelection? {
 	var objectlayout: Set<PdfObjectLayout.ID> {
 		get {
 			if case .object(let layout) = self {

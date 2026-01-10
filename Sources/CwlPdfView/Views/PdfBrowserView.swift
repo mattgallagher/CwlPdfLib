@@ -54,7 +54,6 @@ public struct PdfBrowserView: View {
 	}
 }
 
-
 enum SidebarContent: Hashable {
 	case objects
 	case pages
@@ -63,8 +62,8 @@ enum SidebarContent: Hashable {
 	var sidebarVisibility: NavigationSplitViewVisibility {
 		get {
 			switch self {
-			case .objects, .pages: return .all
-			case .hidden: return .detailOnly
+			case .objects, .pages: .all
+			case .hidden: .detailOnly
 			}
 		}
 		set {

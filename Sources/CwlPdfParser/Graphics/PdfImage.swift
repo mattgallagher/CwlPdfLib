@@ -106,13 +106,12 @@ public struct PdfImage: Sendable {
 					guard array.count >= 4 else { return nil }
 					let baseColorSpace = parseColorSpace(array[1], lookup: lookup) ?? .deviceRGB
 					let hival = array[2].integer(lookup: lookup) ?? 255
-					let lookupData: Data?
-					if let data = array[3].string(lookup: lookup) {
-						lookupData = data
+					let lookupData: Data? = if let data = array[3].string(lookup: lookup) {
+						data
 					} else if let stream = array[3].stream(lookup: lookup) {
-						lookupData = stream.data
+						stream.data
 					} else {
-						lookupData = nil
+						nil
 					}
 					return .indexed(base: baseColorSpace, hival: hival, lookup: lookupData)
 
@@ -136,9 +135,9 @@ public struct PdfImage: Sendable {
 }
 
 public enum ImageEncoding: Sendable, Hashable {
-	case raw       // Uncompressed bitmap data
-	case jpeg      // DCTDecode - JPEG compressed
-	case jpeg2000  // JPXDecode - JPEG 2000 compressed
+	case raw // Uncompressed bitmap data
+	case jpeg // DCTDecode - JPEG compressed
+	case jpeg2000 // JPXDecode - JPEG 2000 compressed
 }
 
 public enum PdfColorSpace: Sendable, Hashable {
@@ -164,15 +163,15 @@ public enum PdfColorSpace: Sendable, Hashable {
 	public var componentsPerPixel: Int {
 		switch self {
 		case .deviceGray:
-			return 1
+			1
 		case .deviceRGB:
-			return 3
+			3
 		case .deviceCMYK:
-			return 4
+			4
 		case .indexed:
-			return 1  // Indexed uses a single index value per pixel
+			1 // Indexed uses a single index value per pixel
 		case .iccBased(let components, _):
-			return components
+			components
 		}
 	}
 }
@@ -182,15 +181,15 @@ public extension PdfColorSpace {
 	static func == (lhs: PdfColorSpace, rhs: PdfColorSpace) -> Bool {
 		switch (lhs, rhs) {
 		case (.deviceGray, .deviceGray),
-			 (.deviceRGB, .deviceRGB),
-			 (.deviceCMYK, .deviceCMYK):
-			return true
-		case let (.indexed(base1, hival1, lookup1), .indexed(base2, hival2, lookup2)):
-			return base1 == base2 && hival1 == hival2 && lookup1 == lookup2
-		case let (.iccBased(c1, p1), .iccBased(c2, p2)):
-			return c1 == c2 && p1 == p2
+			  (.deviceRGB, .deviceRGB),
+			  (.deviceCMYK, .deviceCMYK):
+			true
+		case (.indexed(let base1, let hival1, let lookup1), .indexed(let base2, let hival2, let lookup2)):
+			base1 == base2 && hival1 == hival2 && lookup1 == lookup2
+		case (.iccBased(let c1, let p1), .iccBased(let c2, let p2)):
+			c1 == c2 && p1 == p2
 		default:
-			return false
+			false
 		}
 	}
 

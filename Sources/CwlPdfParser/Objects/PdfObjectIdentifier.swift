@@ -12,6 +12,6 @@ public struct PdfObjectIdentifier: Hashable, Sendable {
 
 extension PdfObjectIdentifier: CustomDebugStringConvertible {
 	public var debugDescription: String {
-		return "\(number) \(generation) R"
+		"\(number) \(generation) R"
 	}
 }

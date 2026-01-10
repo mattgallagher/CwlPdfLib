@@ -9,7 +9,7 @@ extension RandomAccessCollection where Element == UInt8 {
 	
 	var asBigEndianUInt32: UInt32 {
 		var code: UInt32 = 0
-		for byte in self.prefix(4) {
+		for byte in prefix(4) {
 			code = (code << 8) + UInt32(byte)
 		}
 		return code

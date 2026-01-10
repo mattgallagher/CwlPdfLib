@@ -9,11 +9,10 @@ public struct PdfStream: Sendable, Hashable {
 
 extension PdfStream: CustomDebugStringConvertible {
 	public var debugDescription: String {
-		let dataDescription: String
-		if dictionary.isImage(lookup: nil) {
-			dataDescription = "<Image: \(data.count) bytes>"
+		let dataDescription = if dictionary.isImage(lookup: nil) {
+			"<Image: \(data.count) bytes>"
 		} else {
-			dataDescription = String(data: data, encoding: .utf8) ?? "<unknown: \(data.count) bytes>"
+			String(data: data, encoding: .utf8) ?? "<unknown: \(data.count) bytes>"
 		}
 		return "\(dictionary.debugDescription) stream \"\(dataDescription)\""
 	}
@@ -22,9 +21,17 @@ extension PdfStream: CustomDebugStringConvertible {
 public extension PdfDictionary {
 	func isImage(lookup: PdfObjectLookup?) -> Bool {
 		if let type = self[.Type]?.name(lookup: lookup), type == .XObject, let subtype = self[.Subtype]?.name(lookup: lookup) {
-			return subtype == .Image
+			subtype == .Image
 		} else {
-			return false
+			false
+		}
+	}
+	
+	func isForm(lookup: PdfObjectLookup?) -> Bool {
+		if let type = self[.Type]?.name(lookup: lookup), type == .XObject, let subtype = self[.Subtype]?.name(lookup: lookup) {
+			subtype == .Form
+		} else {
+			false
 		}
 	}
 }

@@ -12,11 +12,11 @@ extension PdfImage {
 	public func createCGImage(lookup: PdfObjectLookup?) -> CGImage? {
 		switch encoding {
 		case .jpeg:
-			return createJPEGImage()
+			createJPEGImage()
 		case .jpeg2000:
-			return createJPEG2000Image()
+			createJPEG2000Image()
 		case .raw:
-			return createRawBitmapImage(lookup: lookup)
+			createRawBitmapImage(lookup: lookup)
 		}
 	}
 
@@ -115,14 +115,13 @@ extension PdfImage {
 		}
 
 		// Determine bitmap info based on color space
-		let bitmapInfo: CGBitmapInfo
-		switch colorSpace {
+		let bitmapInfo = switch colorSpace {
 		case .deviceCMYK:
-			bitmapInfo = CGBitmapInfo(rawValue: alphaInfo.rawValue)
+			CGBitmapInfo(rawValue: alphaInfo.rawValue)
 		case .iccBased(let components, _) where components == 4:
-			bitmapInfo = CGBitmapInfo(rawValue: alphaInfo.rawValue)
+			CGBitmapInfo(rawValue: alphaInfo.rawValue)
 		default:
-			bitmapInfo = CGBitmapInfo(rawValue: alphaInfo.rawValue)
+			CGBitmapInfo(rawValue: alphaInfo.rawValue)
 		}
 
 		guard let provider = CGDataProvider(data: data as CFData) else {
@@ -131,7 +130,7 @@ extension PdfImage {
 
 		// Create decode array for CGImage if needed
 		var decodeArray: [CGFloat]?
-		if let decode = self.decode {
+		if let decode {
 			decodeArray = decode.map { CGFloat($0) }
 		}
 
@@ -157,8 +156,9 @@ extension PdfImage {
 
 		// Apply soft mask if present
 		if let softMaskStream = softMask,
-		   let softMaskImage = try? PdfImage(stream: softMaskStream, lookup: lookup),
-		   let maskCGImage = softMaskImage.createCGImage(lookup: lookup) {
+			let softMaskImage = try? PdfImage(stream: softMaskStream, lookup: lookup),
+			let maskCGImage = softMaskImage.createCGImage(lookup: lookup)
+		{
 			return baseImage.masking(maskCGImage)
 		}
 
@@ -170,7 +170,7 @@ extension PdfImage {
 
 private extension Optional where Wrapped: Collection {
 	func withUnsafeBufferPointerOrNil<R>(_ body: (UnsafeBufferPointer<Wrapped.Element>?) throws -> R) rethrows -> R {
-		guard let self = self else {
+		guard let self else {
 			return try body(nil)
 		}
 		return try Array(self).withUnsafeBufferPointer { ptr in

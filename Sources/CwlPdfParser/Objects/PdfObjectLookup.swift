@@ -20,7 +20,7 @@ public struct PdfObjectLookup: Sendable {
 	}
 	
 	public func object(layout: PdfObjectLayout) throws -> PdfObject {
-		return try source.parseContext(range: layout.range) { context in
+		try source.parseContext(range: layout.range) { context in
 			context.objectIdentifier = layout.objectIdentifier
 			return try PdfObject.parseIndirect(lookup: self, context: &context)
 		}
@@ -37,6 +37,6 @@ public struct PdfObjectLookup: Sendable {
 				return lhs.value.range.lowerBound < rhs.value.range.lowerBound
 			}
 			return lhs.value.objectIdentifier.number < rhs.value.objectIdentifier.number
-		}.map { $0.value }
+		}.map(\.value)
 	}
 }
