@@ -10,6 +10,7 @@ public struct PdfFont<PlatformFont> {
 	public enum Kind {
 		case simple(SimpleFontData)
 		case composite(CompositeFontData)
+		case type3(Type3FontData)
 	}
 	
 	public let kind: Kind
@@ -67,6 +68,37 @@ public struct PdfFont<PlatformFont> {
 			
 			let cidFont = try Self.parseCIDFont(descendantDict, lookup)
 			kind = .composite(CompositeFontData(cmap: cmap, descendantFont: cidFont))
+		} else if case .Type3 = fontSubtype {
+			let encoding = try Self.parseEncoding(fontDictionary[.Encoding], lookup)
+			let firstChar = fontDictionary[.FirstChar]?.integer(lookup: lookup) ?? 0
+			let widths = fontDictionary[.Widths]?
+				.array(lookup: lookup)?
+				.compactMap { $0.real(lookup: lookup) }
+			?? []
+
+			guard
+				let fontBBoxArray = fontDictionary[.FontBBox]?.array(lookup: lookup),
+				let fontBBox = PdfRect(array: fontBBoxArray, lookup: lookup)
+			else {
+				throw PdfParseError(failure: .missingRequiredParameters)
+			}
+
+			guard let charProcs = fontDictionary[.CharProcs]?.dictionary(lookup: lookup) else {
+				throw PdfParseError(failure: .missingRequiredParameters)
+			}
+
+			let resources = fontDictionary[.Resources]?.dictionary(lookup: lookup)
+
+			kind = .type3(
+				Type3FontData(
+					encoding: encoding,
+					firstChar: firstChar,
+					widths: widths,
+					fontBBox: fontBBox,
+					charProcs: charProcs,
+					resources: resources
+				)
+			)
 		} else {
 			let encoding = try Self.parseEncoding(fontDictionary[.Encoding], lookup)
 			let firstChar = fontDictionary[.FirstChar]?.integer(lookup: lookup) ?? 0
@@ -75,7 +107,7 @@ public struct PdfFont<PlatformFont> {
 				.array(lookup: lookup)?
 				.compactMap { $0.real(lookup: lookup) }
 			?? []
-			
+
 			kind = .simple(
 				SimpleFontData(
 					encoding: encoding,
@@ -560,8 +592,8 @@ public struct PdfFont<PlatformFont> {
 		case .composite(let compositeFontData):
 			// The writing mode is determined by the CMap
 			compositeFontData.cmap.writingMode
-		case .simple:
-			// Simple fonts are always horizontal
+		case .simple, .type3:
+			// Simple and Type3 fonts are always horizontal
 				.horizontal
 		}
 	}
@@ -728,6 +760,15 @@ public struct SimpleFontData {
 	public let firstChar: Int
 	public let widths: [Double]
 	public let missingWidth: Double?
+}
+
+public struct Type3FontData {
+	public let encoding: EncodingDictionary
+	public let firstChar: Int
+	public let widths: [Double]
+	public let fontBBox: PdfRect
+	public let charProcs: PdfDictionary
+	public let resources: PdfDictionary?
 }
 
 public struct EncodingDictionary {

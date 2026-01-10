@@ -14,6 +14,7 @@ struct TextState {
 	var fontSize: CGFloat = 12
 	var renderMode: Int = 0
 	var rise: CGFloat = 0
+	var lookup: PdfObjectLookup?
 }
 
 struct TextPosition {
@@ -24,12 +25,74 @@ struct TextPosition {
 extension CGContext {
 	func showText(_ data: Data, state: TextState, position: inout TextPosition) {
 		guard let pdfFont = state.font else { return }
+
+		// Handle Type3 fonts
+		if case .type3(let type3Data) = pdfFont.kind {
+			drawType3Text(data, font: pdfFont, type3Data: type3Data, state: state, position: &position)
+			return
+		}
+
 		guard let ctFont = pdfFont.platformFont else {
 			drawFallbackUnicode(data, state: state, position: &position)
 			return
 		}
-		
+
 		drawGlyphRun(GlyphRun(data, font: pdfFont, ctFont: ctFont), ctFont: ctFont, state: state, position: &position)
+	}
+
+	func drawType3Text(
+		_ data: Data,
+		font: PdfFont<CTFont>,
+		type3Data: Type3FontData,
+		state: TextState,
+		position: inout TextPosition
+	) {
+		let fontSize = state.fontSize
+		let fontMatrix = font.common.fontMatrix.cgAffineTransform
+		let hScale = state.horizontalScale / 100
+
+		for byte in data {
+			let code = Int(byte)
+
+			// Get glyph name from encoding
+			let glyphName = type3Data.encoding.differences[code]
+				?? type3Data.encoding.baseEncoding?.glyphName(for: code)
+
+			guard let glyphName else { continue }
+
+			// Look up CharProc stream
+			guard let charProcStream = type3Data.charProcs[glyphName]?.stream(lookup: state.lookup) else {
+				continue
+			}
+
+			// Get width for this glyph
+			let index = code - type3Data.firstChar
+			let width: Double = (index >= 0 && index < type3Data.widths.count)
+				? type3Data.widths[index] : 0
+
+			saveGState()
+
+			// Apply positioning: textMatrix × fontSize × fontMatrix
+			concatenate(position.textMatrix)
+			concatenate(CGAffineTransform(scaleX: fontSize, y: fontSize))
+			concatenate(fontMatrix)
+
+			// Create and render the CharProc content stream
+			let charProcContentStream = PdfContentStream(
+				stream: charProcStream,
+				resources: type3Data.resources,
+				annotationRect: nil,
+				lookup: state.lookup
+			)
+			charProcContentStream.render(in: self, lookup: state.lookup)
+
+			restoreGState()
+
+			// Advance text position (width is in glyph space units, typically 1000 per em)
+			let advance = (width / 1000) * fontSize * hScale + state.charSpace + (code == 0x20 ? state.wordSpace : 0)
+			position.textMatrix = CGAffineTransform(translationX: advance, y: 0)
+				.concatenating(position.textMatrix)
+		}
 	}
 	
 	func drawFallbackUnicode(_ text: Data, state: TextState, position: inout TextPosition) {
@@ -175,6 +238,8 @@ struct GlyphRun {
 			self = Self.decodeSimpleGlyphRun(data, font: font, ctFont: ctFont)
 		case .composite:
 			self = Self.decodeCompositeGlyphRun(data, font: font)
+		case .type3:
+			fatalError("Type3 fonts should not use GlyphRun")
 		}
 	}
 

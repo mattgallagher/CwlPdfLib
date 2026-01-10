@@ -18,8 +18,9 @@ extension PdfContentStream {
 		}
 		
 		var textState = TextState()
+		textState.lookup = lookup
 		var textPosition = TextPosition()
-		
+
 		var colorStack = [ColorState]()
 		var colorState = ColorState()
 		
