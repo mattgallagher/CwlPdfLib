@@ -86,8 +86,26 @@ extension PdfPage {
 					break
 				case .d1:
 					break
-				case .Do(_):
-					break
+				case .Do(let xobjectName):
+					guard let xobjectStream = contentStream.resolveResourceStream(
+						category: .XObject,
+						key: xobjectName,
+						lookup: lookup
+					) else {
+						break
+					}
+					// Check if this is an image XObject
+					if xobjectStream.dictionary.isImage(lookup: lookup) {
+						guard
+							let pdfImage = try? PdfImage(stream: xobjectStream, lookup: lookup),
+							let cgImage = pdfImage.createCGImage(lookup: lookup)
+						else {
+							break
+						}
+						// Images are drawn in a 1x1 unit square; the CTM positions and scales them
+						context.draw(cgImage, in: CGRect(x: 0, y: 0, width: 1, height: 1))
+					}
+					// TODO: Handle Form XObjects (nested content streams)
 				case .DP(_, _):
 					break
 				case .EI:
