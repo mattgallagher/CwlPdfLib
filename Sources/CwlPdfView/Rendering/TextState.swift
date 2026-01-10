@@ -5,6 +5,22 @@ import CoreText
 import CwlPdfParser
 import Foundation
 
+struct TextState {
+	var charSpace: CGFloat = 0
+	var wordSpace: CGFloat = 0
+	var horizontalScale: CGFloat = 100
+	var leading: CGFloat = 0
+	var font: PdfFont<CTFont>?
+	var fontSize: CGFloat = 12
+	var renderMode: Int = 0
+	var rise: CGFloat = 0
+}
+
+struct TextPosition {
+	var textMatrix = CGAffineTransform.identity
+	var lineMatrix = CGAffineTransform.identity
+}
+
 extension CGContext {
 	func showText(_ data: Data, state: TextState, position: inout TextPosition) {
 		guard let pdfFont = state.font else { return }
@@ -270,68 +286,4 @@ struct Glyph {
 	let gid: CGGlyph
 	let advance: CGFloat
 	let isSpace: Bool
-}
-
-extension [(CIDRange, Double)] {
-	func width(for cid: UInt32) -> Double? {
-		for (range, width) in self where range.contains(cid) {
-			return width
-		}
-		return nil
-	}
-}
-
-extension BaseEncoding {
-	func glyphName(for code: Int) -> String? {
-		(0...255).contains(code) ? glyphNames[code] : nil
-	}
-}
-
-extension CMap {
-	func decode(_ data: Data) -> [UInt32] {
-		var result: [UInt32] = []
-		var index = data.startIndex
-		
-		while index < data.endIndex {
-			var matched = false
-			
-			for range in codeSpaceRanges {
-				let length = range.byteLength
-				guard index + length <= data.endIndex else { continue }
-				
-				var code: UInt32 = 0
-				for i in 0..<length {
-					code = (code << 8) | UInt32(data[index + i])
-				}
-				
-				if range.bound.contains(code) {
-					result.append(map(code))
-					index += length
-					matched = true
-					break
-				}
-			}
-			
-			if !matched {
-				// Invalid byte → skip
-				index += 1
-			}
-		}
-		
-		return result
-	}
-	
-	private func map(_ code: UInt32) -> UInt32 {
-		for mapping in mappings {
-			switch mapping {
-			case .single(let c, let cid) where c == code:
-				return cid
-			case .range(let r, let start) where r.contains(code):
-				return start + (code - r.lowerBound)
-			default:
-				continue
-			}
-		}
-		return 0
-	}
 }

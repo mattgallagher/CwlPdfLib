@@ -747,6 +747,10 @@ public enum BaseEncoding: String {
 		case .ZapfDingbatsEncoding: FontEncodingGlyphNames.ZapfDingbats
 		}
 	}
+	
+	public func glyphName(for code: Int) -> String? {
+		(0...255).contains(code) ? glyphNames[code] : nil
+	}
 }
 
 public struct CompositeFontData {
@@ -763,6 +767,15 @@ public struct CIDFontData {
 }
 
 public typealias CIDWidthMap = [(CIDRange, Double)]
+
+public extension CIDWidthMap {
+	func width(for cid: UInt32) -> Double? {
+		for (range, width) in self where range.contains(cid) {
+			return width
+		}
+		return nil
+	}
+}
 
 public struct OptionalFontExtras {
 	public let toUnicode: ToUnicodeCMap? // extraction only
@@ -795,6 +808,53 @@ public struct CMap {
 	public let writingMode: WritingMode
 	public let codeSpaceRanges: [CodeSpaceRange]
 	public let mappings: [CMapMapping]
+	
+	public func decode(_ data: Data) -> [UInt32] {
+		var result: [UInt32] = []
+		var index = data.startIndex
+		
+		while index < data.endIndex {
+			var matched = false
+			
+			for range in codeSpaceRanges {
+				let length = range.byteLength
+				guard index + length <= data.endIndex else { continue }
+				
+				var code: UInt32 = 0
+				for i in 0..<length {
+					code = (code << 8) | UInt32(data[index + i])
+				}
+				
+				if range.bound.contains(code) {
+					result.append(map(code))
+					index += length
+					matched = true
+					break
+				}
+			}
+			
+			if !matched {
+				// Invalid byte → skip
+				index += 1
+			}
+		}
+		
+		return result
+	}
+	
+	public func map(_ code: UInt32) -> UInt32 {
+		for mapping in mappings {
+			switch mapping {
+			case .single(let c, let cid) where c == code:
+				return cid
+			case .range(let r, let start) where r.contains(code):
+				return start + (code - r.lowerBound)
+			default:
+				continue
+			}
+		}
+		return 0
+	}
 }
 
 public enum WritingMode: Int {

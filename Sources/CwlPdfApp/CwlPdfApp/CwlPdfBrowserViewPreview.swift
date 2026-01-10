@@ -1,5 +1,7 @@
 // CwlPdfLib. Copyright © 2025 Matt Gallagher. See LICENSE file for usage permissions.
 
+#if DEBUG
+
 @testable import CwlPdfView
 import SwiftUI
 
@@ -12,3 +14,5 @@ import SwiftUI
 		)
 	)
 }
+
+#endif

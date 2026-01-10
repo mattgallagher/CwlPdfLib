@@ -4,80 +4,6 @@ import CwlPdfParser
 import CoreGraphics
 import AppKit
 
-struct TextState {
-	var charSpace: CGFloat = 0
-	var wordSpace: CGFloat = 0
-	var horizontalScale: CGFloat = 100
-	var leading: CGFloat = 0
-	var font: PdfFont<CTFont>?
-	var fontSize: CGFloat = 12
-	var renderMode: Int = 0
-	var rise: CGFloat = 0
-}
-
-struct TextPosition {
-	var textMatrix = CGAffineTransform.identity
-	var lineMatrix = CGAffineTransform.identity
-}
-
-struct ColorState {
-	var strokeRed: CGFloat = 0
-	var strokeGreen: CGFloat = 0
-	var strokeBlue: CGFloat = 0
-	var strokeAlpha: CGFloat = 1
-
-	var fillRed: CGFloat = 0
-	var fillGreen: CGFloat = 0
-	var fillBlue: CGFloat = 0
-	var fillAlpha: CGFloat = 1
-
-	mutating func setStrokeGray(_ gray: CGFloat) {
-		strokeRed = gray
-		strokeGreen = gray
-		strokeBlue = gray
-	}
-
-	mutating func setFillGray(_ gray: CGFloat) {
-		fillRed = gray
-		fillGreen = gray
-		fillBlue = gray
-	}
-
-	mutating func setStrokeRGB(_ r: CGFloat, _ g: CGFloat, _ b: CGFloat) {
-		strokeRed = r
-		strokeGreen = g
-		strokeBlue = b
-	}
-
-	mutating func setFillRGB(_ r: CGFloat, _ g: CGFloat, _ b: CGFloat) {
-		fillRed = r
-		fillGreen = g
-		fillBlue = b
-	}
-
-	mutating func setStrokeCMYK(_ c: CGFloat, _ m: CGFloat, _ y: CGFloat, _ k: CGFloat) {
-		// Simple CMYK to RGB conversion
-		strokeRed = (1 - c) * (1 - k)
-		strokeGreen = (1 - m) * (1 - k)
-		strokeBlue = (1 - y) * (1 - k)
-	}
-
-	mutating func setFillCMYK(_ c: CGFloat, _ m: CGFloat, _ y: CGFloat, _ k: CGFloat) {
-		// Simple CMYK to RGB conversion
-		fillRed = (1 - c) * (1 - k)
-		fillGreen = (1 - m) * (1 - k)
-		fillBlue = (1 - y) * (1 - k)
-	}
-
-	func applyStrokeColor(to context: CGContext) {
-		context.setStrokeColor(CGColor(red: strokeRed, green: strokeGreen, blue: strokeBlue, alpha: strokeAlpha))
-	}
-
-	func applyFillColor(to context: CGContext) {
-		context.setFillColor(CGColor(red: fillRed, green: fillGreen, blue: fillBlue, alpha: fillAlpha))
-	}
-}
-
 extension PdfContentStream {
 	func render(in context: CGContext, lookup: PdfObjectLookup?) {
 		context.saveGState()
@@ -137,10 +63,24 @@ extension PdfContentStream {
 				case .cm(let a, let b, let c, let d, let tx, let ty):
 					let transform = CGAffineTransform(a: a, b: b, c: c, d: d, tx: tx, ty: ty)
 					context.concatenate(transform)
-				case .CS(_):
-					break
-				case .cs(_):
-					break
+				case .CS(let name):
+					if let deviceColorSpace = PdfColorSpace(name: name) {
+						colorState.strokeColorSpace = deviceColorSpace
+					} else if
+						let colorSpaceArray = resolveResourceArray(category: .ColorSpace, key: name, lookup: lookup),
+						let colorSpace = PdfColorSpace.parse(.array(colorSpaceArray), lookup: lookup)
+					{
+						colorState.strokeColorSpace = colorSpace
+					}
+				case .cs(let name):
+					if let deviceColorSpace = PdfColorSpace(name: name) {
+						colorState.fillColorSpace = deviceColorSpace
+					} else if
+						let colorSpaceArray = resolveResourceArray(category: .ColorSpace, key: name, lookup: lookup),
+						let colorSpace = PdfColorSpace.parse(.array(colorSpaceArray), lookup: lookup)
+					{
+						colorState.fillColorSpace = colorSpace
+					}
 				case .d(let phase, let array):
 					let dashArray = array.map { CGFloat($0) }
 					context.setLineDash(phase: CGFloat(phase), lengths: dashArray)
@@ -201,7 +141,7 @@ extension PdfContentStream {
 					colorState.setFillGray(CGFloat(gray))
 					colorState.applyFillColor(to: context)
 				case .gs(let name):
-					guard let gstateDictionary = resolveResource(
+					guard let gstateDictionary = resolveResourceDictionary(
 						category: .ExtGState,
 						key: name,
 						lookup: lookup
@@ -268,17 +208,17 @@ extension PdfContentStream {
 					context.closePath()
 					context.strokePath()
 				case .SC(let colors):
-					guard colors.count >= 3 else { break }
-					colorState.setStrokeRGB(colors[0], colors[1], colors[2])
+					colorState.setStrokeColor(colors.map { CGFloat($0) })
 					colorState.applyStrokeColor(to: context)
 				case .sc(let colors):
-					guard colors.count >= 3 else { break }
-					colorState.setFillRGB(colors[0], colors[1], colors[2])
+					colorState.setFillColor(colors.map { CGFloat($0) })
 					colorState.applyFillColor(to: context)
-				case .SCN(_):
-					break
-				case .scn(_):
-					break
+				case .SCN(let colors):
+					colorState.setStrokeColor(colors.map { CGFloat($0) })
+					colorState.applyStrokeColor(to: context)
+				case .scn(let colors):
+					colorState.setFillColor(colors.map { CGFloat($0) })
+					colorState.applyFillColor(to: context)
 				case .sh(_):
 					break
 				case .Tc(let spacing):
@@ -293,7 +233,7 @@ extension PdfContentStream {
 				case .Tf(let fontKey, let size):
 					textState.fontSize = size
 					guard
-						let fontDictionary = resolveResource(category: .Font, key: fontKey, lookup: lookup)
+						let fontDictionary = resolveResourceDictionary(category: .Font, key: fontKey, lookup: lookup)
 					else {
 						textState.font = nil
 						break
@@ -309,7 +249,11 @@ extension PdfContentStream {
 					for item in array {
 						switch item {
 						case .offset(let offset):
-							textPosition.textMatrix.tx -= offset / 1000
+							// Offset is in thousandths of text space units
+							// Must use matrix concatenation to account for textMatrix scaling
+							let displacement = -(offset / 1000) * textState.fontSize * (textState.horizontalScale / 100)
+							let translation = CGAffineTransform(translationX: displacement, y: 0)
+							textPosition.textMatrix = translation.concatenating(textPosition.textMatrix)
 						case .text(let text):
 							context.showText(text, state: textState, position: &textPosition)
 						}
@@ -364,18 +308,19 @@ extension PdfContentStream {
 		guard let rect = annotationRect?.cgRect, let bbox = bbox?.cgRect else {
 			return matrix?.cgAffineTransform
 		}
-		
+
 		let matrix = matrix?.cgAffineTransform ?? .identity
 		let transformedBBox = bbox.applying(matrix)
 		let scaleX = rect.width / transformedBBox.width
 		let scaleY = rect.height / transformedBBox.height
 		let translateX = rect.minX - transformedBBox.minX * scaleX
 		let translateY = rect.minY - transformedBBox.minY * scaleY
-		
+
 		var AA = CGAffineTransform.identity
 		AA = AA.translatedBy(x: translateX, y: translateY)
 		AA = AA.scaledBy(x: scaleX, y: scaleY)
 		AA = AA.concatenating(matrix)
 		return AA
 	}
+
 }

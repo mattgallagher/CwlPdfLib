@@ -42,7 +42,11 @@ public struct PdfContentStream {
 		}
 	}
 	
-	public func resolveResource(category: PdfResourceCategory, key: String, lookup: PdfObjectLookup?) -> PdfDictionary? {
+	public func resolveResourceArray(category: PdfResourceCategory, key: String, lookup: PdfObjectLookup?) -> PdfArray? {
+		resources?[category.rawValue]?.dictionary(lookup: lookup)?[key]?.array(lookup: lookup)
+	}
+
+	public func resolveResourceDictionary(category: PdfResourceCategory, key: String, lookup: PdfObjectLookup?) -> PdfDictionary? {
 		resources?[category.rawValue]?.dictionary(lookup: lookup)?[key]?.dictionary(lookup: lookup)
 	}
 
