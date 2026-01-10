@@ -25,7 +25,15 @@ public struct PdfFont<PlatformFont> {
 			throw PdfParseError(failure: .unsupportedFontSubtype)
 		}
 		
-		let descriptorDict = fontDictionary[.FontDescriptor]?.dictionary(lookup: lookup)
+		// For Type0 fonts, FontDescriptor is in the descendant CIDFont, not the top-level dictionary
+		let descriptorDict: PdfDictionary?
+		if case .Type0 = fontSubtype {
+			let descendants = fontDictionary[.DescendantFonts]?.array(lookup: lookup)
+			let descendantDict = descendants?.first?.dictionary(lookup: lookup)
+			descriptorDict = descendantDict?[.FontDescriptor]?.dictionary(lookup: lookup)
+		} else {
+			descriptorDict = fontDictionary[.FontDescriptor]?.dictionary(lookup: lookup)
+		}
 		
 		let (platformFont, postscriptName) = try Self.buildFont(
 			fontDictionary: fontDictionary,
@@ -598,7 +606,7 @@ public struct PdfFont<PlatformFont> {
 				// Check if second value is an array (array format)
 				else if let widthArray = secondValue.array(lookup: lookup) {
 					// Format 3: [cid1 cid2 [width1 width2 ...]] - array of widths for range
-					guard index + 1 < wArray.count else { break }
+					guard index + 2 < wArray.count else { break }
 					
 					let thirdValue = wArray[index + 2]
 					if let endCID = thirdValue.integer(lookup: lookup) {
@@ -853,7 +861,7 @@ public struct CMap {
 				continue
 			}
 		}
-		return 0
+		return code
 	}
 }
 

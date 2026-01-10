@@ -19,6 +19,8 @@ extension PdfContentStream {
 		
 		var textState = TextState()
 		var textPosition = TextPosition()
+		
+		var colorStack = [ColorState]()
 		var colorState = ColorState()
 		
 		do {
@@ -190,7 +192,9 @@ extension PdfContentStream {
 					context.beginPath()
 				case .q:
 					context.saveGState()
+					colorStack.append(colorState)
 				case .Q:
+					colorState = colorStack.popLast() ?? ColorState()
 					context.restoreGState()
 				case .re(let x, let y, let w, let h):
 					context.addRect(CGRect(x: CGFloat(x), y: CGFloat(y), width: CGFloat(w), height: CGFloat(h)))

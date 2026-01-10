@@ -34,16 +34,22 @@ public struct PdfPage: Sendable, Hashable, Identifiable {
 		return documentPageSize
 	}
 	
-	public func contentStream(lookup: PdfObjectLookup?) -> PdfContentStream? {
-		guard let contents = pageDictionary[.Contents]?.stream(lookup: lookup) else {
-			return nil
+	public func contentStreams(lookup: PdfObjectLookup?) -> [PdfContentStream] {
+		let resources = pageDictionary[.Resources]?.dictionary(lookup: lookup)
+		guard let contents = pageDictionary[.Contents] else {
+			return []
 		}
-		return PdfContentStream(
-			stream: contents,
-			resources: pageDictionary[.Resources]?.dictionary(lookup: lookup),
-			annotationRect: nil,
-			lookup: lookup
-		)
+
+		if let stream = contents.stream(lookup: lookup) {
+			return [PdfContentStream(stream: stream, resources: resources, annotationRect: nil, lookup: lookup)]
+		} else if let array = contents.array(lookup: lookup) {
+			return array.compactMap { element in
+				guard let stream = element.stream(lookup: lookup) else { return nil }
+				return PdfContentStream(stream: stream, resources: resources, annotationRect: nil, lookup: lookup)
+			}
+		}
+
+		return []
 	}
 }
 

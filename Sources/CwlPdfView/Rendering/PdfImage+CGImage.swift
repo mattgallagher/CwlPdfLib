@@ -23,11 +23,68 @@ extension PdfImage {
 	// MARK: - JPEG Image Creation
 
 	private func createJPEGImage() -> CGImage? {
-		guard let provider = CGDataProvider(data: data as CFData) else {
+		// Use ImageIO for more robust JPEG decoding
+		guard let imageSource = CGImageSourceCreateWithData(data as CFData, nil),
+			  let image = CGImageSourceCreateImageAtIndex(imageSource, 0, nil) else {
 			return nil
 		}
+
+		// CMYK JPEGs in PDFs typically have inverted color values (0=full color, 255=no color)
+		// Check if we need to invert the CMYK data
+		if colorSpace.isCMYK {
+			return invertCMYKImage(image)
+		}
+
+		return image
+	}
+
+	/// Inverts CMYK color values in an image (255 - value for each component)
+	private func invertCMYKImage(_ image: CGImage) -> CGImage? {
+		let width = image.width
+		let height = image.height
+		let bytesPerPixel = 4
+		let bytesPerRow = width * bytesPerPixel
+		let totalBytes = height * bytesPerRow
+
+		// Create a buffer for the pixel data
+		var pixelData = [UInt8](repeating: 0, count: totalBytes)
+
+		// Create a CMYK color space and bitmap context
+		let cmykColorSpace = CGColorSpaceCreateDeviceCMYK()
+		guard let context = CGContext(
+			data: &pixelData,
+			width: width,
+			height: height,
+			bitsPerComponent: 8,
+			bytesPerRow: bytesPerRow,
+			space: cmykColorSpace,
+			bitmapInfo: CGImageAlphaInfo.none.rawValue
+		) else {
+			return nil
+		}
+
+		// Draw the original image into the context to get CMYK pixel data
+		context.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
+
+		// Invert all CMYK values
+		for i in 0..<totalBytes {
+			pixelData[i] = 255 - pixelData[i]
+		}
+
+		// Create a new image from the inverted data
+		guard let provider = CGDataProvider(data: Data(pixelData) as CFData) else {
+			return nil
+		}
+
 		return CGImage(
-			jpegDataProviderSource: provider,
+			width: width,
+			height: height,
+			bitsPerComponent: 8,
+			bitsPerPixel: 32,
+			bytesPerRow: bytesPerRow,
+			space: cmykColorSpace,
+			bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.none.rawValue),
+			provider: provider,
 			decode: nil,
 			shouldInterpolate: interpolate,
 			intent: .defaultIntent

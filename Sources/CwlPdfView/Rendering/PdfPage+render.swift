@@ -5,11 +5,9 @@ import CwlPdfParser
 
 extension PdfPage {
 	func render(in context: CGContext, lookup: PdfObjectLookup?) {
-		guard let contentStream = contentStream(lookup: lookup) else {
-			return
+		for contentStream in contentStreams(lookup: lookup) {
+			contentStream.render(in: context, lookup: lookup)
 		}
-		
-		contentStream.render(in: context, lookup: lookup)
 		
 		for
 			annotation in pageDictionary[.Annots]?

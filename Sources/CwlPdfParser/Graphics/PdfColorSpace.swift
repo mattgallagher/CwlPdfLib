@@ -37,6 +37,18 @@ public enum PdfColorSpace: Sendable, Hashable {
 		}
 	}
 
+	/// Returns true if this is a CMYK color space (DeviceCMYK or 4-component ICC-based)
+	public var isCMYK: Bool {
+		switch self {
+		case .deviceCMYK:
+			true
+		case .iccBased(let components, _):
+			components == 4
+		default:
+			false
+		}
+	}
+
 	public static func parse(_ colorSpaceObj: PdfObject?, lookup: PdfObjectLookup?) -> PdfColorSpace? {
 		guard let colorSpaceObj else {
 			return nil

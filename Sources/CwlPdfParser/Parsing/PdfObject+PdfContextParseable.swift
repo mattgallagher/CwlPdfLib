@@ -41,15 +41,11 @@ extension PdfObject: PdfContextParseable {
 			}
 			try context.readEndOfLine()
 			
-			let filters: [String] = if dictionary.isImage(lookup: lookup) {
-				[]
-			} else {
-				switch dictionary["Filter"] {
-				case nil: []
-				case .name(let string): [string]
-				case .array(let array): array.compactMap { $0.name(lookup: lookup) }
-				default: throw PdfParseError(context: context, failure: .unexpectedToken)
-				}
+			let filters = switch dictionary["Filter"] {
+			case nil: [] as [String]
+			case .name(let string): [string]
+			case .array(let array): array.compactMap { $0.name(lookup: lookup) }
+			default: throw PdfParseError(context: context, failure: .unexpectedToken)
 			}
 			
 			let data = try context.decode(
@@ -57,7 +53,8 @@ extension PdfObject: PdfContextParseable {
 				filters: filters,
 				decodeParams: dictionary["DecodeParms"],
 				decryption: lookup?.decryption,
-				objectId: context.objectIdentifier
+				objectId: context.objectIdentifier,
+				isImage: dictionary.isImage(lookup: lookup)
 			)
 			object = .stream(PdfStream(dictionary: dictionary, data: data))
 			

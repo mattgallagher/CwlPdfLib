@@ -255,19 +255,16 @@ struct GlyphRun {
 		
 		for cid in cids {
 			// --- CID → GID
-			let gid: CGGlyph = {
-				switch descendant.cidToGIDMap {
-				case .identity, .none:
-					return CGGlyph(cid)
-					
-				case .mapped(let map):
-					let index = Int(cid)
-					if index >= 0, index < map.count {
-						return CGGlyph(map[index])
-					}
-					return 0
+			let gid: CGGlyph = switch descendant.cidToGIDMap {
+			case .identity, .none:
+				CGGlyph(cid)
+			case .mapped(let map):
+				if cid >= 0, Int(cid) < map.count {
+					CGGlyph(map[Int(cid)])
+				} else {
+					CGGlyph(0)
 				}
-			}()
+			}
 			
 			// --- Width (glyph space)
 			let width: Double = descendant.widths.width(for: cid) ?? descendant.defaultWidth
