@@ -316,8 +316,21 @@ extension PdfContentStream {
 				case .scn(let colors):
 					renderState.colorState.setFillColor(colors.map { CGFloat($0) })
 					renderState.colorState.applyFillColor(to: context)
-				case .sh(_):
-					break
+				case .sh(let shadingName):
+					guard let shadingDictionary = resolveResourceDictionary(
+						category: .Shading,
+						key: shadingName,
+						lookup: lookup
+					) else {
+						break
+					}
+					guard
+						let shading = PdfShading.parse(shadingDictionary, lookup: lookup),
+						let cgShading = shading.createCGShading()
+					else {
+						break
+					}
+					context.drawShading(cgShading)
 				case .Tc(let spacing):
 					textState.charSpace = spacing
 				case .Td(let tx, let ty):

@@ -141,6 +141,10 @@ extension PdfObject: PdfContextParseable {
 						throw PdfParseError(context: context, failure: .unexpectedToken)
 					}
 					element = .object(.reference(PdfObjectIdentifier(number: number, generation: generation)))
+				} else if context.slice[reslice: range].elementsEqual(PdfParseIdentifier.`true`.rawValue.utf8) {
+					element = .object(.boolean(true))
+				} else if context.slice[reslice: range].elementsEqual(PdfParseIdentifier.`false`.rawValue.utf8) {
+					element = .object(.boolean(false))
 				} else {
 					element = .object(.identifier(context.pdfText(range: range)))
 				}

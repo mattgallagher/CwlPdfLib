@@ -136,4 +136,24 @@ public extension String {
 	static let AIS = "AIS"
 	static let TK = "TK"
 	static let FL = "FL"
+
+	// Shading keys
+	static let ShadingType = "ShadingType"
+	static let Coords = "Coords"
+	static let Domain = "Domain"
+	static let Function = "Function"
+	static let Extend = "Extend"
+	static let AntiAlias = "AntiAlias"
+	static let Background = "Background"
+
+	// Function keys
+	static let FunctionType = "FunctionType"
+	static let C0 = "C0"
+	static let C1 = "C1"
+	static let Functions = "Functions"
+	static let Bounds = "Bounds"
+	static let Encode = "Encode"
+	static let Range = "Range"
+	static let Size = "Size"
+	static let BitsPerSample = "BitsPerSample"
 }
