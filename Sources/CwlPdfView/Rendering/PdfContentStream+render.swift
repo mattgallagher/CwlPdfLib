@@ -22,6 +22,7 @@ extension PdfContentStream {
 		
 		var textState = TextState()
 		var textPosition = TextPosition()
+		var pendingClip: CGPathFillRule?
 		
 		do {
 			try parse { op in
@@ -37,14 +38,38 @@ extension PdfContentStream {
 					textPosition.textMatrix = textPosition.lineMatrix
 					context.showText(text, state: textState, position: &textPosition, lookup: lookup)
 				case .B:
+					if let clipRule = pendingClip {
+						let path = context.path
+						context.clip(using: clipRule)
+						pendingClip = nil
+						if let path { context.addPath(path) }
+					}
 					context.drawPath(using: .fillStroke)
 				case .`B*`:
+					if let clipRule = pendingClip {
+						let path = context.path
+						context.clip(using: clipRule)
+						pendingClip = nil
+						if let path { context.addPath(path) }
+					}
 					context.drawPath(using: .eoFillStroke)
 				case .b:
 					context.closePath()
+					if let clipRule = pendingClip {
+						let path = context.path
+						context.clip(using: clipRule)
+						pendingClip = nil
+						if let path { context.addPath(path) }
+					}
 					context.drawPath(using: .fillStroke)
 				case .`b*`:
 					context.closePath()
+					if let clipRule = pendingClip {
+						let path = context.path
+						context.clip(using: clipRule)
+						pendingClip = nil
+						if let path { context.addPath(path) }
+					}
 					context.drawPath(using: .eoFillStroke)
 				case .BDC(_, _):
 					break
@@ -131,10 +156,28 @@ extension PdfContentStream {
 				case .EX:
 					break
 				case .F:
+					if let clipRule = pendingClip {
+						let path = context.path
+						context.clip(using: clipRule)
+						pendingClip = nil
+						if let path { context.addPath(path) }
+					}
 					context.fillPath(using: .winding)
 				case .f:
+					if let clipRule = pendingClip {
+						let path = context.path
+						context.clip(using: clipRule)
+						pendingClip = nil
+						if let path { context.addPath(path) }
+					}
 					context.fillPath(using: .winding)
 				case .`f*`:
+					if let clipRule = pendingClip {
+						let path = context.path
+						context.clip(using: clipRule)
+						pendingClip = nil
+						if let path { context.addPath(path) }
+					}
 					context.fillPath(using: .evenOdd)
 				case .G(let gray):
 					renderState.colorState.setStrokeGray(CGFloat(gray))
@@ -189,7 +232,12 @@ extension PdfContentStream {
 				case .MP(_):
 					break
 				case .n:
-					context.beginPath()
+					if let clipRule = pendingClip {
+						context.clip(using: clipRule)
+						pendingClip = nil
+					} else {
+						context.beginPath()
+					}
 				case .q:
 					context.saveGState()
 					renderStateStack.append(renderState)
@@ -207,9 +255,21 @@ extension PdfContentStream {
 				case .ri(_):
 					break
 				case .S:
+					if let clipRule = pendingClip {
+						let path = context.path
+						context.clip(using: clipRule)
+						pendingClip = nil
+						if let path { context.addPath(path) }
+					}
 					context.strokePath()
 				case .s:
 					context.closePath()
+					if let clipRule = pendingClip {
+						let path = context.path
+						context.clip(using: clipRule)
+						pendingClip = nil
+						if let path { context.addPath(path) }
+					}
 					context.strokePath()
 				case .SC(let colors):
 					renderState.colorState.setStrokeColor(colors.map { CGFloat($0) })
@@ -255,7 +315,7 @@ extension PdfContentStream {
 						case .offset(let offset):
 							// Offset is in thousandths of text space units
 							// Must use matrix concatenation to account for textMatrix scaling
-							let displacement = -(offset / 1000) * textState.fontSize * (textState.horizontalScale / 100)
+							let displacement = -(offset / 1000) * (textState.horizontalScale / 100)
 							let translation = CGAffineTransform(translationX: displacement, y: 0)
 							textPosition.textMatrix = translation.concatenating(textPosition.textMatrix)
 						case .text(let text):
@@ -289,9 +349,9 @@ extension PdfContentStream {
 				case .w(let width):
 					context.setLineWidth(CGFloat(width))
 				case .W:
-					break
+					pendingClip = .winding
 				case .`W*`:
-					break
+					pendingClip = .evenOdd
 				case .y(let x2, let y2, let x3, let y3):
 					context.addCurve(
 						to: CGPoint(x: CGFloat(x3), y: CGFloat(y3)),

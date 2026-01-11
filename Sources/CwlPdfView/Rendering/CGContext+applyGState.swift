@@ -79,7 +79,7 @@ extension CGContext {
 		// Handle soft mask
 		if gstate.softMaskNone {
 			renderState.clearSoftMask()
-			// Note: clearing clip requires restoreGState; we track but can't undo immediately
+			resetClip()
 		} else if let smaskData = gstate.softMask {
 			renderState.applySoftMask(smaskData, lookup: lookup)
 			// Apply the mask as a clip to the current graphics context

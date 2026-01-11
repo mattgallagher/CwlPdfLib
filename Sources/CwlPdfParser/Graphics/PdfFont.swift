@@ -598,73 +598,55 @@ public struct PdfFont<PlatformFont> {
 		}
 	}
 	
+	/// Parses the W (widths) array from a CID font dictionary.
+	/// Per PDF 2.0 section 9.7.4.3, the W array has two valid formats:
+	/// - `c [w1 w2 ... wn]`: Starting CID followed by array of widths for consecutive CIDs
+	/// - `cfirst clast w`: Range of CIDs with a single width value
 	static func parseCIDWidths(_ wObject: PdfObject?, _ lookup: PdfObjectLookup?) throws -> CIDWidthMap {
 		guard let wArray = wObject?.array(lookup: lookup) else {
 			return []
 		}
-		
+
 		var widthMap: CIDWidthMap = []
 		var index = 0
-		
+
 		while index < wArray.count {
+			// First element must be a CID (integer)
+			guard let startCID = wArray[index].integer(lookup: lookup) else {
+				index += 1
+				continue
+			}
+
 			guard index + 1 < wArray.count else { break }
-			
-			let firstValue = wArray[index]
-			
-			// Check if first value is a CID (integer)
-			if let startCID = firstValue.integer(lookup: lookup) {
-				let secondValue = wArray[index + 1]
-				
-				// Check if second value is also a CID (range format)
-				if let endCID = secondValue.integer(lookup: lookup) {
-					// Format 1: [cid1 cid2 width] - single width for range
-					guard index + 2 < wArray.count else { break }
-					
-					if let width = wArray[index + 2].real(lookup: lookup) {
-						let range: CIDRange = UInt32(startCID)...UInt32(endCID)
+			let secondValue = wArray[index + 1]
+
+			// Format: c [w1 w2 ... wn] - array of widths for consecutive CIDs
+			if let widthArray = secondValue.array(lookup: lookup) {
+				var currentCID = startCID
+				for widthValue in widthArray {
+					if let width = widthValue.real(lookup: lookup) {
+						let range: CIDRange = UInt32(currentCID)...UInt32(currentCID)
 						widthMap.append((range, width))
 					}
-					
-					index += 3
+					currentCID += 1
 				}
-				// Check if second value is a real number (individual format)
-				else if let width = secondValue.real(lookup: lookup) {
-					// Format 2: [cid1 width1 cid2 width2 ...] - individual widths
-					let range: CIDRange = UInt32(startCID)...UInt32(startCID)
+				index += 2
+			}
+			// Format: cfirst clast w - range with single width
+			else if let endCID = secondValue.integer(lookup: lookup) {
+				guard index + 2 < wArray.count else { break }
+
+				if let width = wArray[index + 2].real(lookup: lookup) {
+					let range: CIDRange = UInt32(startCID)...UInt32(endCID)
 					widthMap.append((range, width))
-					
-					index += 2
 				}
-				// Check if second value is an array (array format)
-				else if let widthArray = secondValue.array(lookup: lookup) {
-					// Format 3: [cid1 cid2 [width1 width2 ...]] - array of widths for range
-					guard index + 2 < wArray.count else { break }
-					
-					let thirdValue = wArray[index + 2]
-					if let endCID = thirdValue.integer(lookup: lookup) {
-						// Create individual mappings for each width in the array
-						var currentCID = startCID
-						for widthValue in widthArray {
-							if let width = widthValue.real(lookup: lookup) {
-								let range: CIDRange = UInt32(currentCID)...UInt32(currentCID)
-								widthMap.append((range, width))
-							}
-							currentCID += 1
-							if currentCID > endCID { break }
-						}
-					}
-					
-					index += 3
-				} else {
-					// Unknown format, skip
-					index += 1
-				}
+				index += 3
 			} else {
-				// First value is not a CID, skip
+				// Unknown format, skip
 				index += 1
 			}
 		}
-		
+
 		return widthMap
 	}
 	

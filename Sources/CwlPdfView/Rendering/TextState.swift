@@ -110,8 +110,8 @@ extension CGContext {
 		for i in 0..<chars.count {
 			let advance = advances[i].x
 			advances[i] = CGPoint(x: x, y: state.rise)
-			x += advance * state.fontSize * state.horizontalScale / 100 + state.charSpace + (
-				chars[i] == 0x0020 ? state.wordSpace : 0
+			x += advance * state.horizontalScale / 100 + state.charSpace + (
+				chars[i] == 0x0020 ? state.wordSpace : 0  // don't multiply by fontSize since CTFontDrawGlyphs will multiply the advances by the rendering matrix which already contains fontSize
 			)
 		}
 		saveGState()
@@ -196,7 +196,7 @@ extension CGContext {
 				y: CGFloat(state.rise)
 			))
 			
-			cursor += adv * fontSize * hScale
+			cursor += adv * hScale // don't multiply by fontSize since CTFontDrawGlyphs will multiply the advances by the rendering matrix which already contains fontSize
 			cursor += CGFloat(state.charSpace)
 			
 			if glyph.isSpace {
@@ -207,11 +207,7 @@ extension CGContext {
 		saveGState()
 		
 		// PDF text rendering matrix:
-		// textMatrix × fontSize × CTM
-		concatenate(
-			position.textMatrix
-				.scaledBy(x: fontSize, y: fontSize)
-		)
+		concatenate(position.textMatrix.scaledBy(x: fontSize, y: fontSize))
 		
 		CTFontDrawGlyphs(
 			ctFont,
@@ -224,7 +220,7 @@ extension CGContext {
 		restoreGState()
 		
 		// Advance text matrix
-		position.textMatrix = CGAffineTransform(translationX: cursor / fontSize, y: 0).concatenating(position.textMatrix)
+		position.textMatrix = CGAffineTransform(translationX: cursor, y: 0).concatenating(position.textMatrix)
 	}
 }
 
