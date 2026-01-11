@@ -4,9 +4,19 @@ import CoreGraphics
 import CwlPdfParser
 
 extension PdfPage {
+	func renderBounds(lookup: PdfObjectLookup?) -> CGRect {
+		var rect = pageRect(lookup: lookup).cgRect
+		rect.origin = .zero
+		return rect
+	}
+
 	func render(in context: CGContext, lookup: PdfObjectLookup?) {
+		let rect = renderBounds(lookup: lookup)
+		context.addRect(rect)
+		context.clip()
+		
 		for contentStream in contentStreams(lookup: lookup) {
-			contentStream.render(in: context, lookup: lookup)
+			contentStream.render(in: context, pageBounds: rect, lookup: lookup)
 		}
 		
 		for
@@ -20,13 +30,14 @@ extension PdfPage {
 			else {
 				continue
 			}
+			
 			let contentStream = PdfContentStream(
 				stream: appearanceStream,
 				resources: nil,
 				annotationRect: annotationRect,
 				lookup: lookup
 			)
-			contentStream.render(in: context, lookup: lookup)
+			contentStream.render(in: context, pageBounds: rect, lookup: lookup)
 		}
 	}
 }

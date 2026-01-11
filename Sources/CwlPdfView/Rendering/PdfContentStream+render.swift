@@ -5,20 +5,22 @@ import CoreGraphics
 import AppKit
 
 extension PdfContentStream {
-	func render(in context: CGContext, lookup: PdfObjectLookup?) {
+	func render(in context: CGContext, pageBounds: CGRect?, lookup: PdfObjectLookup?) {
 		context.saveGState()
-		
-		if let contextTransform {
-			context.concatenate(contextTransform)
-		}
-		
-		if let bbox {
-			context.addRect(bbox.cgRect)
-			context.clip()
-		}
 		
 		var renderState = RenderState()
 		var renderStateStack = [RenderState]()
+
+		if let contextTransform {
+			context.concatenate(contextTransform)
+		}
+
+		if let bbox = bbox?.cgRect ?? pageBounds {
+			let bboxPath = CGPath(rect: bbox, transform: nil)
+			context.addPath(bboxPath)
+			context.clip()
+			renderState.addClipPath(bboxPath, ctm: context.ctm, fillRule: .winding)
+		}
 		
 		var textState = TextState()
 		var textPosition = TextPosition()
@@ -40,6 +42,9 @@ extension PdfContentStream {
 				case .B:
 					if let clipRule = pendingClip {
 						let path = context.path
+						if let pathCopy = path?.copy() {
+							renderState.addClipPath(pathCopy, ctm: context.ctm, fillRule: clipRule)
+						}
 						context.clip(using: clipRule)
 						pendingClip = nil
 						if let path { context.addPath(path) }
@@ -48,6 +53,9 @@ extension PdfContentStream {
 				case .`B*`:
 					if let clipRule = pendingClip {
 						let path = context.path
+						if let pathCopy = path?.copy() {
+							renderState.addClipPath(pathCopy, ctm: context.ctm, fillRule: clipRule)
+						}
 						context.clip(using: clipRule)
 						pendingClip = nil
 						if let path { context.addPath(path) }
@@ -57,6 +65,9 @@ extension PdfContentStream {
 					context.closePath()
 					if let clipRule = pendingClip {
 						let path = context.path
+						if let pathCopy = path?.copy() {
+							renderState.addClipPath(pathCopy, ctm: context.ctm, fillRule: clipRule)
+						}
 						context.clip(using: clipRule)
 						pendingClip = nil
 						if let path { context.addPath(path) }
@@ -66,6 +77,9 @@ extension PdfContentStream {
 					context.closePath()
 					if let clipRule = pendingClip {
 						let path = context.path
+						if let pathCopy = path?.copy() {
+							renderState.addClipPath(pathCopy, ctm: context.ctm, fillRule: clipRule)
+						}
 						context.clip(using: clipRule)
 						pendingClip = nil
 						if let path { context.addPath(path) }
@@ -142,7 +156,7 @@ extension PdfContentStream {
 							annotationRect: nil,
 							lookup: lookup
 						)
-						formContentStream.render(in: context, lookup: lookup)
+						formContentStream.render(in: context, pageBounds: nil, lookup: lookup)
 					}
 				case .DP(_, _):
 					break
@@ -158,6 +172,9 @@ extension PdfContentStream {
 				case .F:
 					if let clipRule = pendingClip {
 						let path = context.path
+						if let pathCopy = path?.copy() {
+							renderState.addClipPath(pathCopy, ctm: context.ctm, fillRule: clipRule)
+						}
 						context.clip(using: clipRule)
 						pendingClip = nil
 						if let path { context.addPath(path) }
@@ -166,6 +183,9 @@ extension PdfContentStream {
 				case .f:
 					if let clipRule = pendingClip {
 						let path = context.path
+						if let pathCopy = path?.copy() {
+							renderState.addClipPath(pathCopy, ctm: context.ctm, fillRule: clipRule)
+						}
 						context.clip(using: clipRule)
 						pendingClip = nil
 						if let path { context.addPath(path) }
@@ -174,6 +194,9 @@ extension PdfContentStream {
 				case .`f*`:
 					if let clipRule = pendingClip {
 						let path = context.path
+						if let pathCopy = path?.copy() {
+							renderState.addClipPath(pathCopy, ctm: context.ctm, fillRule: clipRule)
+						}
 						context.clip(using: clipRule)
 						pendingClip = nil
 						if let path { context.addPath(path) }
@@ -193,8 +216,8 @@ extension PdfContentStream {
 					) else {
 						break
 					}
-					let gstate = PdfGState(dictionary: gstateDictionary, lookup: lookup)
-					context.apply(gstate, renderState: &renderState, lookup: lookup)
+					let gstate = PdfExtGState(dictionary: gstateDictionary, lookup: lookup)
+					context.apply(gstate, renderState: &renderState, renderStack: renderStateStack, lookup: lookup)
 				case .h:
 					context.closePath()
 				case .i(_):
@@ -233,6 +256,9 @@ extension PdfContentStream {
 					break
 				case .n:
 					if let clipRule = pendingClip {
+						if let path = context.path?.copy() {
+							renderState.addClipPath(path, ctm: context.ctm, fillRule: clipRule)
+						}
 						context.clip(using: clipRule)
 						pendingClip = nil
 					} else {
@@ -244,6 +270,7 @@ extension PdfContentStream {
 				case .Q:
 					renderState = renderStateStack.popLast() ?? RenderState()
 					context.restoreGState()
+					pendingClip = nil
 				case .re(let x, let y, let w, let h):
 					context.addRect(CGRect(x: CGFloat(x), y: CGFloat(y), width: CGFloat(w), height: CGFloat(h)))
 				case .RG(let r, let g, let b):
@@ -257,6 +284,9 @@ extension PdfContentStream {
 				case .S:
 					if let clipRule = pendingClip {
 						let path = context.path
+						if let pathCopy = path?.copy() {
+							renderState.addClipPath(pathCopy, ctm: context.ctm, fillRule: clipRule)
+						}
 						context.clip(using: clipRule)
 						pendingClip = nil
 						if let path { context.addPath(path) }
@@ -266,6 +296,9 @@ extension PdfContentStream {
 					context.closePath()
 					if let clipRule = pendingClip {
 						let path = context.path
+						if let pathCopy = path?.copy() {
+							renderState.addClipPath(pathCopy, ctm: context.ctm, fillRule: clipRule)
+						}
 						context.clip(using: clipRule)
 						pendingClip = nil
 						if let path { context.addPath(path) }

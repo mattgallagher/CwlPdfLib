@@ -4,7 +4,7 @@ import Foundation
 
 /// Represents a PDF Extended Graphics State (ExtGState) dictionary.
 /// Used by the `gs` operator to set multiple graphics state parameters at once.
-public struct PdfGState: Sendable {
+public struct PdfExtGState: Sendable {
 	/// Stroking alpha (opacity). Range: 0.0 to 1.0
 	public let strokingAlpha: Double?
 

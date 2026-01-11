@@ -54,7 +54,7 @@ extension PdfSMask {
 			annotationRect: nil,
 			lookup: lookup
 		)
-		contentStream.render(in: context, lookup: lookup)
+		contentStream.render(in: context, pageBounds: nil, lookup: lookup)
 		
 		// Extract mask based on subtype
 		guard let renderedImage = context.makeImage() else {

@@ -8,8 +8,7 @@ struct PageView: View {
 	var body: some View {
 		VStack {
 			Canvas { context, size in
-				var rect = page.pageRect(lookup: document.pdf.lookup).cgRect
-				rect.origin = .zero
+				let rect = page.renderBounds(lookup: document.pdf.lookup)
 				
 				// Calculate scale factor to fit the page within the available size
 				let scaleFactor = min(size.width / rect.width, size.height / rect.height)
@@ -19,10 +18,6 @@ struct PageView: View {
 				context.concatenate(
 					CGAffineTransform(a: scaleFactor, b: 0, c: 0, d: -scaleFactor, tx: xOffset, ty: yOffset + scaleFactor * rect.height)
 				)
-				
-				let path = Path(rect)
-				context.fill(path, with: .color(.white))
-				context.clip(to: path)
 				
 				context.withCGContext { cgContext in
 					page.render(in: cgContext, lookup: document.pdf.lookup)

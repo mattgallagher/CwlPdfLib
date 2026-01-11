@@ -3,11 +3,18 @@
 import CwlPdfParser
 import CoreGraphics
 
+/// Represents a single clip operation applied to the graphics state
+struct ClipEntry: Sendable {
+	let deviceSpacePath: CGPath
+	let fillRule: CGPathFillRule
+}
+
 /// Tracks the active soft mask state during rendering.
 struct RenderState {
 	var activeSoftMask: CGImage?
 	var softMaskBounds: CGRect?
 	var colorState = ColorState()
+	var clipPaths: [ClipEntry] = []
 
 	mutating func applySoftMask(_ smaskData: PdfSMask?, lookup: PdfObjectLookup?) {
 		if let smaskData, let result = smaskData.createMaskImage(lookup: lookup) {
@@ -22,10 +29,39 @@ struct RenderState {
 		activeSoftMask = nil
 		softMaskBounds = nil
 	}
+
+	mutating func addClipPath(_ path: CGPath, ctm: CGAffineTransform, fillRule: CGPathFillRule) {
+		var ctm = ctm
+		guard let deviceSpacePath = path.copy(using: &ctm) else { return }
+		clipPaths.append(ClipEntry(deviceSpacePath: deviceSpacePath, fillRule: fillRule))
+	}
 }
 
 extension CGContext {
-	func apply(_ gstate: PdfGState, renderState: inout RenderState, lookup: PdfObjectLookup?) {
+	func reapplyClips(renderState: RenderState, renderStack: [RenderState]) {
+		let pathBackup = path
+		beginPath()
+		
+		guard ctm.isInvertible else { return }
+		var invertedCTM = ctm.inverted()
+		
+		for entry in [renderState.clipPaths, renderStack.flatMap(\.clipPaths)].joined() {
+			let userSpacePath = entry.deviceSpacePath.copy(using: &invertedCTM) ?? entry.deviceSpacePath
+			addPath(userSpacePath)
+			clip(using: entry.fillRule)
+		}
+		
+		if let pathBackup {
+			addPath(pathBackup)
+		}
+	}
+
+	func apply(
+		_ gstate: PdfExtGState,
+		renderState: inout RenderState,
+		renderStack: [RenderState],
+		lookup: PdfObjectLookup?
+	) {
 		if let alpha = gstate.strokingAlpha {
 			renderState.colorState.strokeAlpha = CGFloat(alpha)
 			renderState.colorState.applyStrokeColor(to: self)
@@ -80,6 +116,7 @@ extension CGContext {
 		if gstate.softMaskNone {
 			renderState.clearSoftMask()
 			resetClip()
+			reapplyClips(renderState: renderState, renderStack:  renderStack)
 		} else if let smaskData = gstate.softMask {
 			renderState.applySoftMask(smaskData, lookup: lookup)
 			// Apply the mask as a clip to the current graphics context
@@ -111,5 +148,12 @@ extension PdfBlendMode {
 		case .color: .color
 		case .luminosity: .luminosity
 		}
+	}
+}
+
+extension CGAffineTransform {
+	var isInvertible: Bool {
+		let det = a * d - b * c
+		return det != 0
 	}
 }

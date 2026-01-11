@@ -84,7 +84,7 @@ extension CGContext {
 				annotationRect: nil,
 				lookup: lookup
 			)
-			charProcContentStream.render(in: self, lookup: lookup)
+			charProcContentStream.render(in: self, pageBounds: nil, lookup: lookup)
 
 			restoreGState()
 
