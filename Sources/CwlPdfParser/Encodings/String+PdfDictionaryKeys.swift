@@ -1,4 +1,4 @@
-// CwlPdfLib. Copyright © 2025 Matt Gallagher. See LICENSE file for usage permissions.
+// CwlPdfLib. Copyright © 2026 Matt Gallagher. See LICENSE file for usage permissions.
 
 public extension String {
 	static let AESV2 = "AESV2"
@@ -46,6 +46,7 @@ public extension String {
 	static let endcodespacerange = "endcodespacerange"
 	static let Filter = "Filter"
 	static let FirstChar = "FirstChar"
+	static let First = "First"
 	static let FontBBox = "FontBBox"
 	static let FontDescriptor = "FontDescriptor"
 	static let FontFile = "FontFile"
@@ -64,6 +65,7 @@ public extension String {
 	static let ImageMask = "ImageMask"
 	static let Indexed = "Indexed"
 	static let Intent = "Intent"
+	static let Index = "Index"
 	static let Interpolate = "Interpolate"
 	static let ItalicAngle = "ItalicAngle"
 	static let Kids = "Kids"
@@ -76,6 +78,7 @@ public extension String {
 	static let None = "None"
 	static let O = "O"
 	static let OE = "OE"
+	static let ObjStm = "ObjStm"
 	static let Ordering = "Ordering"
 	static let P = "P"
 	static let Page = "Page"
@@ -108,6 +111,8 @@ public extension String {
 	static let Width = "Width"
 	static let Widths = "Widths"
 	static let WMode = "WMode"
+	static let XRef = "XRef"
+	static let XRefStm = "XRefStm"
 	static let XObject = "XObject"
 
 	// SMask dictionary keys

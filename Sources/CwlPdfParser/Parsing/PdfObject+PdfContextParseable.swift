@@ -1,4 +1,4 @@
-// CwlPdfLib. Copyright © 2025 Matt Gallagher. See LICENSE file for usage permissions.
+// CwlPdfLib. Copyright © 2026 Matt Gallagher. See LICENSE file for usage permissions.
 
 import Foundation
 
@@ -11,6 +11,15 @@ extension PdfObject: PdfContextParseable {
 	}
 	
 	static func parseIndirect(lookup: PdfObjectLookup?, context: inout PdfParseContext) throws -> PdfObject {
+		let expectedIdentifier = context.objectIdentifier
+		let (objectIdentifier, object) = try parseIndirectObject(lookup: lookup, context: &context)
+		if let expectedIdentifier, expectedIdentifier != objectIdentifier {
+			throw PdfParseError(context: context, failure: .objectNotFound)
+		}
+		return object
+	}
+	
+	static func parseIndirectObject(lookup: PdfObjectLookup?, context: inout PdfParseContext) throws -> (PdfObjectIdentifier, PdfObject) {
 		let number = try PdfToken
 			.parse(context: &context)
 			.requireNaturalNumber(context: &context)
@@ -19,9 +28,8 @@ extension PdfObject: PdfContextParseable {
 			.parse(context: &context)
 			.requireNaturalNumber(context: &context)
 		
-		guard number == context.objectIdentifier?.number, generation == context.objectIdentifier?.generation else {
-			throw PdfParseError(context: context, failure: .objectNotFound)
-		}
+		let objectIdentifier = PdfObjectIdentifier(number: number, generation: generation)
+		context.objectIdentifier = objectIdentifier
 		
 		try PdfToken
 			.parse(context: &context)
@@ -36,7 +44,7 @@ extension PdfObject: PdfContextParseable {
 			guard case .dictionary(let dictionary) = object else {
 				throw PdfParseError(context: context, failure: .expectedDictionary)
 			}
-			guard let lengthObject = dictionary["Length"], case .integer(let length) = lengthObject else {
+			guard let length = dictionary["Length"]?.integer(lookup: lookup) else {
 				throw PdfParseError(context: context, failure: .missingLength)
 			}
 			try context.readEndOfLine()
@@ -67,7 +75,7 @@ extension PdfObject: PdfContextParseable {
 		}
 		
 		try token.requireIdentifier(context: &context, equals: .endobj, else: .expectedIdentifierNotFound)
-		return object
+		return (objectIdentifier, object)
 	}
 	
 	static func parseNext(context: inout PdfParseContext) throws -> PdfObject? {
@@ -145,6 +153,8 @@ extension PdfObject: PdfContextParseable {
 					element = .object(.boolean(true))
 				} else if context.slice[reslice: range].elementsEqual(PdfParseIdentifier.`false`.rawValue.utf8) {
 					element = .object(.boolean(false))
+				} else if context.slice[reslice: range].elementsEqual(PdfParseIdentifier.null.rawValue.utf8) {
+					element = .object(.null)
 				} else {
 					element = .object(.identifier(context.pdfText(range: range)))
 				}

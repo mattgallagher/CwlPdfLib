@@ -6,23 +6,20 @@ Use the Xcode MCP tools for all building, testing and project exploration. Avoid
 
 ## Code Style Guidelines
 
-- Do NOT use the swift built-in "swift format" command.
-
-- DO use swiftformat as follows:
-
-```bash
-swiftformat --swiftversion 6 --config .swiftformat "Sources/CwlPdfParser/Document/PdfDocument.swift"
-```
+### Copyright inclusion
 
 - All Swift files should start with the header line:
+
 ```swift
 // CwlPdfLib. Copyright © 2026 Matt Gallagher. See LICENSE file for usage permissions.
 ```
 
-Never use code alignment (multiple spaces outside the indentation intended to
-create columns).
+### Whitespace
 
-If you need to break a function call over multiple lines, insert a newline
+Use tabs for indentation and do not trim whitespace from empty lines.
+
+Never use code alignment (multiple spaces outside the indentation intended to create
+columns). If you need to break a function call over multiple lines, insert a newline
 immediately after an open parenthesis and increase the indentation level until
 the closing parenthesis.
 
@@ -33,7 +30,10 @@ someFunction(
 )
 ```
 
-If you need a multi-line conditional statement (if or guard), always insert a newline immediately after the conditional or loop statement keyword and indent each line, then move the end of conditional (the else and/or opening brace) to a non-indented line after the multi-line block.
+If you need a multi-line conditional statement (if or guard), always insert a newline
+immediately after the conditional or loop statement keyword and indent each line, then
+move the end of conditional (the else and/or opening brace) to a non-indented line after
+the multi-line block.
 
 ```swift
 guard
@@ -44,8 +44,14 @@ else {
 }
 ```
 
-- Tab indentation with 3 spaces
-- Empty lines must contain the correct tab indentation for their scope (do not trim whitespace from empty lines)
+### Reformatting
+
+- Do NOT use the swift built-in "swift format" command.
+- If reformatting is required use swiftformat as follows:
+
+```bash
+swiftformat --swiftversion 6 --config .swiftformat "Sources/CwlPdfParser/Document/PdfDocument.swift"
+```
 
 ### Swift Language Conventions
 - Use Swift 6+ features and syntax

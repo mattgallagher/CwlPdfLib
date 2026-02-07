@@ -1,4 +1,4 @@
-// CwlPdfLib. Copyright © 2025 Matt Gallagher. See LICENSE file for usage permissions.
+// CwlPdfLib. Copyright © 2026 Matt Gallagher. See LICENSE file for usage permissions.
 
 import CwlPdfParser
 import SwiftUI
@@ -8,7 +8,7 @@ struct ObjectsTable: View {
 	@Binding var selection: SidebarSelection?
 	
 	var body: some View {
-		Table(document.pdf.lookup.allObjectByteRanges, selection: $selection.objectlayout) {
+		Table(document.pdf.lookup.allObjectLayouts, selection: $selection.objectlayout) {
 			TableColumn("Objects", value: \.debugDescription)
 		}
 	}

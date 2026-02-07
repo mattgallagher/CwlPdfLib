@@ -1,15 +1,27 @@
-// CwlPdfLib. Copyright © 2025 Matt Gallagher. See LICENSE file for usage permissions.
+// CwlPdfLib. Copyright © 2026 Matt Gallagher. See LICENSE file for usage permissions.
+
+public enum PdfObjectStorage: Sendable, Hashable {
+	case uncompressed(range: Range<Int>)
+	case objectStream(stream: PdfObjectIdentifier, index: Int)
+}
 
 public struct PdfObjectLayout: Sendable, Hashable, Identifiable {
-	public init(objectIdentifier: PdfObjectIdentifier, range: Range<Int>, revision: Int) {
+	public init(objectIdentifier: PdfObjectIdentifier, storage: PdfObjectStorage, revision: Int) {
 		self.objectIdentifier = objectIdentifier
-		self.range = range
+		self.storage = storage
 		self.revision = revision
 	}
 	
 	public let objectIdentifier: PdfObjectIdentifier
-	public let range: Range<Int>
+	public let storage: PdfObjectStorage
 	public let revision: Int
+	
+	public var range: Range<Int>? {
+		if case .uncompressed(let range) = storage {
+			return range
+		}
+		return nil
+	}
 	
 	public var id: PdfObjectLayout { self }
 }

@@ -1,4 +1,4 @@
-// CwlPdfLib. Copyright © 2025 Matt Gallagher. See LICENSE file for usage permissions.
+// CwlPdfLib. Copyright © 2026 Matt Gallagher. See LICENSE file for usage permissions.
 
 import Foundation
 import Testing
@@ -83,7 +83,7 @@ struct PdfDocumentTests {
 			try PdfStartXrefAndEof.parse(context: &context)
 		}
 		
-		let (xrefTables, trailer, objectLayoutFromOffset) = try PdfXRefTable.parseXrefTables(
+		let (xrefTables, trailer, objectLayoutFromOffset, _) = try PdfXRefTable.parseXrefTables(
 			source: source,
 			firstXrefRange: startXrefAndEof.range,
 			initialXrefTableLimit: 20
@@ -113,6 +113,40 @@ struct PdfDocumentTests {
 		let document = try PdfDocument(source: PdfDataSource(Data(contentsOf: fileURL, options: .mappedIfSafe)))
 		
 		#expect(document.trailer == trailer)
+	}
+	
+	@Test(arguments: [
+		"smallest-possible-pdf-1.5.pdf",
+		"smallest-possible-pdf-1.5-xrefstm-only.pdf"
+	])
+	func `GIVEN a pdf with xref stream WHEN PdfDocument.init THEN document loads`(filename: String) throws {
+		let fileURL = try #require(Bundle.module.url(forResource: "Fixtures/\(filename)", withExtension: nil))
+		let document = try PdfDocument(source: PdfDataSource(Data(contentsOf: fileURL, options: .mappedIfSafe)))
+		
+		#expect(!document.pages.isEmpty)
+		#expect(document.trailer[.Root] != nil)
+	}
+	
+	@Test(arguments: [
+		"smallest-possible-pdf-2.0-stms.pdf",
+		"smallest-possible-pdf-2.0-stms-flate.pdf"
+	])
+	func `GIVEN a pdf with object streams WHEN xref tables parsed THEN object stream layouts tracked`(filename: String) throws {
+		let fileURL = try #require(Bundle.module.url(forResource: "Fixtures/\(filename)", withExtension: nil))
+		let source = try PdfDataSource(Data(contentsOf: fileURL, options: .mappedIfSafe))
+		var buffer = PdfSourceBuffer()
+		try source.seek(to: source.length, buffer: &buffer)
+		let startXrefAndEof = try source.parseContext(lineCount: 3, reverse: true, buffer: &buffer) { context in
+			try PdfStartXrefAndEof.parse(context: &context)
+		}
+		let (xrefTables, _, _, objectStreamLayouts) = try PdfXRefTable.parseXrefTables(
+			source: source,
+			firstXrefRange: startXrefAndEof.range
+		)
+		let expectedObjectStreamCount = xrefTables.reduce(0) { total, table in
+			total + table.objectStreamLocations.count
+		}
+		#expect(objectStreamLayouts.count == expectedObjectStreamCount)
 	}
 }
 

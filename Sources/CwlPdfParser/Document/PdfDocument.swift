@@ -1,4 +1,4 @@
-// CwlPdfLib. Copyright © 2025 Matt Gallagher. See LICENSE file for usage permissions.
+// CwlPdfLib. Copyright © 2026 Matt Gallagher. See LICENSE file for usage permissions.
 
 import Foundation
 
@@ -22,7 +22,7 @@ public struct PdfDocument: Sendable {
 			try PdfStartXrefAndEof.parse(context: &context)
 		}
 
-		let (xrefTables, trailer, objectLayoutFromOffset) = try PdfXRefTable.parseXrefTables(
+		let (xrefTables, trailer, objectLayoutFromOffset, objectLayoutFromObjectStream) = try PdfXRefTable.parseXrefTables(
 			source: source,
 			firstXrefRange: startXrefAndEof.range
 		)
@@ -30,7 +30,12 @@ public struct PdfDocument: Sendable {
 		self.trailer = trailer
 
 		// Create lookup first (decryption will be set after if needed)
-		var lookup = PdfObjectLookup(source: source, xrefTables: xrefTables, objectLayoutFromOffset: objectLayoutFromOffset)
+		var lookup = PdfObjectLookup(
+			source: source,
+			xrefTables: xrefTables,
+			objectLayoutFromOffset: objectLayoutFromOffset,
+			objectLayoutFromObjectStream: objectLayoutFromObjectStream
+		)
 
 		// Check for encryption and set up decryption if present
 		if let encryptDict = trailer[.Encrypt]?.dictionary(lookup: lookup) {

@@ -1,4 +1,4 @@
-// CwlPdfLib. Copyright © 2025 Matt Gallagher. See LICENSE file for usage permissions.
+// CwlPdfLib. Copyright © 2026 Matt Gallagher. See LICENSE file for usage permissions.
 
 import Foundation
 import Testing
@@ -79,5 +79,15 @@ struct PdfObjectParsingTests {
 		let object = try document.lookup.object(for: objectIdentifier)
 		
 		#expect(object == matches)
+	}
+	
+	@Test
+	func `GIVEN a null token WHEN PdfObject.parse THEN null object returned`() throws {
+		let data = Data("null".utf8)
+		let object = try data.parseContext { context in
+			try PdfObject.parse(context: &context)
+		}
+		
+		#expect(object == .null)
 	}
 }
