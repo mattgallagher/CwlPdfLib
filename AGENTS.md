@@ -2,35 +2,9 @@
 
 ## Build and Test Commands
 
-### Building the Package
-```bash
-swift build
-```
-
-### Running Tests
-To run all tests:
-```bash
-swift test
-```
-
-To run a single test case:
-```bash
-swift test --filter "GIVEN a pdf file WHEN PdfDocument.init THEN trailer parsed"
-```
-
-To run a specific test file:
-```bash
-swift test --filter "PdfDocumentTests"
-```
-
-To run tests with code coverage:
-```bash
-swift test --enable-code-coverage
-```
+Use the Xcode MCP tools for all building, testing and project exploration. Avoid command line tools unless strictly necessary.
 
 ## Code Style Guidelines
-
-### Code Formatting
 
 - Do NOT use the swift built-in "swift format" command.
 
@@ -45,22 +19,37 @@ swiftformat --swiftversion 6 --config .swiftformat "Sources/CwlPdfParser/Documen
 // CwlPdfLib. Copyright © 2026 Matt Gallagher. See LICENSE file for usage permissions.
 ```
 
+Never use code alignment (multiple spaces outside the indentation intended to
+create columns).
+
+If you need to break a function call over multiple lines, insert a newline
+immediately after an open parenthesis and increase the indentation level until
+the closing parenthesis.
+
+```swift
+someFunction(
+    someParameter: someValue
+    someOtherParam: someOtherValue
+)
+```
+
+If you need a multi-line conditional statement (if or guard), always insert a newline immediately after the conditional or loop statement keyword and indent each line, then move the end of conditional (the else and/or opening brace) to a non-indented line after the multi-line block.
+
+```swift
+guard
+    someVariable == someValue,
+    someOtherVariable == someOtherValue
+else {
+    // ...
+}
+```
+
 - Tab indentation with 3 spaces
-- Empty lines must contain the correct tab indentation for their scope (do not trim
-  whitespace from empty lines)
-- Consistent spacing around operators
-- Type and function attributes should be on previous line
-- Property attributes should be on the same line
+- Empty lines must contain the correct tab indentation for their scope (do not trim whitespace from empty lines)
 
 ### Swift Language Conventions
 - Use Swift 6+ features and syntax
 - Prefer value types and the `Sendable` protocol for thread-safe types
-
-### Naming Conventions
-- Use PascalCase for types and protocols (e.g., `PdfDocument`, `PdfParseError`)
-- Use camelCase for properties and methods (e.g., `objectLayoutFromOffset`, `parseContext`)
-- Use descriptive names that clearly indicate purpose
-- Prefix public types with `Pdf` for PDF-related structures
 
 ### Import Organization
 - Keep imports in alphabetical order
@@ -71,7 +60,6 @@ swiftformat --swiftversion 6 --config .swiftformat "Sources/CwlPdfParser/Documen
   - `PdfDictionary` = `[String: PdfObject]`
 
 ### Documentation and Comments
-- Include clear comments on PDF-specific functionality
 - Use JSDoc-style documentation for public APIs
 - Document complex parsing logic with inline comments
 
@@ -94,9 +82,6 @@ swiftformat --swiftversion 6 --config .swiftformat "Sources/CwlPdfParser/Documen
 - Validate object extraction from various PDF structures
 
 ## Package Structure
-
-- This project is a Swift Package
-- The files in `CwlPdfApp` should be ignored. DO NOT build or try to run `CwlPdfApp`.
 
 ### PDF handling
 - Most logic should be kept in the `CwlPdfParser` module but all views should be kept out of
