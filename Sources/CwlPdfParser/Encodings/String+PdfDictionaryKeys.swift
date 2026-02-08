@@ -81,6 +81,7 @@ public extension String {
 	static let ObjStm = "ObjStm"
 	static let Ordering = "Ordering"
 	static let P = "P"
+	static let Catalog = "Catalog"
 	static let Page = "Page"
 	static let Pages = "Pages"
 	static let Perms = "Perms"

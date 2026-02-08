@@ -46,10 +46,30 @@ enum PdfKeyDerivation {
 		revision: Int,
 		encryptMetadata: Bool
 	) -> Data {
+		let paddedPassword = padPassword(password)
+		return computeFileEncryptionKey(
+			paddedPassword: paddedPassword,
+			ownerKey: ownerKey,
+			permissions: permissions,
+			documentId: documentId,
+			keyLength: keyLength,
+			revision: revision,
+			encryptMetadata: encryptMetadata
+		)
+	}
+
+	static func computeFileEncryptionKey(
+		paddedPassword: Data,
+		ownerKey: Data,
+		permissions: Int32,
+		documentId: Data,
+		keyLength: Int,
+		revision: Int,
+		encryptMetadata: Bool
+	) -> Data {
 		var md5 = Insecure.MD5()
 
-		// Step a: Pad password to 32 bytes
-		let paddedPassword = padPassword(password)
+		// Step a: Use padded password directly
 		md5.update(data: paddedPassword)
 
 		// Step b: Pass O value
@@ -80,6 +100,39 @@ enum PdfKeyDerivation {
 
 		// Return first n bytes where n = keyLength/8
 		return Data(digest.prefix(keyLength / 8))
+	}
+
+	static func computeUserPasswordFromOwnerPassword(
+		password: String,
+		ownerKey: Data,
+		keyLength: Int,
+		revision: Int
+	) -> Data {
+		let paddedPassword = padPassword(password)
+		var md5 = Insecure.MD5()
+		md5.update(data: paddedPassword)
+		var digest = Data(md5.finalize())
+
+		if revision >= 3 {
+			let keyBytes = keyLength / 8
+			for _ in 0..<50 {
+				var md5Inner = Insecure.MD5()
+				md5Inner.update(data: digest.prefix(keyBytes))
+				digest = Data(md5Inner.finalize())
+			}
+		}
+
+		let key = Data(digest.prefix(keyLength / 8))
+		if revision >= 3 {
+			var data = ownerKey
+			for i in stride(from: 19, through: 0, by: -1) {
+				let iterKey = Data(key.map { $0 ^ UInt8(i) })
+				data = RC4.process(data: data, key: iterKey)
+			}
+			return data
+		}
+
+		return RC4.process(data: ownerKey, key: key)
 	}
 
 	// MARK: - Algorithm 2.A: Computing encryption key (R=5,6 - AESV3)

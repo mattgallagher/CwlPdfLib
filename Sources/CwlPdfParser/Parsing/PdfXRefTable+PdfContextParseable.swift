@@ -152,9 +152,167 @@ extension PdfXRefTable: PdfContextParseable {
 		
 		return (xrefTables, trailerDictionary, objectRanges, objectStreamLayouts)
 	}
+
+    static func parseWithoutXref(
+        source: any PdfSource
+    ) throws -> ([PdfXRefTable], PdfDictionary, [Int: PdfObjectLayout], [PdfObjectIdentifier: PdfObjectLayout]) {
+        let scanResult = try scanForObjectsAndTrailer(source: source)
+        let objectRanges = buildObjectRanges(
+            objectLocations: scanResult.objectLocations,
+            upperBound: source.length
+        )
+        var trailer = scanResult.trailer ?? [:]
+        if trailer[.Size] == nil {
+            let maxObjectNumber = scanResult.objectLocations.keys.map(\.number).max() ?? 0
+            trailer[.Size] = .integer(maxObjectNumber + 1)
+        }
+        if trailer[.Root] == nil {
+            if let catalogId = try findCatalogObjectId(
+                source: source,
+                objectRanges: objectRanges
+            ) {
+                trailer[.Root] = .reference(catalogId)
+            }
+        }
+        let xrefTable = PdfXRefTable(
+            trailerDictionary: trailer,
+            objectLocations: scanResult.objectLocations
+        )
+        return ([xrefTable], trailer, objectRanges, [:])
+    }
 }
 
 private extension PdfXRefTable {
+    struct ScanResult: Sendable {
+        let objectLocations: [PdfObjectIdentifier: Int]
+        let trailer: PdfDictionary?
+    }
+
+    static func scanForObjectsAndTrailer(source: any PdfSource) throws -> ScanResult {
+        try source.bytes(in: 0..<source.length) { buffer in
+            var context = PdfParseContext(
+                slice: buffer
+            )
+            var objectLocations: [PdfObjectIdentifier: Int] = [:]
+            var trailer: PdfDictionary?
+
+            while let token = try PdfToken.parseNext(context: &context) {
+                if token.isIdentifier(context: context, equals: .trailer) {
+                    if let dictionary = try PdfObject.parse(context: &context).dictionary(lookup: nil) {
+                        trailer = dictionary
+                    }
+                    continue
+                }
+
+                if token.isIdentifier(context: context, equals: .stream) {
+                    try skipStreamData(context: &context)
+                    continue
+                }
+
+                if case .integer = token, let tokenStart = context.tokenStart {
+                    var probeContext = context
+                    probeContext.slice = context.slice[reslice: tokenStart..<context.slice.endIndex]
+                    do {
+                        let number = try PdfToken
+                            .parse(context: &probeContext)
+                            .requireNaturalNumber(context: &probeContext)
+                        let generation = try PdfToken
+                            .parse(context: &probeContext)
+                            .requireNaturalNumber(context: &probeContext)
+                        let objToken = try PdfToken.parse(context: &probeContext)
+                        guard objToken.isIdentifier(context: probeContext, equals: .obj) else {
+                            continue
+                        }
+                        let objectIdentifier = PdfObjectIdentifier(number: number, generation: generation)
+                        objectLocations[objectIdentifier] = tokenStart
+                        context = probeContext
+                    } catch {
+                        continue
+                    }
+                }
+            }
+
+            return ScanResult(objectLocations: objectLocations, trailer: trailer)
+        }
+    }
+
+    static func buildObjectRanges(
+        objectLocations: [PdfObjectIdentifier: Int],
+        upperBound: Int
+    ) -> [Int: PdfObjectLayout] {
+        let sortedEntries = objectLocations
+            .map { (offset: $0.value, objectIdentifier: $0.key) }
+            .sorted { $0.offset < $1.offset }
+        var objectRanges: [Int: PdfObjectLayout] = [:]
+        for index in sortedEntries.indices {
+            let entry = sortedEntries[index]
+            let nextOffset = index + 1 < sortedEntries.count
+                ? sortedEntries[index + 1].offset
+                : upperBound
+            objectRanges[entry.offset] = PdfObjectLayout(
+                objectIdentifier: entry.objectIdentifier,
+                storage: .uncompressed(range: entry.offset..<nextOffset),
+                revision: 0
+            )
+        }
+        return objectRanges
+    }
+
+    static func findCatalogObjectId(
+        source: any PdfSource,
+        objectRanges: [Int: PdfObjectLayout]
+    ) throws -> PdfObjectIdentifier? {
+        let sortedLayouts = objectRanges
+            .values
+            .sorted { ($0.range?.lowerBound ?? 0) < ($1.range?.lowerBound ?? 0) }
+        for layout in sortedLayouts {
+            guard let range = layout.range else { continue }
+            do {
+                let object = try source.parseContext(range: range) { context in
+                    context.objectIdentifier = layout.objectIdentifier
+                    return try PdfObject.parseIndirect(lookup: nil, context: &context)
+                }
+                if
+                    let dictionary = object.dictionary(lookup: nil),
+                    dictionary[.Type]?.name(lookup: nil) == .Catalog
+                {
+                    return layout.objectIdentifier
+                }
+            } catch {
+                continue
+            }
+        }
+        return nil
+    }
+
+    static func skipStreamData(context: inout PdfParseContext) throws {
+        try context.readEndOfLine()
+        let pattern = Array(PdfParseIdentifier.endstream.rawValue.utf8)
+        var index = context.slice.startIndex
+        let lastStart = context.slice.endIndex - pattern.count
+        if lastStart < index {
+            throw PdfParseError(failure: .objectEndedUnexpectedly, range: context.slice.indices)
+        }
+        while index <= lastStart {
+            if context.slice[index] == pattern[0] {
+                var matched = true
+                for offset in 1..<pattern.count {
+                    if context.slice[index + offset] != pattern[offset] {
+                        matched = false
+                        break
+                    }
+                }
+                if matched {
+                    let after = index + pattern.count
+                    context.slice = context.slice[reslice: after..<context.slice.endIndex]
+                    return
+                }
+            }
+            index += 1
+        }
+        throw PdfParseError(failure: .objectEndedUnexpectedly, range: context.slice.indices)
+    }
+
 	static func parseXrefSection(
 		source: any PdfSource,
 		range: Range<Int>,

@@ -201,22 +201,37 @@ public struct PdfDecryption: Sendable {
 				encryptMetadata: encryptMetadata
 			)
 
-			// Verify password by computing expected U value
-			let expectedU: Data
-			if revision == 2 {
-				expectedU = PdfKeyDerivation.computeUserKeyR2(fileEncryptionKey: fileKey)
-				guard expectedU == userKey else {
-					throw PdfDecryptionError.invalidPassword
+			func isValidUserKey(fileKey: Data) -> Bool {
+				if revision == 2 {
+					return PdfKeyDerivation.computeUserKeyR2(fileEncryptionKey: fileKey) == userKey
 				}
-			} else {
-				expectedU = PdfKeyDerivation.computeUserKeyR3R4(fileEncryptionKey: fileKey, documentId: documentId)
-				// Only compare first 16 bytes for R=3,4
-				guard expectedU == userKey.prefix(16) else {
-					throw PdfDecryptionError.invalidPassword
-				}
+				let expectedU = PdfKeyDerivation.computeUserKeyR3R4(fileEncryptionKey: fileKey, documentId: documentId)
+				return expectedU == Data(userKey.prefix(16))
 			}
 
-			self.fileEncryptionKey = fileKey
+			if isValidUserKey(fileKey: fileKey) {
+				self.fileEncryptionKey = fileKey
+			} else {
+				let userPassword = PdfKeyDerivation.computeUserPasswordFromOwnerPassword(
+					password: passwordToTry,
+					ownerKey: ownerKey,
+					keyLength: keyLength,
+					revision: revision
+				)
+				let ownerFileKey = PdfKeyDerivation.computeFileEncryptionKey(
+					paddedPassword: userPassword,
+					ownerKey: ownerKey,
+					permissions: Int32(truncatingIfNeeded: permissions),
+					documentId: documentId,
+					keyLength: keyLength,
+					revision: revision,
+					encryptMetadata: encryptMetadata
+				)
+				guard isValidUserKey(fileKey: ownerFileKey) else {
+					throw PdfDecryptionError.invalidPassword
+				}
+				self.fileEncryptionKey = ownerFileKey
+			}
 		}
 	}
 

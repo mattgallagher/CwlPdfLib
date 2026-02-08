@@ -11,7 +11,7 @@ struct PdfFileSourceTests {
 		("single-text-line.pdf", 10848)
 	])
 	func `GIVEN a PdfFileSource WHEN PdfDataSource functions invoked THEN expected bytes read`(file: (name: String, length: Int)) throws {
-		let fileURL = try #require(Bundle.module.url(forResource: "Fixtures/\(file.name)", withExtension: nil))
+		let fileURL = try #require(Bundle.module.url(forResource: "Fixtures/Basic/\(file.name)", withExtension: nil))
 		
 		let fileSource = try PdfFileSource(url: fileURL)
 		#expect(fileSource.length == file.length, "Expected length \(file.length) for file \(file.name)")
@@ -43,7 +43,7 @@ struct PdfFileSourceTests {
 	
 	@Test
 	func `GIVEN a file source with two buffers WHEN reading from them THEN results are identical`() throws {
-		let fileURL = try #require(Bundle.module.url(forResource: "Fixtures/blank-page.pdf", withExtension: nil))
+		let fileURL = try #require(Bundle.module.url(forResource: "Fixtures/Basic/blank-page.pdf", withExtension: nil))
 		let fileSource = try PdfFileSource(url: fileURL)
 		
 		var buffer1 = PdfSourceBuffer()

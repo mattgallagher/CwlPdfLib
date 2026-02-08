@@ -11,7 +11,7 @@ struct PdfDocumentTests {
 		"single-text-line.pdf"
 	])
 	func `GIVEN a pdf file seeked to 0 WHEN PdfHeader.parse over a parseContext of lineCount 1 THEN pdf and version number extracted`(filename: String) throws {
-		let fileURL = try #require(Bundle.module.url(forResource: "Fixtures/\(filename)", withExtension: nil))
+		let fileURL = try #require(Bundle.module.url(forResource: "Fixtures/Basic/\(filename)", withExtension: nil))
 		let dataSource = try PdfDataSource(Data(contentsOf: fileURL, options: .mappedIfSafe)) as any PdfSource
 		var buffer = PdfSourceBuffer()
 		try dataSource.seek(to: 0, buffer: &buffer)
@@ -29,7 +29,7 @@ struct PdfDocumentTests {
 		("single-text-line.pdf", 10450..<10826)
 	])
 	func `GIVEN a pdf file seeked to end and an xref table range WHEN PdfStartXrefAndEof.parse over a reverse parseContext of lineCount 3 THEN matching xref table range extracted`(filename: String, range: Range<Int>) throws {
-		let fileURL = try #require(Bundle.module.url(forResource: "Fixtures/\(filename)", withExtension: nil))
+		let fileURL = try #require(Bundle.module.url(forResource: "Fixtures/Basic/\(filename)", withExtension: nil))
 		let dataSource = try PdfDataSource(Data(contentsOf: fileURL, options: .mappedIfSafe)) as any PdfSource
 		var buffer = PdfSourceBuffer()
 		try dataSource.seek(to: dataSource.length, buffer: &buffer)
@@ -46,7 +46,7 @@ struct PdfDocumentTests {
 		("single-text-line.pdf", 10450..<10826)
 	])
 	func `GIVEN a pdf file and appropriate range WHEN PdfXRefTable.parse over that range THEN xref table extracted`(filename: String, range: Range<Int>) throws {
-		let fileURL = try #require(Bundle.module.url(forResource: "Fixtures/\(filename)", withExtension: nil))
+		let fileURL = try #require(Bundle.module.url(forResource: "Fixtures/Basic/\(filename)", withExtension: nil))
 		let dataSource = try PdfDataSource(Data(contentsOf: fileURL, options: .mappedIfSafe)) as any PdfSource
 		
 		let xrefTable = try dataSource.parseContext(range: range) { context in
@@ -59,7 +59,7 @@ struct PdfDocumentTests {
 	
 	@Test
 	func `GIVEN a pdf file with multiple xref tables WHEN PdfDocument.init THEN xref tables extracted, all objects extracted and size is max objNum plus one`() throws {
-		let fileURL = try #require(Bundle.module.url(forResource: "Fixtures/three-page-images-annots.pdf", withExtension: nil))
+		let fileURL = try #require(Bundle.module.url(forResource: "Fixtures/Basic/three-page-images-annots.pdf", withExtension: nil))
 		let document = try PdfDocument(source: PdfDataSource(Data(contentsOf: fileURL, options: .mappedIfSafe)))
 		
 		#expect(document.lookup.xrefTables.count == 2)
@@ -74,8 +74,8 @@ struct PdfDocumentTests {
 	
 	@Test
 	func `GIVEN a pdf and a low initial xref table limit WHEN xref tables read THEN retries with larger reads succeed`() throws {
-		let fileURL = try #require(Bundle.module.url(forResource: "Fixtures/three-page-images-annots.pdf", withExtension: nil))
-
+		let fileURL = try #require(Bundle.module.url(forResource: "Fixtures/Basic/three-page-images-annots.pdf", withExtension: nil))
+		
 		let source = try PdfDataSource(Data(contentsOf: fileURL, options: .mappedIfSafe))
 		var buffer = PdfSourceBuffer()
 		try source.seek(to: source.length, buffer: &buffer)
@@ -88,7 +88,7 @@ struct PdfDocumentTests {
 			firstXrefRange: startXrefAndEof.range,
 			initialXrefTableLimit: 20
 		)
-
+		
 		#expect(xrefTables.count == 2)
 		#expect(objectLayoutFromOffset.count == 105)
 		#expect(trailer.count == 6)
@@ -109,7 +109,7 @@ struct PdfDocumentTests {
 		])
 	])
 	func `GIVEN a pdf file WHEN PdfDocument.init THEN trailer parsed`(filename: String, trailer: PdfDictionary) throws {
-		let fileURL = try #require(Bundle.module.url(forResource: "Fixtures/\(filename)", withExtension: nil))
+		let fileURL = try #require(Bundle.module.url(forResource: "Fixtures/Basic/\(filename)", withExtension: nil))
 		let document = try PdfDocument(source: PdfDataSource(Data(contentsOf: fileURL, options: .mappedIfSafe)))
 		
 		#expect(document.trailer == trailer)
@@ -120,7 +120,7 @@ struct PdfDocumentTests {
 		"smallest-possible-pdf-1.5-xrefstm-only.pdf"
 	])
 	func `GIVEN a pdf with xref stream WHEN PdfDocument.init THEN document loads`(filename: String) throws {
-		let fileURL = try #require(Bundle.module.url(forResource: "Fixtures/\(filename)", withExtension: nil))
+		let fileURL = try #require(Bundle.module.url(forResource: "Fixtures/Basic/\(filename)", withExtension: nil))
 		let document = try PdfDocument(source: PdfDataSource(Data(contentsOf: fileURL, options: .mappedIfSafe)))
 		
 		#expect(!document.pages.isEmpty)
@@ -132,7 +132,7 @@ struct PdfDocumentTests {
 		"smallest-possible-pdf-2.0-stms-flate.pdf"
 	])
 	func `GIVEN a pdf with object streams WHEN xref tables parsed THEN object stream layouts tracked`(filename: String) throws {
-		let fileURL = try #require(Bundle.module.url(forResource: "Fixtures/\(filename)", withExtension: nil))
+		let fileURL = try #require(Bundle.module.url(forResource: "Fixtures/Basic/\(filename)", withExtension: nil))
 		let source = try PdfDataSource(Data(contentsOf: fileURL, options: .mappedIfSafe))
 		var buffer = PdfSourceBuffer()
 		try source.seek(to: source.length, buffer: &buffer)
@@ -148,6 +148,85 @@ struct PdfDocumentTests {
 		}
 		#expect(objectStreamLayouts.count == expectedObjectStreamCount)
 	}
+	
+	@Test(arguments: [
+		("single-text-line-encrypted-ownerpw-pdf.pdf", nil),
+		("single-text-line-encrypted-ownerpw-pdf.pdf", "pdf")
+	])
+	func `GIVEN an owner password protected pdf WHEN PdfDocument.init THEN content stream decrypted`(filename: String, password: String?) throws {
+		let fileURL = try #require(Bundle.module.url(forResource: "Fixtures/Basic/\(filename)", withExtension: nil))
+		let document = try PdfDocument(
+			source: PdfDataSource(Data(contentsOf: fileURL, options: .mappedIfSafe)),
+			password: password
+		)
+		let operators = try parseContentOperators(document: document)
+		#expect(containsTextLine(operators: operators, text: "This is some basic text"))
+	}
+	
+	@Test
+	func `GIVEN a user password protected pdf WHEN PdfDocument.init THEN content stream decrypted`() throws {
+		let fileURL = try #require(Bundle.module.url(forResource: "Fixtures/Basic/single-text-line-pw-pdf.pdf", withExtension: nil))
+		let document = try PdfDocument(
+			source: PdfDataSource(Data(contentsOf: fileURL, options: .mappedIfSafe)),
+			password: "pdf"
+		)
+		let operators = try parseContentOperators(document: document)
+		
+		#expect(containsTextLine(operators: operators, text: "This is some basic text"))
+	}
+	
+	@Test(arguments: [
+		"notrailer-xref.pdf",
+		"noxref-trailer.pdf",
+		"smallest-possible-pdf-1.0.pdf",
+		"smallest-possible-pdf-1.5-flate.pdf",
+		"smallest-possible-pdf-2.0.pdf"
+	])
+	func `GIVEN a tiny pdf WHEN PdfDocument.init THEN page 1 media box can be read`(filename: String) throws {
+		let fileURL = try #require(Bundle.module.url(forResource: "Fixtures/Basic/\(filename)", withExtension: nil))
+		let document = try PdfDocument(
+			source: PdfDataSource(Data(contentsOf: fileURL, options: .mappedIfSafe))
+		)
+		let pageRect = document.pages.first?.pageRect(lookup: document.lookup)
+		
+		#expect((pageRect?.width ?? 0) > 0)
+		#expect((pageRect?.height ?? 0) > 0)
+	}
+}
+
+private func parseContentOperators(document: PdfDocument) throws -> [PdfOperator] {
+	let page = try #require(document.pages.first)
+	let contentStream = try #require(page.contentStreams(lookup: document.lookup).first)
+	var parsed = [PdfOperator]()
+	try contentStream.parse { op in
+		parsed.append(op)
+		return true
+	}
+	return parsed
+}
+
+private func containsTextLine(operators: [PdfOperator], text: String) -> Bool {
+	for op in operators {
+		switch op {
+		case .Tj(let data):
+			if data.pdfTextToString() == text {
+				return true
+			}
+		case .TJ(let elements):
+			let combined = elements.compactMap { element -> String? in
+				if case .text(let data) = element {
+					return data.pdfTextToString()
+				}
+				return nil
+			}.joined()
+			if combined.contains(text) {
+				return true
+			}
+		default:
+			break
+		}
+	}
+	return false
 }
 
 private extension Data {

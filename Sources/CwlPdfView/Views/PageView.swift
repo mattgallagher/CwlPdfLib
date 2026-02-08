@@ -1,4 +1,7 @@
+// CwlPdfLib. Copyright © 2026 Matt Gallagher. See LICENSE file for usage permissions.
+
 import CwlPdfParser
+import CwlPdfRenderer
 import SwiftUI
 
 struct PageView: View {
@@ -18,6 +21,8 @@ struct PageView: View {
 				context.concatenate(
 					CGAffineTransform(a: scaleFactor, b: 0, c: 0, d: -scaleFactor, tx: xOffset, ty: yOffset + scaleFactor * rect.height)
 				)
+
+				context.fill(Path(rect), with: .color(.white))
 				
 				context.withCGContext { cgContext in
 					page.render(in: cgContext, lookup: document.pdf.lookup)

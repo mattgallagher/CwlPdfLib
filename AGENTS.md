@@ -2,7 +2,31 @@
 
 ## Build and Test Commands
 
-Use the Xcode MCP tools for all building, testing and project exploration. Avoid command line tools unless strictly necessary.
+### Building the Package
+```bash
+swift build
+```
+
+### Running Tests
+To run all tests:
+```bash
+swift test
+```
+
+To run a single test case:
+```bash
+swift test --filter "GIVEN a pdf file WHEN PdfDocument.init THEN trailer parsed"
+```
+
+To run a specific test file:
+```bash
+swift test --filter "PdfDocumentTests"
+```
+
+To run tests with code coverage:
+```bash
+swift test --enable-code-coverage
+```
 
 ## Code Style Guidelines
 
@@ -16,7 +40,7 @@ Use the Xcode MCP tools for all building, testing and project exploration. Avoid
 
 ### Whitespace
 
-Use tabs for indentation and do not trim whitespace from empty lines.
+Do not trim whitespace from empty lines.
 
 Never use code alignment (multiple spaces outside the indentation intended to create
 columns). If you need to break a function call over multiple lines, insert a newline

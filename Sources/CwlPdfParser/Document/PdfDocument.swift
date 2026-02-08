@@ -17,16 +17,11 @@ public struct PdfDocument: Sendable {
 			try PdfHeader.parse(context: &context)
 		}
 
-		try source.seek(to: source.length, buffer: &buffer)
-		self.startXrefAndEof = try source.parseContext(lineCount: 3, reverse: true, buffer: &buffer) { context in
-			try PdfStartXrefAndEof.parse(context: &context)
-		}
-
-		let (xrefTables, trailer, objectLayoutFromOffset, objectLayoutFromObjectStream) = try PdfXRefTable.parseXrefTables(
+		let (startXrefAndEof, xrefTables, trailer, objectLayoutFromOffset, objectLayoutFromObjectStream) = try Self.parseXrefData(
 			source: source,
-			firstXrefRange: startXrefAndEof.range
+			buffer: &buffer
 		)
-
+		self.startXrefAndEof = startXrefAndEof
 		self.trailer = trailer
 
 		// Create lookup first (decryption will be set after if needed)
@@ -74,7 +69,45 @@ public struct PdfDocument: Sendable {
 
 		self.pages = try allPages(pageTree: pageTreeRoot, lookup: lookup, offset: 0)
 	}
-	
+
+	private static func parseXrefData(
+		source: any PdfSource,
+		buffer: inout PdfSourceBuffer
+	) throws -> (PdfStartXrefAndEof, [PdfXRefTable], PdfDictionary, [Int: PdfObjectLayout], [PdfObjectIdentifier: PdfObjectLayout]) {
+		do {
+			try source.seek(to: source.length, buffer: &buffer)
+			let startXrefAndEof = try source.parseContext(lineCount: 3, reverse: true, buffer: &buffer) { context in
+				try PdfStartXrefAndEof.parse(context: &context)
+			}
+			let (xrefTables, trailer, objectLayoutFromOffset, objectLayoutFromObjectStream) = try PdfXRefTable.parseXrefTables(
+				source: source,
+				firstXrefRange: startXrefAndEof.range
+			)
+			return (startXrefAndEof, xrefTables, trailer, objectLayoutFromOffset, objectLayoutFromObjectStream)
+		} catch let error as PdfParseError where shouldFallbackToObjectScan(error: error) {
+			let (xrefTables, trailer, objectLayoutFromOffset, objectLayoutFromObjectStream) = try PdfXRefTable.parseWithoutXref(
+				source: source
+			)
+			let startXrefAndEof = PdfStartXrefAndEof(range: 0..<source.length)
+			return (startXrefAndEof, xrefTables, trailer, objectLayoutFromOffset, objectLayoutFromObjectStream)
+		}
+	}
+
+	private static func shouldFallbackToObjectScan(error: PdfParseError) -> Bool {
+		switch error.failure {
+		case .startXrefNotFound:
+			return true
+		case .xrefNotFound:
+			return true
+		case .eofMarkerNotFound:
+			return true
+		case .expectedDictionary:
+			return true
+		default:
+			return false
+		}
+	}
+
 	public func page(for objectLayout: PdfObjectLayout) -> PdfPage? {
 		pages.first(where: { $0.objectLayout == objectLayout })
 	}
@@ -84,7 +117,7 @@ func allPages(pageTree: PdfDictionary, lookup: PdfObjectLookup, offset: Int) thr
 	guard let kids = pageTree[.Kids]?.array(lookup: lookup) else {
 		throw PdfParseError(failure: .expectedArray)
 	}
-	
+
 	// Default to standard US Letter size if no default dimensions found
 	let cropBox =
 		(
@@ -93,7 +126,7 @@ func allPages(pageTree: PdfDictionary, lookup: PdfObjectLookup, offset: Int) thr
 		).flatMap {
 			PdfRect(array: $0, lookup: lookup)
 		} ?? PdfRect(x: 0, y: 0, width: 612, height: 792)
-	
+
 	var pages = [PdfPage]()
 	for kid in kids {
 		guard case .reference(let objectIdentifier) = kid else {
@@ -124,6 +157,6 @@ func allPages(pageTree: PdfDictionary, lookup: PdfObjectLookup, offset: Int) thr
 			throw PdfParseError(failure: .expectedPageTree)
 		}
 	}
-	
+
 	return pages
 }

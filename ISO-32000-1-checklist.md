@@ -1,4 +1,4 @@
-# ≈ (CwlPdfLib)
+# CwlPdfLib
 
 This checklist maps major ISO 32000-1 (PDF 1.7) areas to the current implementation in this repository.
 Each item includes status, key files, and whether implementation is custom or platform-backed.
@@ -10,9 +10,9 @@ Legend: Implemented, Partial, Not Implemented.
 - Implemented: startxref and EOF marker parsing in `Sources/CwlPdfParser/Parsing/PdfStartXrefAndEof+PdfContextParseable.swift` (custom parser).
 - Implemented: Classic xref tables and trailers in `Sources/CwlPdfParser/Parsing/PdfXRefTable+PdfContextParseable.swift` (custom parser).
 - Implemented: Indirect objects and basic object grammar in `Sources/CwlPdfParser/Parsing/PdfObject+PdfContextParseable.swift` and `Sources/CwlPdfParser/Parsing/PdfToken+PdfContextParseable.swift` (custom parser).
-- Partial: Null object tokenization exists but is not converted into `.null` in the object parser; extend `PdfObject.parseNext` in `Sources/CwlPdfParser/Parsing/PdfObject+PdfContextParseable.swift` (custom).
-- Not Implemented: XRef streams and object streams (PDF 1.5+) should be added to `Sources/CwlPdfParser/Parsing/` alongside `PdfXRefTable` parsing; custom implementation (no platform feature).
-- Not Implemented: Hybrid-reference files (xref table + xref stream) should be handled in `PdfDocument`/`PdfXRefTable.parseXrefTables`; custom implementation.
+- Implemented: Null object tokenization exists but is not converted into `.null` in the object parser; extend `PdfObject.parseNext` in `Sources/CwlPdfParser/Parsing/PdfObject+PdfContextParseable.swift` (custom).
+- Implemented: XRef streams and object streams (PDF 1.5+) should be added to `Sources/CwlPdfParser/Parsing/` alongside `PdfXRefTable` parsing; custom implementation (no platform feature).
+- Implemented: Hybrid-reference files (xref table + xref stream) should be handled in `PdfDocument`/`PdfXRefTable.parseXrefTables`; custom implementation.
 
 ## 2. Filters and Stream Decoding
 - Implemented: FlateDecode with TIFF/PNG predictors in `Sources/CwlPdfParser/Encodings/StreamFilters.swift` (custom; uses zlib/Compression).

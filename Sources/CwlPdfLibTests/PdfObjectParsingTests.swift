@@ -73,7 +73,7 @@ struct PdfObjectParsingTests {
 		]
 	)
 	func `GIVEN a pdf file WHEN PdfDocument.objects.object THEN object parsed`(filename: String, objectIdentifier: PdfObjectIdentifier, matches: PdfObject) throws {
-		let fileURL = try #require(Bundle.module.url(forResource: "Fixtures/\(filename)", withExtension: nil))
+		let fileURL = try #require(Bundle.module.url(forResource: "Fixtures/Basic/\(filename)", withExtension: nil))
 		let document = try PdfDocument(source: PdfDataSource(Data(contentsOf: fileURL, options: .mappedIfSafe)))
 		
 		let object = try document.lookup.object(for: objectIdentifier)

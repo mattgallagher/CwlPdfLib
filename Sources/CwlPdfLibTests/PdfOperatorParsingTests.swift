@@ -11,7 +11,7 @@ struct PdfOperatorParsingTests {
 		("text-shapes-shading.pdf", textShapesShadingOperators)
 	])
 	func `GIVEN a blank page WHEN content stream THEN q Q extracted`(filename: String, operators: @Sendable () -> [PdfOperator]) throws {
-		let fileURL = try #require(Bundle.module.url(forResource: "Fixtures/\(filename)", withExtension: nil))
+		let fileURL = try #require(Bundle.module.url(forResource: "Fixtures/Basic/\(filename)", withExtension: nil))
 		let document = try PdfDocument(source: PdfDataSource(Data(contentsOf: fileURL, options: .mappedIfSafe)))
 		let page = try #require(document.pages.first)
 		let contentStream = try #require(page.contentStreams(lookup: document.lookup).first)

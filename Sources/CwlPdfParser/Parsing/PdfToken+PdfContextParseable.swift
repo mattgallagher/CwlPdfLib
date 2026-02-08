@@ -76,6 +76,7 @@ extension PdfToken: PdfContextParseable {
 				case .carriageReturn, .formFeed, .lineFeed:
 					token = .comment(range.lowerBound..<context.slice.startIndex)
 					if context.skipComments {
+						token = nil
 						break
 					}
 					return token
