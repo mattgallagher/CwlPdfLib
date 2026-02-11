@@ -12,7 +12,6 @@
 
 /* Begin PBXFileReference section */
 		C953BF6C2EAC987600010E86 /* CwlPdfApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CwlPdfApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		C9CB80752F0B4FC9003340DB /* CwlPdfLib */ = {isa = PBXFileReference; lastKnownFileType = wrapper; name = CwlPdfLib; path = ../..; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -54,7 +53,6 @@
 			children = (
 				C953BF6E2EAC987600010E86 /* CwlPdfApp */,
 				C953BF6D2EAC987600010E86 /* Products */,
-				C9CB80752F0B4FC9003340DB /* CwlPdfLib */,
 			);
 			sourceTree = "<group>";
 		};

@@ -1,8 +1,8 @@
 // CwlPdfLib. Copyright © 2026 Matt Gallagher. See LICENSE file for usage permissions.
 
-import CwlPdfParser
-import CoreGraphics
 import AppKit
+import CoreGraphics
+import CwlPdfParser
 
 extension PdfContentStream {
 	func render(in context: CGContext, pageBounds: CGRect?, lookup: PdfObjectLookup?) {
@@ -85,11 +85,11 @@ extension PdfContentStream {
 						if let path { context.addPath(path) }
 					}
 					context.drawPath(using: .eoFillStroke)
-				case .BDC(_, _):
+				case .BDC:
 					break
 				case .BI:
 					break
-				case .BMC(_):
+				case .BMC:
 					break
 				case .BT:
 					textPosition = TextPosition()
@@ -158,7 +158,7 @@ extension PdfContentStream {
 						)
 						formContentStream.render(in: context, pageBounds: nil, lookup: lookup)
 					}
-				case .DP(_, _):
+				case .DP:
 					break
 				case .EI:
 					break
@@ -220,7 +220,7 @@ extension PdfContentStream {
 					context.apply(gstate, renderState: &renderState, renderStack: renderStateStack, lookup: lookup)
 				case .h:
 					context.closePath()
-				case .i(_):
+				case .i:
 					break
 				case .ID:
 					break
@@ -252,7 +252,7 @@ extension PdfContentStream {
 					context.setMiterLimit(CGFloat(limit))
 				case .m(let x, let y):
 					context.move(to: CGPoint(x: CGFloat(x), y: CGFloat(y)))
-				case .MP(_):
+				case .MP:
 					break
 				case .n:
 					if let clipRule = pendingClip {
@@ -279,7 +279,7 @@ extension PdfContentStream {
 				case .rg(let r, let g, let b):
 					renderState.colorState.setFillRGB(CGFloat(r), CGFloat(g), CGFloat(b))
 					renderState.colorState.applyFillColor(to: context)
-				case .ri(_):
+				case .ri:
 					break
 				case .S:
 					if let clipRule = pendingClip {
