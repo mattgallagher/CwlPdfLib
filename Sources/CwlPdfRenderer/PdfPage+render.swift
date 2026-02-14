@@ -5,15 +5,11 @@ import CwlPdfParser
 
 extension PdfPage {
 	public func renderBounds(lookup: PdfObjectLookup?) -> CGRect {
-		var rect = pageRect(lookup: lookup).cgRect
-		rect.origin = .zero
-		return rect
+		return pageRect(lookup: lookup).cgRect
 	}
 
 	public func render(in context: CGContext, lookup: PdfObjectLookup?) {
 		let rect = renderBounds(lookup: lookup)
-		context.addRect(rect)
-		context.clip()
 		
 		for contentStream in contentStreams(lookup: lookup) {
 			contentStream.render(in: context, pageBounds: rect, lookup: lookup)
@@ -78,7 +74,7 @@ extension PdfPage {
 			context.fill(CGRect(x: 0, y: 0, width: pixelWidth, height: pixelHeight))
 		}
 		context.scaleBy(x: scale, y: scale)
-		context.translateBy(x: 0, y: bounds.height)
+		context.translateBy(x: -bounds.minX, y: -bounds.minY + bounds.height)
 		context.scaleBy(x: 1, y: -1)
 		render(in: context, lookup: lookup)
 		return context.makeImage()

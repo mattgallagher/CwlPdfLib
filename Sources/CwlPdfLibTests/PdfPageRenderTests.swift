@@ -26,11 +26,14 @@ struct PdfPageRenderTests {
 		let pageIndex = pageNumber - 1
 		#expect(pageIndex >= 0)
 		let page = try #require(document.pages.indices.contains(pageIndex) ? document.pages[pageIndex] : nil)
-		let renderedImage = try #require(page.renderedImage(lookup: document.lookup, scale: 1))
 
 		let pdfKitDocument = try #require(PDFDocument(url: fileURL))
 		let pdfKitPage = try #require(pdfKitDocument.page(at: pageIndex))
-		let pdfKitImage = try #require(renderPDFKitImage(page: pdfKitPage, width: renderedImage.width, height: renderedImage.height))
+		let scale: CGFloat = 2
+		let renderedImage = try #require(renderCwlPdfRendererImage(page: page, lookup: document.lookup, pdfKitPage: pdfKitPage, scale: scale))
+		let pdfKitImage = try #require(renderPDFKitImage(page: pdfKitPage, scale: scale))
+		#expect(pdfKitImage.width == renderedImage.width)
+		#expect(pdfKitImage.height == renderedImage.height)
 
 		let debugDirectory = try makeDebugDirectory()
 		let debugBaseName = "\(filename.replacingOccurrences(of: ".pdf", with: ""))-page-\(pageNumber)"
@@ -42,8 +45,9 @@ struct PdfPageRenderTests {
 		try writePNG(image: renderedImage, to: debugURLs.ours)
 		try writePNG(image: pdfKitImage, to: debugURLs.pdfKit)
 		let difference = pixelDifference(lhs: renderedImage, rhs: pdfKitImage, diffURL: debugURLs.diff)
+		print("Difference: \(difference)")
 		#expect(
-			difference.normalizedTotal < 0.0001,
+			difference.normalizedTotal < 0.00000001,
 			"""
 			Expected less than 0.01% pixel difference but found \(difference.normalizedTotal * 100)% for \(filename) page \(pageNumber).
 			rgb=\(difference.normalizedRGB * 100)% alpha=\(difference.normalizedAlpha * 100)% differentPixels=\(difference.differentPixels)/\(difference.totalPixels)
@@ -76,7 +80,7 @@ private struct PixelDifference {
 
 private func resolveFixtureURL(filename: String) -> URL? {
 	let fallback = filename == "three-page-annots.pdf" ? "three-page-images-annots.pdf" : nil
-	let candidates = [filename, fallback].compactMap { $0 }
+	let candidates = [filename, fallback].compactMap(\.self)
 	for candidate in candidates {
 		if let fileURL = Bundle.module.url(forResource: "Fixtures/Basic/\(candidate)", withExtension: nil) {
 			return fileURL
@@ -85,7 +89,36 @@ private func resolveFixtureURL(filename: String) -> URL? {
 	return nil
 }
 
-private func renderPDFKitImage(page: PDFPage, width: Int, height: Int) -> CGImage? {
+private func renderCwlPdfRendererImage(page: PdfPage, lookup: PdfObjectLookup?, pdfKitPage: PDFPage, scale: CGFloat) -> CGImage? {
+	renderPageImage(pdfKitPage: pdfKitPage, scale: scale) { context in
+		page.render(in: context, lookup: lookup)
+	}
+}
+
+private func renderPDFKitImage(page: PDFPage, scale: CGFloat) -> CGImage? {
+	renderPageImage(pdfKitPage: page, scale: scale) { context in
+		page.draw(with: .cropBox, to: context)
+	}
+}
+
+private func renderPageImage(pdfKitPage: PDFPage, scale: CGFloat, draw: (CGContext) -> Void) -> CGImage? {
+	guard
+		let pageRef = pdfKitPage.pageRef
+	else {
+		return nil
+	}
+
+	let cropBounds = pdfKitPage.bounds(for: .cropBox)
+	guard
+		scale > 0,
+		cropBounds.width > 0,
+		cropBounds.height > 0
+	else {
+		return nil
+	}
+
+	let width = Int((cropBounds.width * scale).rounded(.up))
+	let height = Int((cropBounds.height * scale).rounded(.up))
 	guard
 		width > 0,
 		height > 0,
@@ -105,19 +138,21 @@ private func renderPDFKitImage(page: PDFPage, width: Int, height: Int) -> CGImag
 	context.setFillColor(CGColor(gray: 1, alpha: 1))
 	context.fill(CGRect(x: 0, y: 0, width: CGFloat(width), height: CGFloat(height)))
 
-	let cropBounds = page.bounds(for: .cropBox)
-	guard
-		cropBounds.width > 0,
-		cropBounds.height > 0
-	else {
-		return context.makeImage()
-	}
-
-	context.translateBy(x: 0, y: CGFloat(height))
-	context.scaleBy(x: 1, y: -1)
-	context.scaleBy(x: CGFloat(width) / cropBounds.width, y: CGFloat(height) / cropBounds.height)
-	context.translateBy(x: -cropBounds.minX, y: -cropBounds.minY)
-	page.draw(with: .cropBox, to: context)
+	let targetRect = CGRect(
+		x: 0,
+		y: 0,
+		width: cropBounds.width,
+		height: cropBounds.height
+	)
+	let drawingTransform = pageRef.getDrawingTransform(
+		.cropBox,
+		rect: targetRect,
+		rotate: Int32(pdfKitPage.rotation),
+		preserveAspectRatio: true
+	)
+	context.concatenate(drawingTransform)
+	context.concatenate(CGAffineTransform(scaleX: scale, y: scale))
+	draw(context)
 	return context.makeImage()
 }
 
@@ -128,38 +163,13 @@ private func makeDebugDirectory() throws -> URL {
 }
 
 private func writePNG(image: CGImage, to url: URL) throws {
-	let outputImage = flippedForPNG(image) ?? image
 	guard let destination = CGImageDestinationCreateWithURL(url as CFURL, UTType.png.identifier as CFString, 1, nil) else {
 		throw CocoaError(.fileWriteUnknown)
 	}
-	CGImageDestinationAddImage(destination, outputImage, nil)
+	CGImageDestinationAddImage(destination, image, nil)
 	guard CGImageDestinationFinalize(destination) else {
 		throw CocoaError(.fileWriteUnknown)
 	}
-}
-
-private func flippedForPNG(_ image: CGImage) -> CGImage? {
-	let width = image.width
-	let height = image.height
-	guard
-		width > 0,
-		height > 0,
-		let context = CGContext(
-			data: nil,
-			width: width,
-			height: height,
-			bitsPerComponent: 8,
-			bytesPerRow: 0,
-			space: CGColorSpaceCreateDeviceRGB(),
-			bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
-		)
-	else {
-		return nil
-	}
-	context.translateBy(x: 0, y: CGFloat(height))
-	context.scaleBy(x: 1, y: -1)
-	context.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
-	return context.makeImage()
 }
 
 private func pixelDifference(lhs: CGImage, rhs: CGImage, diffURL: URL) -> PixelDifference {
@@ -198,25 +208,26 @@ private func pixelDifference(lhs: CGImage, rhs: CGImage, diffURL: URL) -> PixelD
 	var totalRGBDifference = 0
 	var totalAlphaDifference = 0
 	var differentPixels = 0
-	var diffPixels = [UInt8](repeating: 255, count: pixelCount * 4)
+	let halfEightBit = Int(UInt8.max / 2)
+	var diffPixels = [UInt8](repeating: UInt8(halfEightBit), count: pixelCount * 4)
 
 	for pixelIndex in 0..<pixelCount {
 		let base = pixelIndex * 4
-		let redDiff = abs(Int(lhsBuffer.pixels[base]) - Int(rhsBuffer.pixels[base]))
-		let greenDiff = abs(Int(lhsBuffer.pixels[base + 1]) - Int(rhsBuffer.pixels[base + 1]))
-		let blueDiff = abs(Int(lhsBuffer.pixels[base + 2]) - Int(rhsBuffer.pixels[base + 2]))
-		let alphaDiff = abs(Int(lhsBuffer.pixels[base + 3]) - Int(rhsBuffer.pixels[base + 3]))
-		let pixelDifference = redDiff + greenDiff + blueDiff + alphaDiff
+		let redDiff = Int(lhsBuffer.pixels[base]) - Int(rhsBuffer.pixels[base])
+		let greenDiff = Int(lhsBuffer.pixels[base + 1]) - Int(rhsBuffer.pixels[base + 1])
+		let blueDiff = Int(lhsBuffer.pixels[base + 2]) - Int(rhsBuffer.pixels[base + 2])
+		let alphaDiff = Int(lhsBuffer.pixels[base + 3]) - Int(rhsBuffer.pixels[base + 3])
+		let pixelDifference = abs(redDiff) + abs(greenDiff) + abs(blueDiff) + abs(alphaDiff)
 
 		totalDifference += pixelDifference
-		totalRGBDifference += redDiff + greenDiff + blueDiff
-		totalAlphaDifference += alphaDiff
-		if pixelDifference > 0 {
+		totalRGBDifference += abs(redDiff) + abs(greenDiff) + abs(blueDiff)
+		totalAlphaDifference += abs(alphaDiff)
+		if pixelDifference != 0 {
 			differentPixels += 1
 		}
 
-		let rgbDelta = redDiff + greenDiff + blueDiff
-		let grayscale = UInt8(min(255, rgbDelta / 3))
+		let rgbDelta = halfEightBit + 2 * (redDiff / 2 + greenDiff / 2 + blueDiff / 2) / 3
+		let grayscale = UInt8(max(0, min(255, rgbDelta)))
 		diffPixels[base] = grayscale
 		diffPixels[base + 1] = grayscale
 		diffPixels[base + 2] = grayscale
@@ -232,7 +243,8 @@ private func pixelDifference(lhs: CGImage, rhs: CGImage, diffURL: URL) -> PixelD
 		space: CGColorSpaceCreateDeviceRGB(),
 		bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
 	),
-	let diffImage = diffContext.makeImage() {
+		let diffImage = diffContext.makeImage()
+	{
 		try? writePNG(image: diffImage, to: diffURL)
 	}
 

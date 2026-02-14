@@ -89,7 +89,8 @@ extension CGContext {
 			restoreGState()
 
 			// Advance text position (width is in glyph space units, typically 1000 per em)
-			let advance = (width / 1000) * fontSize * hScale + state.charSpace + (code == 0x20 ? state.wordSpace : 0)
+			let spacing = (state.charSpace + (code == 0x20 ? state.wordSpace : 0)) * fontSize * hScale
+			let advance = (width / 1000) * fontSize * hScale + spacing
 			position.textMatrix = CGAffineTransform(translationX: advance, y: 0)
 				.concatenating(position.textMatrix)
 		}
@@ -110,9 +111,8 @@ extension CGContext {
 		for i in 0..<chars.count {
 			let advance = advances[i].x
 			advances[i] = CGPoint(x: x, y: state.rise)
-			x += advance * state.horizontalScale / 100 + state.charSpace + (
-				chars[i] == 0x0020 ? state.wordSpace : 0  // don't multiply by fontSize since CTFontDrawGlyphs will multiply the advances by the rendering matrix which already contains fontSize
-			)
+			x += advance * state.horizontalScale / 100
+			x += (state.charSpace + (chars[i] == 0x0020 ? state.wordSpace : 0)) * state.horizontalScale / 100
 		}
 		saveGState()
 		concatenate(position.textMatrix.scaledBy(x: state.fontSize, y: state.fontSize))
@@ -197,11 +197,8 @@ extension CGContext {
 			))
 			
 			cursor += adv * hScale // don't multiply by fontSize since CTFontDrawGlyphs will multiply the advances by the rendering matrix which already contains fontSize
-			cursor += CGFloat(state.charSpace)
-			
-			if glyph.isSpace {
-				cursor += CGFloat(state.wordSpace)
-			}
+			let spacing = (CGFloat(state.charSpace) + (glyph.isSpace ? CGFloat(state.wordSpace) : 0)) * hScale
+			cursor += spacing
 		}
 		
 		saveGState()
@@ -275,7 +272,7 @@ struct GlyphRun {
 			let gid: CGGlyph = if let name = glyphName {
 				CTFontGetGlyphWithName(ctFont, name as CFString)
 			} else {
-				decodeSimpleGlyph(code: byte, ctFont: ctFont)
+				decodeSimpleGlyph(code: byte, simple: simple, ctFont: ctFont)
 			}
 			
 			glyphs.append(Glyph(gid: gid, advance: width, isSpace: code == 0x20))
@@ -289,12 +286,33 @@ struct GlyphRun {
 
 	private static func decodeSimpleGlyph(
 		code: UInt8,
+		simple: SimpleFontData,
 		ctFont: CTFont
 	) -> CGGlyph {
-		var utf16 = UInt16(code)
+		let utf16 = if
+			let stringEncoding = stringEncoding(for: simple.encoding.baseEncoding),
+			let decoded = String(data: Data([code]), encoding: stringEncoding),
+			let scalar = decoded.unicodeScalars.first
+		{
+			UInt16(scalar.value)
+		} else {
+			UInt16(code)
+		}
+		var character = utf16
 		var glyph: CGGlyph = 0
-		let success = CTFontGetGlyphsForCharacters(ctFont, &utf16, &glyph, 1)
+		let success = CTFontGetGlyphsForCharacters(ctFont, &character, &glyph, 1)
 		return success ? glyph : CGGlyph(0)
+	}
+
+	private static func stringEncoding(for baseEncoding: BaseEncoding?) -> String.Encoding? {
+		switch baseEncoding {
+		case .MacRomanEncoding:
+			.macOSRoman
+		case .WinAnsiEncoding:
+			.windowsCP1252
+		default:
+			nil
+		}
 	}
 
 	private static func decodeCompositeGlyphRun(
@@ -316,7 +334,7 @@ struct GlyphRun {
 		
 		for cid in cids {
 			// --- CID → GID
-			let gid: CGGlyph = switch descendant.cidToGIDMap {
+			let gid = switch descendant.cidToGIDMap {
 			case .identity, .none:
 				CGGlyph(cid)
 			case .mapped(let map):

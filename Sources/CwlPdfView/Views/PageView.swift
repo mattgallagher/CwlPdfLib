@@ -15,8 +15,8 @@ struct PageView: View {
 				
 				// Calculate scale factor to fit the page within the available size
 				let scaleFactor = min(size.width / rect.width, size.height / rect.height)
-				let xOffset = (size.width - scaleFactor * rect.width) / 2
-				let yOffset = (size.height - scaleFactor * rect.height) / 2
+				let xOffset = -rect.origin.x + (size.width - scaleFactor * rect.width) / 2
+				let yOffset = -rect.origin.y + (size.height - scaleFactor * rect.height) / 2
 				
 				context.concatenate(
 					CGAffineTransform(a: scaleFactor, b: 0, c: 0, d: -scaleFactor, tx: xOffset, ty: yOffset + scaleFactor * rect.height)
