@@ -71,6 +71,7 @@ public extension String {
 	static let Kids = "Kids"
 	static let Length = "Length"
 	static let Mask = "Mask"
+	static let Matte = "Matte"
 	static let Matrix = "Matrix"
 	static let MediaBox = "MediaBox"
 	static let MissingWidth = "MissingWidth"

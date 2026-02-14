@@ -14,6 +14,7 @@ public struct PdfImage: Sendable {
 	public let intent: String?
 	public let imageMask: Bool
 	public let softMask: PdfStream?
+	public let matte: [Double]?
 
 	public init(stream: PdfStream, lookup: PdfObjectLookup?) throws {
 		let dict = stream.dictionary
@@ -56,6 +57,9 @@ public struct PdfImage: Sendable {
 
 		// Soft mask for transparency
 		self.softMask = dict[.SMask]?.stream(lookup: lookup)
+
+		// Optional matte color for images associated with a soft mask
+		self.matte = dict[.Matte]?.array(lookup: lookup)?.compactMap { $0.real(lookup: lookup) }
 	}
 
 	static func parseEncoding(_ filterObj: PdfObject?, lookup: PdfObjectLookup?) -> ImageEncoding {

@@ -1,5 +1,6 @@
 // CwlPdfLib. Copyright © 2026 Matt Gallagher. See LICENSE file for usage permissions.
 
+import Accelerate
 import CoreGraphics
 import CwlPdfParser
 import Foundation
@@ -25,7 +26,8 @@ extension PdfImage {
 	private func createJPEGImage() -> CGImage? {
 		// Use ImageIO for more robust JPEG decoding
 		guard let imageSource = CGImageSourceCreateWithData(data as CFData, nil),
-			  let image = CGImageSourceCreateImageAtIndex(imageSource, 0, nil) else {
+				let image = CGImageSourceCreateImageAtIndex(imageSource, 0, nil)
+		else {
 			return nil
 		}
 
@@ -216,10 +218,170 @@ extension PdfImage {
 			let softMaskImage = try? PdfImage(stream: softMaskStream, lookup: lookup),
 			let maskCGImage = softMaskImage.createCGImage(lookup: lookup)
 		{
-			return baseImage.masking(maskCGImage)
+			if let matteColor = matteColorRGB() {
+				return applySoftMaskWithMatte(baseImage: baseImage, maskImage: maskCGImage, matteColor: matteColor)
+			} else {
+				return baseImage.masking(maskCGImage)
+			}
 		}
 
 		return baseImage
+	}
+
+	private func matteColorRGB() -> (r: UInt8, g: UInt8, b: UInt8)? {
+		guard let matte else {
+			return nil
+		}
+
+		switch colorSpace {
+		case .deviceGray:
+			guard let value = matte.first else { return nil }
+			let gray = UInt8((min(1, max(0, value)) * 255).rounded())
+			return (gray, gray, gray)
+		case .deviceRGB, .iccBased(3, _), .indexed(.deviceRGB, _, _):
+			guard matte.count >= 3 else { return nil }
+			return (
+				UInt8((min(1, max(0, matte[0])) * 255).rounded()),
+				UInt8((min(1, max(0, matte[1])) * 255).rounded()),
+				UInt8((min(1, max(0, matte[2])) * 255).rounded())
+			)
+		case .deviceCMYK, .iccBased(4, _):
+			guard matte.count >= 4 else { return nil }
+			let c = min(1, max(0, matte[0]))
+			let m = min(1, max(0, matte[1]))
+			let y = min(1, max(0, matte[2]))
+			let k = min(1, max(0, matte[3]))
+			let r = UInt8((((1 - c) * (1 - k)) * 255).rounded())
+			let g = UInt8((((1 - m) * (1 - k)) * 255).rounded())
+			let b = UInt8((((1 - y) * (1 - k)) * 255).rounded())
+			return (r, g, b)
+		default:
+			guard matte.count >= 3 else { return nil }
+			return (
+				UInt8((min(1, max(0, matte[0])) * 255).rounded()),
+				UInt8((min(1, max(0, matte[1])) * 255).rounded()),
+				UInt8((min(1, max(0, matte[2])) * 255).rounded())
+			)
+		}
+	}
+
+	private func applySoftMaskWithMatte(baseImage: CGImage, maskImage: CGImage, matteColor: (r: UInt8, g: UInt8, b: UInt8)) -> CGImage? {
+		let width = baseImage.width
+		let height = baseImage.height
+		guard
+			width > 0,
+			height > 0
+		else {
+			return nil
+		}
+
+		var argbPixels = [UInt8](repeating: 0, count: width * height * 4)
+		guard
+			let argbContext = CGContext(
+				data: &argbPixels,
+				width: width,
+				height: height,
+				bitsPerComponent: 8,
+				bytesPerRow: width * 4,
+				space: CGColorSpaceCreateDeviceRGB(),
+				bitmapInfo: CGImageAlphaInfo.noneSkipFirst.rawValue | CGBitmapInfo.byteOrder32Big.rawValue
+			)
+		else {
+			return nil
+		}
+		argbContext.draw(baseImage, in: CGRect(x: 0, y: 0, width: width, height: height))
+
+		var maskPixels = [UInt8](repeating: 0, count: width * height)
+		guard
+			let maskContext = CGContext(
+				data: &maskPixels,
+				width: width,
+				height: height,
+				bitsPerComponent: 8,
+				bytesPerRow: width,
+				space: CGColorSpaceCreateDeviceGray(),
+				bitmapInfo: CGImageAlphaInfo.none.rawValue
+			)
+		else {
+			return nil
+		}
+		maskContext.draw(maskImage, in: CGRect(x: 0, y: 0, width: width, height: height))
+
+		var argbBuffer = argbPixels.withUnsafeMutableBufferPointer {
+			vImage_Buffer(
+				data: $0.baseAddress,
+				height: vImagePixelCount(height),
+				width: vImagePixelCount(width),
+				rowBytes: width * 4
+			)
+		}
+
+		var alphaBuffer = maskPixels.withUnsafeMutableBufferPointer {
+			vImage_Buffer(
+				data: $0.baseAddress,
+				height: vImagePixelCount(height),
+				width: vImagePixelCount(width),
+				rowBytes: width
+			)
+		}
+
+		guard
+			var red = try? vImage_Buffer(width: width, height: height, bitsPerPixel: 8),
+			var green = try? vImage_Buffer(width: width, height: height, bitsPerPixel: 8),
+			var blue = try? vImage_Buffer(width: width, height: height, bitsPerPixel: 8),
+			var alpha = try? vImage_Buffer(width: width, height: height, bitsPerPixel: 8)
+		else {
+			return nil
+		}
+		defer {
+			red.free()
+			green.free()
+			blue.free()
+			alpha.free()
+		}
+
+		vImageConvert_ARGB8888toPlanar8(&argbBuffer, &alpha, &red, &green, &blue, vImage_Flags(kvImageNoFlags))
+		vImageCopyBuffer(&alphaBuffer, &alpha, 1, vImage_Flags(kvImageNoFlags))
+
+		let pixelCount = width * height
+		let redPtr = red.data.assumingMemoryBound(to: UInt8.self)
+		let greenPtr = green.data.assumingMemoryBound(to: UInt8.self)
+		let bluePtr = blue.data.assumingMemoryBound(to: UInt8.self)
+		let alphaPtr = alpha.data.assumingMemoryBound(to: UInt8.self)
+		let matteR = Int(matteColor.r)
+		let matteG = Int(matteColor.g)
+		let matteB = Int(matteColor.b)
+
+		for index in 0..<pixelCount {
+			let alphaValue = Int(alphaPtr[index])
+			let invAlpha = 255 - alphaValue
+
+			let correctedR = Int(redPtr[index]) - (invAlpha * matteR + 127) / 255
+			let correctedG = Int(greenPtr[index]) - (invAlpha * matteG + 127) / 255
+			let correctedB = Int(bluePtr[index]) - (invAlpha * matteB + 127) / 255
+
+			redPtr[index] = UInt8(min(255, max(0, correctedR)))
+			greenPtr[index] = UInt8(min(255, max(0, correctedG)))
+			bluePtr[index] = UInt8(min(255, max(0, correctedB)))
+		}
+
+		vImageConvert_Planar8toARGB8888(&alpha, &red, &green, &blue, &argbBuffer, vImage_Flags(kvImageNoFlags))
+
+		guard
+			let outputContext = CGContext(
+				data: &argbPixels,
+				width: width,
+				height: height,
+				bitsPerComponent: 8,
+				bytesPerRow: width * 4,
+				space: CGColorSpaceCreateDeviceRGB(),
+				bitmapInfo: CGImageAlphaInfo.premultipliedFirst.rawValue | CGBitmapInfo.byteOrder32Big.rawValue
+			)
+		else {
+			return nil
+		}
+
+		return outputContext.makeImage()
 	}
 }
 
