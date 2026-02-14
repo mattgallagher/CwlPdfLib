@@ -1,7 +1,7 @@
 // CwlPdfLib. Copyright © 2026 Matt Gallagher. See LICENSE file for usage permissions.
 
-import CwlPdfParser
 import CoreGraphics
+import CwlPdfParser
 
 /// Represents a single clip operation applied to the graphics state
 struct ClipEntry {
@@ -16,8 +16,17 @@ struct RenderState {
 	var colorState = ColorState()
 	var clipPaths: [ClipEntry] = []
 
-	mutating func applySoftMask(_ smaskData: PdfSMask?, lookup: PdfObjectLookup?) {
-		if let smaskData, let result = smaskData.createMaskImage(lookup: lookup) {
+	mutating func applySoftMask(
+		_ smaskData: PdfSMask?,
+		lookup: PdfObjectLookup?,
+		deviceScaleX: CGFloat,
+		deviceScaleY: CGFloat
+	) {
+		if let smaskData, let result = smaskData.createMaskImage(
+			lookup: lookup,
+			deviceScaleX: deviceScaleX,
+			deviceScaleY: deviceScaleY
+		) {
 			activeSoftMask = result.image
 			softMaskBounds = result.bounds
 		} else {
@@ -116,9 +125,16 @@ extension CGContext {
 		if gstate.softMaskNone {
 			renderState.clearSoftMask()
 			resetClip()
-			reapplyClips(renderState: renderState, renderStack:  renderStack)
+			reapplyClips(renderState: renderState, renderStack: renderStack)
 		} else if let smaskData = gstate.softMask {
-			renderState.applySoftMask(smaskData, lookup: lookup)
+			let deviceScaleX = max(hypot(ctm.a, ctm.c), 1)
+			let deviceScaleY = max(hypot(ctm.b, ctm.d), 1)
+			renderState.applySoftMask(
+				smaskData,
+				lookup: lookup,
+				deviceScaleX: deviceScaleX,
+				deviceScaleY: deviceScaleY
+			)
 			// Apply the mask as a clip to the current graphics context
 			if let mask = renderState.activeSoftMask, let bounds = renderState.softMaskBounds {
 				clip(to: bounds, mask: mask)

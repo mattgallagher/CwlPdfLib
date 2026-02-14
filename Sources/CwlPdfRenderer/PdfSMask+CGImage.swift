@@ -7,8 +7,14 @@ import CwlPdfParser
 extension PdfSMask {
 	/// Renders the transparency group and extracts a grayscale mask image.
 	/// - Parameter lookup: The object lookup for resolving indirect references.
+	/// - Parameter deviceScaleX: Device pixels per user-space unit on the x axis.
+	/// - Parameter deviceScaleY: Device pixels per user-space unit on the y axis.
 	/// - Returns: A grayscale CGImage to be used as a soft mask, or nil if creation fails.
-	func createMaskImage(lookup: PdfObjectLookup?) -> (image: CGImage, bounds: CGRect)? {
+	func createMaskImage(
+		lookup: PdfObjectLookup?,
+		deviceScaleX: CGFloat = 1,
+		deviceScaleY: CGFloat = 1
+	) -> (image: CGImage, bounds: CGRect)? {
 		// Get bounding box from transparency group
 		guard
 			let bboxArray = transparencyGroup.dictionary[.BBox]?.array(lookup: lookup),
@@ -18,8 +24,10 @@ extension PdfSMask {
 		}
 		
 		let cgBBox = bbox.cgRect
-		let width = Int(ceil(cgBBox.width))
-		let height = Int(ceil(cgBBox.height))
+		let scaleX = max(deviceScaleX, 1)
+		let scaleY = max(deviceScaleY, 1)
+		let width = Int((cgBBox.width * scaleX).rounded(.toNearestOrAwayFromZero))
+		let height = Int((cgBBox.height * scaleY).rounded(.toNearestOrAwayFromZero))
 		
 		guard width > 0, height > 0 else { return nil }
 		
@@ -44,7 +52,12 @@ extension PdfSMask {
 			context.fill(CGRect(x: 0, y: 0, width: width, height: height))
 		}
 		
-		// Transform to match bbox coordinate system
+		// Transform to match bbox coordinate system at raster scale.
+		// Use effective scales derived from integer raster dimensions to avoid
+		// subpixel slack that can shift mask edges by ~1 pixel.
+		let effectiveScaleX = CGFloat(width) / cgBBox.width
+		let effectiveScaleY = CGFloat(height) / cgBBox.height
+		context.scaleBy(x: effectiveScaleX, y: effectiveScaleY)
 		context.translateBy(x: -cgBBox.minX, y: -cgBBox.minY)
 		
 		// Render the transparency group

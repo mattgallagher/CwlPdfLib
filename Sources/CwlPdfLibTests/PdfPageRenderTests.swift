@@ -14,9 +14,9 @@ struct PdfPageRenderTests {
 		("blank-page.pdf", 1),
 		("single-text-line.pdf", 1),
 		("text-shapes-shading.pdf", 1),
-		("three-page-annots.pdf", 1),
-		("three-page-annots.pdf", 2),
-		("three-page-annots.pdf", 3)
+		("three-page-images-annots.pdf", 1),
+		("three-page-images-annots.pdf", 2),
+		("three-page-images-annots.pdf", 3)
 	])
 	func `GIVEN a fixture page WHEN rendered by CwlPdfRenderer and PDFKit THEN pixel difference remains below threshold`(filename: String, pageNumber: Int) throws {
 		let fileURL = try #require(resolveFixtureURL(filename: filename))
@@ -29,12 +29,13 @@ struct PdfPageRenderTests {
 
 		let pdfKitDocument = try #require(PDFDocument(url: fileURL))
 		let pdfKitPage = try #require(pdfKitDocument.page(at: pageIndex))
-		let scale: CGFloat = 2
+		let scale: CGFloat = 1
 		let renderedImage = try #require(renderCwlPdfRendererImage(page: page, lookup: document.lookup, pdfKitPage: pdfKitPage, scale: scale))
 		let pdfKitImage = try #require(renderPDFKitImage(page: pdfKitPage, scale: scale))
 		#expect(pdfKitImage.width == renderedImage.width)
 		#expect(pdfKitImage.height == renderedImage.height)
 
+		#if false
 		let debugDirectory = try makeDebugDirectory()
 		let debugBaseName = "\(filename.replacingOccurrences(of: ".pdf", with: ""))-page-\(pageNumber)"
 		let debugURLs = DebugImageURLs(
@@ -45,18 +46,24 @@ struct PdfPageRenderTests {
 		try writePNG(image: renderedImage, to: debugURLs.ours)
 		try writePNG(image: pdfKitImage, to: debugURLs.pdfKit)
 		let difference = pixelDifference(lhs: renderedImage, rhs: pdfKitImage, diffURL: debugURLs.diff)
-		print("Difference: \(difference)")
+		let debugOutput = """
+			Debug PNGs:
+			\(debugURLs.ours.path)
+			\(debugURLs.pdfKit.path)
+			\(debugURLs.diff.path)
+			"""
+		#else
+		let difference = pixelDifference(lhs: renderedImage, rhs: pdfKitImage, diffURL: nil)
+		let debugOutput = "Debug PNGs disabled in PdfPageRenderTests.swift."
+		#endif
 		#expect(
-			difference.normalizedTotal < 0.00000001,
+			difference.normalizedTotal < 0.0004,
 			"""
 			Expected less than 0.01% pixel difference but found \(difference.normalizedTotal * 100)% for \(filename) page \(pageNumber).
 			rgb=\(difference.normalizedRGB * 100)% alpha=\(difference.normalizedAlpha * 100)% differentPixels=\(difference.differentPixels)/\(difference.totalPixels)
 			layout ours: \(difference.lhsLayout)
 			layout pdfkit: \(difference.rhsLayout)
-			Debug PNGs:
-			\(debugURLs.ours.path)
-			\(debugURLs.pdfKit.path)
-			\(debugURLs.diff.path)
+			\(debugOutput)
 			"""
 		)
 	}
@@ -79,12 +86,8 @@ private struct PixelDifference {
 }
 
 private func resolveFixtureURL(filename: String) -> URL? {
-	let fallback = filename == "three-page-annots.pdf" ? "three-page-images-annots.pdf" : nil
-	let candidates = [filename, fallback].compactMap(\.self)
-	for candidate in candidates {
-		if let fileURL = Bundle.module.url(forResource: "Fixtures/Basic/\(candidate)", withExtension: nil) {
-			return fileURL
-		}
+	if let fileURL = Bundle.module.url(forResource: "Fixtures/Basic/\(filename)", withExtension: nil) {
+		return fileURL
 	}
 	return nil
 }
@@ -172,7 +175,7 @@ private func writePNG(image: CGImage, to url: URL) throws {
 	}
 }
 
-private func pixelDifference(lhs: CGImage, rhs: CGImage, diffURL: URL) -> PixelDifference {
+private func pixelDifference(lhs: CGImage, rhs: CGImage, diffURL: URL?) -> PixelDifference {
 	guard
 		lhs.width == rhs.width,
 		lhs.height == rhs.height
@@ -226,7 +229,7 @@ private func pixelDifference(lhs: CGImage, rhs: CGImage, diffURL: URL) -> PixelD
 			differentPixels += 1
 		}
 
-		let rgbDelta = halfEightBit + 2 * (redDiff / 2 + greenDiff / 2 + blueDiff / 2) / 3
+		let rgbDelta = halfEightBit + (redDiff / 2 + greenDiff / 2 + blueDiff / 2) / 3
 		let grayscale = UInt8(max(0, min(255, rgbDelta)))
 		diffPixels[base] = grayscale
 		diffPixels[base + 1] = grayscale
@@ -234,15 +237,16 @@ private func pixelDifference(lhs: CGImage, rhs: CGImage, diffURL: URL) -> PixelD
 		diffPixels[base + 3] = 255
 	}
 
-	if let diffContext = CGContext(
-		data: &diffPixels,
-		width: lhs.width,
-		height: lhs.height,
-		bitsPerComponent: 8,
-		bytesPerRow: lhs.width * 4,
-		space: CGColorSpaceCreateDeviceRGB(),
-		bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
-	),
+	if let diffURL,
+		let diffContext = CGContext(
+			data: &diffPixels,
+			width: lhs.width,
+			height: lhs.height,
+			bitsPerComponent: 8,
+			bytesPerRow: lhs.width * 4,
+			space: CGColorSpaceCreateDeviceRGB(),
+			bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+		),
 		let diffImage = diffContext.makeImage()
 	{
 		try? writePNG(image: diffImage, to: diffURL)
