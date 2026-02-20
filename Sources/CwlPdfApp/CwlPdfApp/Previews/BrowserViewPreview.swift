@@ -2,14 +2,15 @@
 
 #if DEBUG
 
-@testable import CwlPdfView
 import SwiftUI
 
+@testable import CwlPdfView
+
 #Preview {
-	try! PdfBrowserView(
+	PdfBrowserView(
 		document: .constant(
-			PdfFileDocument(
-				data: NSDataAsset(name: "blank-page.pdf")!.data
+			try! PdfFileDocument(
+				data: NSDataAsset(name: "three-page-images-assets.pdf")!.data
 			)
 		)
 	)

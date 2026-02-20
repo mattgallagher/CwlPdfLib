@@ -20,6 +20,10 @@ public final class PdfFileSource: PdfSource {
 		self.fileHandle = Mutex(fileHandle)
 	}
 	
+	public func allData() throws -> Data {
+		return try Data(contentsOf: url)
+	}
+	
 	public func readNext(buffer: inout PdfSourceBuffer) throws -> UInt8 {
 		guard buffer.offset < length else {
 			throw PdfParseError(failure: .endOfFile, range: buffer.offset..<(buffer.offset + 1))

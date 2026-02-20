@@ -40,6 +40,11 @@ Tests with coverage:
 swift test --enable-code-coverage
 ```
 
+### Build app
+```bash
+xcodebuild -workspace "CwlPdfApp.xcworkspace" -scheme "CwlPdfApp"
+```
+
 ## Version and Platform Baseline
 
 - Swift tools version is `6.2` (see `Package.swift`).

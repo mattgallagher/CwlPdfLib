@@ -6,11 +6,9 @@ import UniformTypeIdentifiers
 
 public nonisolated struct PdfFileDocument: FileDocument {
 	let pdf: PdfDocument
-	let data: Data
 	
 	init(data: Data) throws {
 		self.pdf = try PdfDocument(source: PdfDataSource(data))
-		self.data = data
 	}
 	
 	public static let readableContentTypes = [
@@ -25,6 +23,6 @@ public nonisolated struct PdfFileDocument: FileDocument {
 	}
 	
 	public func fileWrapper(configuration: WriteConfiguration) throws -> FileWrapper {
-		.init(regularFileWithContents: data)
+		return try FileWrapper(regularFileWithContents: pdf.fileData())
 	}
 }

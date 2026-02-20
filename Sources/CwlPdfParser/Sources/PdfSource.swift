@@ -8,6 +8,8 @@ public protocol PdfSource: Sendable {
 	func readPrevious(buffer: inout PdfSourceBuffer) throws -> UInt8
 	func seek(to offset: Int, buffer: inout PdfSourceBuffer) throws
 	func bytes<Output>(in range: Range<Int>, handler: (OffsetSlice<UnsafeRawBufferPointer>) throws -> Output) throws -> Output
+	
+	func allData() throws -> Data
 }
 
 public struct PdfSourceBuffer {

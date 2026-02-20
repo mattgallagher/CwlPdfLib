@@ -69,6 +69,10 @@ public struct PdfDocument: Sendable {
 
 		self.pages = try allPages(pageTree: pageTreeRoot, lookup: lookup, offset: 0)
 	}
+	
+	public func fileData() throws -> Data {
+		try lookup.source.allData()
+	}
 
 	private static func parseXrefData(
 		source: any PdfSource,

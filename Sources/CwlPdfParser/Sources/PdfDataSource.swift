@@ -9,6 +9,10 @@ public struct PdfDataSource: PdfSource {
 		self.data = data
 	}
 	
+	public func allData() throws -> Data {
+		return data
+	}
+	
 	public var length: Int { data.count }
 
 	public func readNext(buffer: inout PdfSourceBuffer) throws -> UInt8 {
