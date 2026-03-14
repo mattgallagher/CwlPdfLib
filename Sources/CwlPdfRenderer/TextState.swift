@@ -264,16 +264,8 @@ struct GlyphRun {
 			} else {
 				simple.missingWidth ?? 0
 			}
-			
-			// --- Glyph name
-			let glyphName: String? = simple.encoding.differences[code] ?? simple.encoding.baseEncoding?.glyphName(for: code)
-			
-			// --- GID
-			let gid: CGGlyph = if let name = glyphName {
-				CTFontGetGlyphWithName(ctFont, name as CFString)
-			} else {
-				decodeSimpleGlyph(code: byte, simple: simple, ctFont: ctFont)
-			}
+
+			let gid = decodeSimpleGlyph(code: byte, font: font, simple: simple, ctFont: ctFont)
 			
 			glyphs.append(Glyph(gid: gid, advance: width, isSpace: code == 0x20))
 		}
@@ -286,22 +278,36 @@ struct GlyphRun {
 
 	private static func decodeSimpleGlyph(
 		code: UInt8,
+		font: PdfFont<CTFont>,
 		simple: SimpleFontData,
 		ctFont: CTFont
 	) -> CGGlyph {
-		let utf16 = if
+		let glyphName = simple.encoding.differences[Int(code)] ?? simple.encoding.baseEncoding?.glyphName(for: Int(code))
+		if let glyphName {
+			let glyph = CTFontGetGlyphWithName(ctFont, glyphName as CFString)
+			if glyph != 0 {
+				return glyph
+			}
+		}
+
+		if
+			let toUnicode = font.extras.toUnicode,
+			let scalar = toUnicode.decodeScalars(Data([code])).onlyElement,
+			let glyph = glyph(for: scalar, ctFont: ctFont)
+		{
+			return glyph
+		}
+
+		if
 			let stringEncoding = stringEncoding(for: simple.encoding.baseEncoding),
 			let decoded = String(data: Data([code]), encoding: stringEncoding),
-			let scalar = decoded.unicodeScalars.first
+			let scalar = decoded.unicodeScalars.onlyElement,
+			let glyph = glyph(for: scalar, ctFont: ctFont)
 		{
-			UInt16(scalar.value)
-		} else {
-			UInt16(code)
+			return glyph
 		}
-		var character = utf16
-		var glyph: CGGlyph = 0
-		let success = CTFontGetGlyphsForCharacters(ctFont, &character, &glyph, 1)
-		return success ? glyph : CGGlyph(0)
+
+		return glyph(for: UnicodeScalar(UInt32(code)), ctFont: ctFont) ?? 0
 	}
 
 	private static func stringEncoding(for baseEncoding: BaseEncoding?) -> String.Encoding? {
@@ -313,6 +319,24 @@ struct GlyphRun {
 		default:
 			nil
 		}
+	}
+
+	private static func glyph(for scalar: UnicodeScalar?, ctFont: CTFont) -> CGGlyph? {
+		guard
+			let scalar,
+			scalar.value <= UInt32(UInt16.max)
+		else {
+			return nil
+		}
+
+		var character = UniChar(scalar.value)
+		var glyph: CGGlyph = 0
+		let success = CTFontGetGlyphsForCharacters(ctFont, &character, &glyph, 1)
+		guard success, glyph != 0 else {
+			return nil
+		}
+
+		return glyph
 	}
 
 	private static func decodeCompositeGlyphRun(
@@ -362,4 +386,10 @@ struct Glyph {
 	let gid: CGGlyph
 	let advance: CGFloat
 	let isSpace: Bool
+}
+
+private extension Collection {
+	var onlyElement: Element? {
+		count == 1 ? first : nil
+	}
 }

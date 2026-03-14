@@ -9,7 +9,7 @@ import Testing
 struct PdfFeatureExtractionTests {
 	@Test
 	func `GIVEN page annotations WHEN extracting annotations only THEN only annotation features are returned`() throws {
-		let document = try fixtureDocument(filename: "three-page-images-annots.pdf")
+		let document = try basicFixtureDocument(filename: "three-page-images-annots.pdf")
 		let page = try #require(document.pages.first)
 
 		let features = page.extract(features: .annotations, lookup: document.lookup)
@@ -31,7 +31,7 @@ struct PdfFeatureExtractionTests {
 
 	@Test
 	func `GIVEN text content WHEN extracting text only THEN text features contain bounds and font info`() throws {
-		let document = try fixtureDocument(filename: "single-text-line.pdf")
+		let document = try basicFixtureDocument(filename: "single-text-line.pdf")
 		let page = try #require(document.pages.first)
 
 		let features = page.extract(features: .text, lookup: document.lookup)
@@ -55,7 +55,7 @@ struct PdfFeatureExtractionTests {
 
 	@Test
 	func `GIVEN image heavy fixture WHEN extracting images THEN image features are discoverable`() throws {
-		let document = try fixtureDocument(filename: "three-page-images-annots.pdf")
+		let document = try basicFixtureDocument(filename: "three-page-images-annots.pdf")
 		let allImageFeatures = document.pages.flatMap { page in
 			page.extract(features: .images, lookup: document.lookup)
 		}
@@ -72,20 +72,38 @@ struct PdfFeatureExtractionTests {
 	}
 
 	@Test
-	func `GIVEN placeholder expected extraction fixtures WHEN loaded THEN files are available for later assertions`() throws {
-		let textExpected = try #require(Bundle.module.url(forResource: "Fixtures/Extraction/single-text-line-page-1.expected.json", withExtension: nil))
-		let imageExpected = try #require(Bundle.module.url(forResource: "Fixtures/Extraction/three-page-images-annots-page-1.expected.json", withExtension: nil))
+	func `GIVEN PDFUA magazine page 3 WHEN extracting text THEN mixed embedded fonts decode readable spans`() throws {
+		let document = try fixtureDocument(
+			path: "PDFUA-Reference-Files_1-1_2024_02/PDFUA-Ref-2-01_Magazine-danish.pdf"
+		)
+		let page = try #require(document.pages.indices.contains(2) ? document.pages[2] : nil)
 
-		let textContent = try String(contentsOf: textExpected, encoding: .utf8)
-		let imageContent = try String(contentsOf: imageExpected, encoding: .utf8)
+		let textFeatures: [ExtractedTextSample] = page.extract(features: .text, lookup: document.lookup).compactMap { feature in
+			guard case .text(let utf8Text, let font) = feature.payload else {
+				return nil
+			}
 
-		#expect(textContent.contains("TODO"))
-		#expect(imageContent.contains("TODO"))
+			return ExtractedTextSample(
+				text: utf8Text,
+				postScriptName: font.postScriptName
+			)
+		}
+		let textByFont = Dictionary(grouping: textFeatures, by: { $0.postScriptName ?? "" }).mapValues { samples in
+			samples.map { $0.text }.joined()
+		}
+
+		#expect(textByFont["Georgia2"]?.contains("I Dansk Blindesamfund hjælper") == true)
+		#expect(textByFont["AGWEKG+Georgia"]?.contains("mange flere, der kunne have brug") == true)
+		#expect(textByFont["GIXFJO+Georgia-Bold"]?.contains("Aktivitetsmedlemskabet kan tegnes") == true)
+		#expect(textByFont["YMVHKH+Georgia-BoldItalic"]?.contains("Vi glæder os til at byde") == true)
+
+		for sample in textFeatures {
+			#expect(!sample.text.contains("\u{FFFD}"))
+		}
 	}
 }
 
-private func fixtureDocument(filename: String) throws -> PdfDocument {
-	let fileURL = try #require(Bundle.module.url(forResource: "Fixtures/Basic/\(filename)", withExtension: nil))
-	let data = try Data(contentsOf: fileURL, options: .mappedIfSafe)
-	return try PdfDocument(source: PdfDataSource(data))
+private struct ExtractedTextSample {
+	let text: String
+	let postScriptName: String?
 }

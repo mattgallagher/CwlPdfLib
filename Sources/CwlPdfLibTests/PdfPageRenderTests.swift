@@ -11,33 +11,37 @@ import UniformTypeIdentifiers
 
 struct PdfPageRenderTests {
 	@Test(arguments: [
-		("blank-page.pdf", 1),
-		("single-text-line.pdf", 1),
-		("text-shapes-shading.pdf", 1),
-		("three-page-images-annots.pdf", 1),
-		("three-page-images-annots.pdf", 2),
-		("three-page-images-annots.pdf", 3)
+		("Basic/blank-page.pdf", 1, nil, 0.0004),
+		("Basic/single-text-line.pdf", 1, nil, 0.0004),
+		("Basic/text-shapes-shading.pdf", 1, nil, 0.0004),
+		("Basic/three-page-images-annots.pdf", 1, nil, 0.0004),
+		("Basic/three-page-images-annots.pdf", 2, nil, 0.0004),
+		("Basic/three-page-images-annots.pdf", 3, nil, 0.0004),
+		("PDFUA-Reference-Files_1-1_2024_02/PDFUA-Ref-2-01_Magazine-danish.pdf", 3, CGRect(x: 24, y: 126, width: 334, height: 430), 0.0006)
 	])
-	func `GIVEN a fixture page WHEN rendered by CwlPdfRenderer and PDFKit THEN pixel difference remains below threshold`(filename: String, pageNumber: Int) throws {
-		let fileURL = try #require(resolveFixtureURL(filename: filename))
+	func `GIVEN a fixture page WHEN rendered by CwlPdfRenderer and PDFKit THEN pixel difference remains below threshold`(fixturePath: String, pageNumber: Int, cropRect: CGRect?, threshold: Double) throws {
+		let fileURL = try #require(fixtureURL(path: fixturePath))
 		let dataSource = try PdfDataSource(Data(contentsOf: fileURL, options: .mappedIfSafe))
 		let document = try PdfDocument(source: dataSource)
 
 		let pageIndex = pageNumber - 1
-		#expect(pageIndex >= 0)
 		let page = try #require(document.pages.indices.contains(pageIndex) ? document.pages[pageIndex] : nil)
-
 		let pdfKitDocument = try #require(PDFDocument(url: fileURL))
 		let pdfKitPage = try #require(pdfKitDocument.page(at: pageIndex))
-		let scale: CGFloat = 1
-		let renderedImage = try #require(renderCwlPdfRendererImage(page: page, lookup: document.lookup, pdfKitPage: pdfKitPage, scale: scale))
-		let pdfKitImage = try #require(renderPDFKitImage(page: pdfKitPage, scale: scale))
+		let scale: CGFloat = 2
+		var renderedImage = try #require(renderCwlPdfRendererImage(page: page, lookup: document.lookup, pdfKitPage: pdfKitPage, scale: scale))
+		var pdfKitImage = try #require(renderPDFKitImage(page: pdfKitPage, scale: scale))
 		#expect(pdfKitImage.width == renderedImage.width)
 		#expect(pdfKitImage.height == renderedImage.height)
+		if let cropRect {
+			renderedImage = try #require(renderedImage.cropping(to: cropRect))
+			pdfKitImage = try #require(pdfKitImage.cropping(to: cropRect))
+		}
 
+		// When a test fails, set this to `true` to capture the rendered images and diffs for debugging
 		#if false
 		let debugDirectory = try makeDebugDirectory()
-		let debugBaseName = "\(filename.replacingOccurrences(of: ".pdf", with: ""))-page-\(pageNumber)"
+		let debugBaseName = "\(fixturePath.replacingOccurrences(of: "/", with: "-").replacingOccurrences(of: ".pdf", with: ""))-page-\(pageNumber)"
 		let debugURLs = DebugImageURLs(
 			ours: debugDirectory.appending(path: "\(debugBaseName)-ours.png"),
 			pdfKit: debugDirectory.appending(path: "\(debugBaseName)-pdfkit.png"),
@@ -56,10 +60,11 @@ struct PdfPageRenderTests {
 		let difference = pixelDifference(lhs: renderedImage, rhs: pdfKitImage, diffURL: nil)
 		let debugOutput = "Debug PNGs disabled in PdfPageRenderTests.swift."
 		#endif
+		
 		#expect(
-			difference.normalizedTotal < 0.0004,
+			difference.normalizedTotal < threshold,
 			"""
-			Expected less than 0.01% pixel difference but found \(difference.normalizedTotal * 100)% for \(filename) page \(pageNumber).
+			Expected less than 0.01% pixel difference but found \(difference.normalizedTotal * 100)% for \(fixturePath) page \(pageNumber).
 			rgb=\(difference.normalizedRGB * 100)% alpha=\(difference.normalizedAlpha * 100)% differentPixels=\(difference.differentPixels)/\(difference.totalPixels)
 			layout ours: \(difference.lhsLayout)
 			layout pdfkit: \(difference.rhsLayout)
@@ -83,13 +88,6 @@ private struct PixelDifference {
 	let totalPixels: Int
 	let lhsLayout: String
 	let rhsLayout: String
-}
-
-private func resolveFixtureURL(filename: String) -> URL? {
-	if let fileURL = Bundle.module.url(forResource: "Fixtures/Basic/\(filename)", withExtension: nil) {
-		return fileURL
-	}
-	return nil
 }
 
 private func renderCwlPdfRendererImage(page: PdfPage, lookup: PdfObjectLookup?, pdfKitPage: PDFPage, scale: CGFloat) -> CGImage? {

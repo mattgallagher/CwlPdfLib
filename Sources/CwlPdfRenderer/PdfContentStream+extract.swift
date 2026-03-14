@@ -264,69 +264,11 @@ private func decodeText(data: Data, font: PdfFont<CTFont>?) -> String {
 		return data.pdfTextToString()
 	}
 
-	guard let toUnicode = font.extras.toUnicode else {
-		return data.pdfTextToString()
-	}
-
-	let scalars = decodeToUnicodeScalars(data: data, cmap: toUnicode)
-	if !scalars.isEmpty {
-		return String(String.UnicodeScalarView(scalars))
+	if let decoded = font.extras.toUnicode?.decodeString(data) {
+		return decoded
 	}
 
 	return data.pdfTextToString()
-}
-
-private func decodeToUnicodeScalars(data: Data, cmap: ToUnicodeCMap) -> [UnicodeScalar] {
-	var result: [UnicodeScalar] = []
-	var index = data.startIndex
-
-	while index < data.endIndex {
-		var matched = false
-
-		for range in cmap.codeSpaceRanges {
-			let length = range.byteLength
-			guard index + length <= data.endIndex else {
-				continue
-			}
-
-			var code: UInt32 = 0
-			for i in 0..<length {
-				code = (code << 8) | UInt32(data[index + i])
-			}
-
-			guard range.bound.contains(code) else {
-				continue
-			}
-
-			appendMappedScalars(code: code, mappings: cmap.mappings, output: &result)
-			index += length
-			matched = true
-			break
-		}
-
-		if !matched {
-			index += 1
-		}
-	}
-
-	return result
-}
-
-private func appendMappedScalars(code: UInt32, mappings: [UnicodeMapping], output: inout [UnicodeScalar]) {
-	for mapping in mappings {
-		switch mapping {
-		case .single(let singleCode, let scalars) where singleCode == code:
-			output.append(contentsOf: scalars)
-			return
-		case .range(let range, let startScalar) where range.contains(code):
-			if let scalar = UnicodeScalar(startScalar.value + (code - range.lowerBound)) {
-				output.append(scalar)
-			}
-			return
-		default:
-			continue
-		}
-	}
 }
 
 private extension PdfContentStream {

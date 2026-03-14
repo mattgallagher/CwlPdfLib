@@ -89,6 +89,7 @@ Use this as a fast navigation guide before broad searching.
 ## Code Style Guidelines
 
 - Keep imports, enum cases, and similar lists in alphabetical order where practical.
+- If a file exceeds 750 lines (max) refactor until under 400 lines (preferred)
 
 ### Copyright inclusion
 
@@ -188,7 +189,7 @@ swiftformat --swiftversion 6 --config .swiftformat "Sources/CwlPdfParser/Documen
 ## Guardrails (Do Not Do)
 
 - Do not introduce CoreGraphics dependencies into `CwlPdfParser`.
-- Do not move parser logic into `CwlPdfView`.
+- Do not move parser logic into `CwlPdfRenderer` (the renderer should be limited to integration with CoreGraphics).
 - Do not replace targeted parsing with broad eager loading without strong justification.
 
 ## Commit and PR Conventions
