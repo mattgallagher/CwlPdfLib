@@ -1,0 +1,363 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		5F4F5702CBD4B764116C3717 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 87BFE48BAE9A19F8CB0FFB46 /* Assets.xcassets */; };
+		6CB1103014E66277CE1689AE /* CwlPdfApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A7A902EABB5237711B3E165 /* CwlPdfApp.swift */; };
+		7D4378C88E4E1404BB635460 /* PageViewPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBC85D912983ECE405A367F3 /* PageViewPreview.swift */; };
+		9280F69DEF4066B952C90F3E /* CwlPdfLib in Frameworks */ = {isa = PBXBuildFile; productRef = C33210BDFA05B84530DA43BD /* CwlPdfLib */; };
+		B9587B9C049285970FA8C9D0 /* Preview.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E8898324D51417072CAD3976 /* Preview.xcassets */; };
+		FEE81335EE7027EDD513E569 /* BrowserViewPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1300E380B10C4C373677B92B /* BrowserViewPreview.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		1300E380B10C4C373677B92B /* BrowserViewPreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserViewPreview.swift; sourceTree = "<group>"; };
+		2BA2A169FD623A6B45CD318E /* CwlPdfApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CwlPdfApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		87BFE48BAE9A19F8CB0FFB46 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		8A7A902EABB5237711B3E165 /* CwlPdfApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CwlPdfApp.swift; sourceTree = "<group>"; };
+		BBC85D912983ECE405A367F3 /* PageViewPreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PageViewPreview.swift; sourceTree = "<group>"; };
+		BE954613C5D2CC7461CC9618 /* CwlPdfApp.xctestplan */ = {isa = PBXFileReference; path = CwlPdfApp.xctestplan; sourceTree = "<group>"; };
+		E8898324D51417072CAD3976 /* Preview.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Preview.xcassets; sourceTree = "<group>"; };
+		F263AC0E111AB1E104E02C40 /* CwlPdfLib */ = {isa = PBXFileReference; lastKnownFileType = folder; name = CwlPdfLib; path = .; sourceTree = SOURCE_ROOT; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		C58E4A2CADFB8A57FAAD53FF /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				9280F69DEF4066B952C90F3E /* CwlPdfLib in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		4010AED93ED2F082E22A497A /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				2BA2A169FD623A6B45CD318E /* CwlPdfApp.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		5A2B923FA85F95572E5BDEB7 /* CwlPdfApp */ = {
+			isa = PBXGroup;
+			children = (
+				87BFE48BAE9A19F8CB0FFB46 /* Assets.xcassets */,
+				8A7A902EABB5237711B3E165 /* CwlPdfApp.swift */,
+				BE954613C5D2CC7461CC9618 /* CwlPdfApp.xctestplan */,
+				E8898324D51417072CAD3976 /* Preview.xcassets */,
+				912232FD03B341B609A753F3 /* Previews */,
+			);
+			path = CwlPdfApp;
+			sourceTree = "<group>";
+		};
+		912232FD03B341B609A753F3 /* Previews */ = {
+			isa = PBXGroup;
+			children = (
+				1300E380B10C4C373677B92B /* BrowserViewPreview.swift */,
+				BBC85D912983ECE405A367F3 /* PageViewPreview.swift */,
+			);
+			path = Previews;
+			sourceTree = "<group>";
+		};
+		9CC93F79255800540F0F247C /* Packages */ = {
+			isa = PBXGroup;
+			children = (
+				F263AC0E111AB1E104E02C40 /* CwlPdfLib */,
+			);
+			name = Packages;
+			sourceTree = "<group>";
+		};
+		F1E594B2C58129C723C1FFFD = {
+			isa = PBXGroup;
+			children = (
+				5A2B923FA85F95572E5BDEB7 /* CwlPdfApp */,
+				9CC93F79255800540F0F247C /* Packages */,
+				4010AED93ED2F082E22A497A /* Products */,
+			);
+			indentWidth = 4;
+			sourceTree = "<group>";
+			tabWidth = 4;
+			usesTabs = 1;
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		F8C5D6E3ABE887B8ABE61B92 /* CwlPdfApp */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 12796ACFC51D0EA5542712CF /* Build configuration list for PBXNativeTarget "CwlPdfApp" */;
+			buildPhases = (
+				CF180C0BCA0A7DA6684F251E /* Sources */,
+				713A0489E4DEC5BFB58D2A3D /* Resources */,
+				C58E4A2CADFB8A57FAAD53FF /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = CwlPdfApp;
+			packageProductDependencies = (
+				C33210BDFA05B84530DA43BD /* CwlPdfLib */,
+			);
+			productName = CwlPdfApp;
+			productReference = 2BA2A169FD623A6B45CD318E /* CwlPdfApp.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		879078F582FEF7F403A2DED5 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+			};
+			buildConfigurationList = F0B5E778DC8C3E21A38E0CF2 /* Build configuration list for PBXProject "CwlPdfApp" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = F1E594B2C58129C723C1FFFD;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				BA98D4F772BF4A081E665BC4 /* XCLocalSwiftPackageReference "." */,
+			);
+			preferredProjectObjectVersion = 77;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				F8C5D6E3ABE887B8ABE61B92 /* CwlPdfApp */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		713A0489E4DEC5BFB58D2A3D /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				5F4F5702CBD4B764116C3717 /* Assets.xcassets in Resources */,
+				B9587B9C049285970FA8C9D0 /* Preview.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		CF180C0BCA0A7DA6684F251E /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				FEE81335EE7027EDD513E569 /* BrowserViewPreview.swift in Sources */,
+				6CB1103014E66277CE1689AE /* CwlPdfApp.swift in Sources */,
+				7D4378C88E4E1404BB635460 /* PageViewPreview.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		5044CF9E8B73680D6F751B60 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		5D436C01A8724A4EB578A145 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+		7B0F32F404DEF25E14C698F7 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				COMBINE_HIDPI_IMAGES = YES;
+				DEVELOPMENT_ASSET_PATHS = CwlPdfApp/Preview.xcassets;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.mattgallagher.CwlPdfApp;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		AA76F8B2BBF3516AF658D69A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				COMBINE_HIDPI_IMAGES = YES;
+				DEVELOPMENT_ASSET_PATHS = CwlPdfApp/Preview.xcassets;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.mattgallagher.CwlPdfApp;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		12796ACFC51D0EA5542712CF /* Build configuration list for PBXNativeTarget "CwlPdfApp" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				7B0F32F404DEF25E14C698F7 /* Debug */,
+				AA76F8B2BBF3516AF658D69A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		F0B5E778DC8C3E21A38E0CF2 /* Build configuration list for PBXProject "CwlPdfApp" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				5044CF9E8B73680D6F751B60 /* Debug */,
+				5D436C01A8724A4EB578A145 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		BA98D4F772BF4A081E665BC4 /* XCLocalSwiftPackageReference "." */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = .;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		C33210BDFA05B84530DA43BD /* CwlPdfLib */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = CwlPdfLib;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 879078F582FEF7F403A2DED5 /* Project object */;
+}

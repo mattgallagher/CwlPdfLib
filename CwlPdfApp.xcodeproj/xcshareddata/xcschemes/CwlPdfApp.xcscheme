@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Scheme
-   LastUpgradeVersion = "2620"
+   LastUpgradeVersion = "1430"
    version = "1.7">
    <BuildAction
       parallelizeBuildables = "YES"
       buildImplicitDependencies = "YES"
-      buildArchitectures = "Automatic">
+      runPostActionsOnFailure = "NO">
       <BuildActionEntries>
          <BuildActionEntry
             buildForTesting = "YES"
@@ -15,7 +15,7 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "C953BF6B2EAC987600010E86"
+               BlueprintIdentifier = "F8C5D6E3ABE887B8ABE61B92"
                BuildableName = "CwlPdfApp.app"
                BlueprintName = "CwlPdfApp"
                ReferencedContainer = "container:CwlPdfApp.xcodeproj">
@@ -27,13 +27,27 @@
       buildConfiguration = "Debug"
       selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
       selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
-      shouldUseLaunchSchemeArgsEnv = "YES">
+      shouldUseLaunchSchemeArgsEnv = "YES"
+      onlyGenerateCoverageForSpecifiedTargets = "NO">
       <TestPlans>
          <TestPlanReference
-            reference = "container:CwlPdfApp/CwlPdfApp.xctestplan"
-            default = "YES">
+            default = "YES"
+            reference = "container:CwlPdfApp/CwlPdfApp.xctestplan">
          </TestPlanReference>
       </TestPlans>
+      <MacroExpansion>
+         <BuildableReference
+            BuildableIdentifier = "primary"
+            BlueprintIdentifier = "F8C5D6E3ABE887B8ABE61B92"
+            BuildableName = "CwlPdfApp.app"
+            BlueprintName = "CwlPdfApp"
+            ReferencedContainer = "container:CwlPdfApp.xcodeproj">
+         </BuildableReference>
+      </MacroExpansion>
+      <Testables>
+      </Testables>
+      <CommandLineArguments>
+      </CommandLineArguments>
    </TestAction>
    <LaunchAction
       buildConfiguration = "Debug"
@@ -49,7 +63,7 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "C953BF6B2EAC987600010E86"
+            BlueprintIdentifier = "F8C5D6E3ABE887B8ABE61B92"
             BuildableName = "CwlPdfApp.app"
             BlueprintName = "CwlPdfApp"
             ReferencedContainer = "container:CwlPdfApp.xcodeproj">
@@ -61,12 +75,12 @@
       shouldUseLaunchSchemeArgsEnv = "YES"
       savedToolIdentifier = ""
       useCustomWorkingDirectory = "NO"
-      debugDocumentVersioning = "NO">
+      debugDocumentVersioning = "YES">
       <BuildableProductRunnable
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "C953BF6B2EAC987600010E86"
+            BlueprintIdentifier = "F8C5D6E3ABE887B8ABE61B92"
             BuildableName = "CwlPdfApp.app"
             BlueprintName = "CwlPdfApp"
             ReferencedContainer = "container:CwlPdfApp.xcodeproj">

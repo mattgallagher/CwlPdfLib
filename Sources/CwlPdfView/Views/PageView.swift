@@ -51,17 +51,6 @@ struct PageView: View {
 	private func refreshExtractedFeatures() {
 		extractedFeatures = page.extract(features: .all, lookup: document.pdf.lookup)
 		
-		for feature in extractedFeatures {
-			switch feature.payload {
-			case .text(let utf8, _):
-				print("Text \(utf8) bounds \(feature.bounds)")
-			case .image:
-				print("Image bounds \(feature.bounds)")
-			case .annotation(let type, _):
-				print("Annotation \(type ?? "unknown") bounds \(feature.bounds)")
-			}
-		}
-		
 		if
 			let selectedFeatureIndex,
 			!extractedFeatures.indices.contains(selectedFeatureIndex)

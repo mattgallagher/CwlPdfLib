@@ -1,0 +1,42 @@
+name: CwlPdfApp
+
+options:
+  minimumXcodeGenVersion: 2.44.0
+  usesTabs: true
+  tabWidth: 4
+  indentWidth: 4
+  schemePathPrefix: ../
+
+settings:
+  base:
+    SWIFT_APPROACHABLE_CONCURRENCY: YES
+    SWIFT_VERSION: 6.0
+
+packages:
+  CwlPdfLib:
+    path: .
+
+targets:
+  CwlPdfApp:
+    type: application
+    platform: macOS
+    deploymentTarget: "26.0"
+    sources:
+      - path: CwlPdfApp
+    dependencies:
+      - package: CwlPdfLib
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.mattgallagher.CwlPdfApp
+        GENERATE_INFOPLIST_FILE: YES
+        DEVELOPMENT_ASSET_PATHS: CwlPdfApp/Preview.xcassets
+        ENABLE_PREVIEWS: YES
+
+schemes:
+  CwlPdfApp:
+    build:
+      targets:
+        CwlPdfApp: build
+    test:
+      testPlans:
+        - path: CwlPdfApp/CwlPdfApp.xctestplan

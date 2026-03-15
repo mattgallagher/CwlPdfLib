@@ -2,6 +2,10 @@
 
 This is a Swift Package implementing PDF parsing, rendering and object inspection; targetting macOS 26; compiling using Swift 6.2
 
+The repository also contains a macOS app test harness in `CwlPdfApp/`. The Xcode project lives at
+`CwlPdfApp.xcodeproj` and is generated from the root `project.yml` via XcodeGen using a local package
+reference back to this package.
+
 ## Definition of Done
 
 A task is complete when all of the following are true:
@@ -41,8 +45,11 @@ swift test --enable-code-coverage
 ```
 
 ### Build app
+
+The app harness sources, assets, previews, and test plan live in `CwlPdfApp/`. Maintain the app project via the root `project.yml`. Build the app from the project using:
+
 ```bash
-xcodebuild -workspace "CwlPdfApp.xcworkspace" -scheme "CwlPdfApp"
+xcodebuild -project "CwlPdfApp.xcodeproj" -scheme "CwlPdfApp"
 ```
 
 ## Version and Platform Baseline

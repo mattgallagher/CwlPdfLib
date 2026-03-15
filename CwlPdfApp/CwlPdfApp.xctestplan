@@ -20,7 +20,7 @@
   "testTargets" : [
     {
       "target" : {
-        "containerPath" : "container:..\/..",
+        "containerPath" : "container:",
         "identifier" : "CwlPdfLibTests",
         "name" : "CwlPdfLibTests"
       }
