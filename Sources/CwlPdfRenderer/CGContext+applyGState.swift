@@ -12,6 +12,8 @@ struct ClipEntry {
 /// Tracks the active soft mask state during rendering.
 struct RenderState {
 	var activeSoftMask: CGImage?
+	var deviceScaleX: CGFloat = 1
+	var deviceScaleY: CGFloat = 1
 	var softMaskBounds: CGRect?
 	var colorState = ColorState()
 	var clipPaths: [ClipEntry] = []
@@ -127,13 +129,11 @@ extension CGContext {
 			resetClip()
 			reapplyClips(renderState: renderState, renderStack: renderStack)
 		} else if let smaskData = gstate.softMask {
-			let deviceScaleX = max(hypot(ctm.a, ctm.c), 1)
-			let deviceScaleY = max(hypot(ctm.b, ctm.d), 1)
 			renderState.applySoftMask(
 				smaskData,
 				lookup: lookup,
-				deviceScaleX: deviceScaleX,
-				deviceScaleY: deviceScaleY
+				deviceScaleX: renderState.deviceScaleX,
+				deviceScaleY: renderState.deviceScaleY
 			)
 			// Apply the mask as a clip to the current graphics context
 			if let mask = renderState.activeSoftMask, let bounds = renderState.softMaskBounds {

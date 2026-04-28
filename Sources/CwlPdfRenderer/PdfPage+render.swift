@@ -10,9 +10,17 @@ extension PdfPage {
 
 	public func render(in context: CGContext, lookup: PdfObjectLookup?) {
 		let rect = renderBounds(lookup: lookup)
+		let deviceScaleX = max(hypot(context.ctm.a, context.ctm.c), 1)
+		let deviceScaleY = max(hypot(context.ctm.b, context.ctm.d), 1)
 		
 		for contentStream in contentStreams(lookup: lookup) {
-			contentStream.render(in: context, pageBounds: rect, lookup: lookup)
+			contentStream.render(
+				in: context,
+				pageBounds: rect,
+				lookup: lookup,
+				deviceScaleX: deviceScaleX,
+				deviceScaleY: deviceScaleY
+			)
 		}
 		
 		for
@@ -33,7 +41,13 @@ extension PdfPage {
 				annotationRect: annotationRect,
 				lookup: lookup
 			)
-			contentStream.render(in: context, pageBounds: rect, lookup: lookup)
+			contentStream.render(
+				in: context,
+				pageBounds: rect,
+				lookup: lookup,
+				deviceScaleX: deviceScaleX,
+				deviceScaleY: deviceScaleY
+			)
 		}
 	}
 

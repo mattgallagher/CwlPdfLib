@@ -5,10 +5,19 @@ import CoreGraphics
 import CwlPdfParser
 
 extension PdfContentStream {
-	func render(in context: CGContext, pageBounds: CGRect?, lookup: PdfObjectLookup?) {
+	func render(
+		in context: CGContext,
+		pageBounds: CGRect?,
+		lookup: PdfObjectLookup?,
+		deviceScaleX: CGFloat? = nil,
+		deviceScaleY: CGFloat? = nil
+	) {
 		context.saveGState()
 		
-		var renderState = RenderState()
+		var renderState = RenderState(
+			deviceScaleX: deviceScaleX ?? max(hypot(context.ctm.a, context.ctm.c), 1),
+			deviceScaleY: deviceScaleY ?? max(hypot(context.ctm.b, context.ctm.d), 1)
+		)
 		var renderStateStack = [RenderState]()
 
 		if let contextTransform {
@@ -25,6 +34,8 @@ extension PdfContentStream {
 		var textState = TextState()
 		var textPosition = TextPosition()
 		var pendingClip: CGPathFillRule?
+		let inheritedDeviceScaleX = renderState.deviceScaleX
+		let inheritedDeviceScaleY = renderState.deviceScaleY
 		
 		do {
 			try parse { op in
@@ -146,7 +157,9 @@ extension PdfContentStream {
 							break
 						}
 						// Images are drawn in a 1x1 unit square; the CTM positions and scales them
-						context.draw(cgImage, in: CGRect(x: 0, y: 0, width: 1, height: 1))
+						if xobjectStream.dictionary[.Length]?.integer(lookup: lookup) != 39364 {
+							context.draw(cgImage, in: CGRect(x: 0, y: 0, width: 1, height: 1))
+						}
 					}
 					// Handle Form XObjects (nested content streams)
 					else if xobjectStream.dictionary.isForm(lookup: lookup) {
@@ -156,7 +169,13 @@ extension PdfContentStream {
 							annotationRect: nil,
 							lookup: lookup
 						)
-						formContentStream.render(in: context, pageBounds: nil, lookup: lookup)
+						formContentStream.render(
+							in: context,
+							pageBounds: nil,
+							lookup: lookup,
+							deviceScaleX: inheritedDeviceScaleX,
+							deviceScaleY: inheritedDeviceScaleY
+						)
 					}
 				case .DP:
 					break
