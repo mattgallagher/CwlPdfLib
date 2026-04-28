@@ -34,8 +34,33 @@ extension PdfContentStream {
 		var textState = TextState()
 		var textPosition = TextPosition()
 		var pendingClip: CGPathFillRule?
+		var pathState = PdfGraphicsPathState()
 		let inheritedDeviceScaleX = renderState.deviceScaleX
 		let inheritedDeviceScaleY = renderState.deviceScaleY
+
+		func applyPendingClipIfNeeded(preservePath: Bool) {
+			guard let clipRule = pendingClip else {
+				return
+			}
+
+			defer {
+				pendingClip = nil
+			}
+
+			guard pathState.hasDrawableSegments else {
+				context.beginPath()
+				return
+			}
+
+			let path = context.path
+			if let pathCopy = path?.copy() {
+				renderState.addClipPath(pathCopy, ctm: context.ctm, fillRule: clipRule)
+			}
+			context.clip(using: clipRule)
+			if preservePath, let path {
+				context.addPath(path)
+			}
+		}
 		
 		do {
 			try parse { op in
@@ -51,51 +76,27 @@ extension PdfContentStream {
 					textPosition.textMatrix = textPosition.lineMatrix
 					context.showText(text, state: textState, position: &textPosition, lookup: lookup)
 				case .B:
-					if let clipRule = pendingClip {
-						let path = context.path
-						if let pathCopy = path?.copy() {
-							renderState.addClipPath(pathCopy, ctm: context.ctm, fillRule: clipRule)
-						}
-						context.clip(using: clipRule)
-						pendingClip = nil
-						if let path { context.addPath(path) }
-					}
+					applyPendingClipIfNeeded(preservePath: true)
 					context.drawPath(using: .fillStroke)
+					pathState.beginPath()
 				case .`B*`:
-					if let clipRule = pendingClip {
-						let path = context.path
-						if let pathCopy = path?.copy() {
-							renderState.addClipPath(pathCopy, ctm: context.ctm, fillRule: clipRule)
-						}
-						context.clip(using: clipRule)
-						pendingClip = nil
-						if let path { context.addPath(path) }
-					}
+					applyPendingClipIfNeeded(preservePath: true)
 					context.drawPath(using: .eoFillStroke)
+					pathState.beginPath()
 				case .b:
-					context.closePath()
-					if let clipRule = pendingClip {
-						let path = context.path
-						if let pathCopy = path?.copy() {
-							renderState.addClipPath(pathCopy, ctm: context.ctm, fillRule: clipRule)
-						}
-						context.clip(using: clipRule)
-						pendingClip = nil
-						if let path { context.addPath(path) }
+					if pathState.closeSubpath() {
+						context.closePath()
 					}
+					applyPendingClipIfNeeded(preservePath: true)
 					context.drawPath(using: .fillStroke)
+					pathState.beginPath()
 				case .`b*`:
-					context.closePath()
-					if let clipRule = pendingClip {
-						let path = context.path
-						if let pathCopy = path?.copy() {
-							renderState.addClipPath(pathCopy, ctm: context.ctm, fillRule: clipRule)
-						}
-						context.clip(using: clipRule)
-						pendingClip = nil
-						if let path { context.addPath(path) }
+					if pathState.closeSubpath() {
+						context.closePath()
 					}
+					applyPendingClipIfNeeded(preservePath: true)
 					context.drawPath(using: .eoFillStroke)
+					pathState.beginPath()
 				case .BDC:
 					break
 				case .BI:
@@ -107,6 +108,9 @@ extension PdfContentStream {
 				case .BX:
 					break
 				case .c(let x1, let y1, let x2, let y2, let x3, let y3):
+					guard pathState.addCurve(to: CGPoint(x: CGFloat(x3), y: CGFloat(y3))) else {
+						break
+					}
 					context.addCurve(
 						to: CGPoint(x: CGFloat(x3), y: CGFloat(y3)),
 						control1: CGPoint(x: CGFloat(x1), y: CGFloat(y1)),
@@ -189,38 +193,17 @@ extension PdfContentStream {
 				case .EX:
 					break
 				case .F:
-					if let clipRule = pendingClip {
-						let path = context.path
-						if let pathCopy = path?.copy() {
-							renderState.addClipPath(pathCopy, ctm: context.ctm, fillRule: clipRule)
-						}
-						context.clip(using: clipRule)
-						pendingClip = nil
-						if let path { context.addPath(path) }
-					}
+					applyPendingClipIfNeeded(preservePath: true)
 					context.fillPath(using: .winding)
+					pathState.beginPath()
 				case .f:
-					if let clipRule = pendingClip {
-						let path = context.path
-						if let pathCopy = path?.copy() {
-							renderState.addClipPath(pathCopy, ctm: context.ctm, fillRule: clipRule)
-						}
-						context.clip(using: clipRule)
-						pendingClip = nil
-						if let path { context.addPath(path) }
-					}
+					applyPendingClipIfNeeded(preservePath: true)
 					context.fillPath(using: .winding)
+					pathState.beginPath()
 				case .`f*`:
-					if let clipRule = pendingClip {
-						let path = context.path
-						if let pathCopy = path?.copy() {
-							renderState.addClipPath(pathCopy, ctm: context.ctm, fillRule: clipRule)
-						}
-						context.clip(using: clipRule)
-						pendingClip = nil
-						if let path { context.addPath(path) }
-					}
+					applyPendingClipIfNeeded(preservePath: true)
 					context.fillPath(using: .evenOdd)
+					pathState.beginPath()
 				case .G(let gray):
 					renderState.colorState.setStrokeGray(CGFloat(gray))
 					renderState.colorState.applyStrokeColor(to: context)
@@ -238,7 +221,9 @@ extension PdfContentStream {
 					let gstate = PdfExtGState(dictionary: gstateDictionary, lookup: lookup)
 					context.apply(gstate, renderState: &renderState, renderStack: renderStateStack, lookup: lookup)
 				case .h:
-					context.closePath()
+					if pathState.closeSubpath() {
+						context.closePath()
+					}
 				case .i:
 					break
 				case .ID:
@@ -266,23 +251,24 @@ extension PdfContentStream {
 					renderState.colorState.setFillCMYK(CGFloat(c), CGFloat(m), CGFloat(y), CGFloat(k))
 					renderState.colorState.applyFillColor(to: context)
 				case .l(let x, let y):
+					guard pathState.addLine(to: CGPoint(x: CGFloat(x), y: CGFloat(y))) else {
+						break
+					}
 					context.addLine(to: CGPoint(x: CGFloat(x), y: CGFloat(y)))
 				case .M(let limit):
 					context.setMiterLimit(CGFloat(limit))
 				case .m(let x, let y):
+					pathState.move(to: CGPoint(x: CGFloat(x), y: CGFloat(y)))
 					context.move(to: CGPoint(x: CGFloat(x), y: CGFloat(y)))
 				case .MP:
 					break
 				case .n:
-					if let clipRule = pendingClip {
-						if let path = context.path?.copy() {
-							renderState.addClipPath(path, ctm: context.ctm, fillRule: clipRule)
-						}
-						context.clip(using: clipRule)
-						pendingClip = nil
+					if pendingClip != nil {
+						applyPendingClipIfNeeded(preservePath: false)
 					} else {
 						context.beginPath()
 					}
+					pathState.beginPath()
 				case .q:
 					context.saveGState()
 					renderStateStack.append(renderState)
@@ -291,6 +277,7 @@ extension PdfContentStream {
 					context.restoreGState()
 					pendingClip = nil
 				case .re(let x, let y, let w, let h):
+					pathState.addRect(CGRect(x: CGFloat(x), y: CGFloat(y), width: CGFloat(w), height: CGFloat(h)))
 					context.addRect(CGRect(x: CGFloat(x), y: CGFloat(y), width: CGFloat(w), height: CGFloat(h)))
 				case .RG(let r, let g, let b):
 					renderState.colorState.setStrokeRGB(CGFloat(r), CGFloat(g), CGFloat(b))
@@ -301,28 +288,16 @@ extension PdfContentStream {
 				case .ri:
 					break
 				case .S:
-					if let clipRule = pendingClip {
-						let path = context.path
-						if let pathCopy = path?.copy() {
-							renderState.addClipPath(pathCopy, ctm: context.ctm, fillRule: clipRule)
-						}
-						context.clip(using: clipRule)
-						pendingClip = nil
-						if let path { context.addPath(path) }
-					}
+					applyPendingClipIfNeeded(preservePath: true)
 					context.strokePath()
+					pathState.beginPath()
 				case .s:
-					context.closePath()
-					if let clipRule = pendingClip {
-						let path = context.path
-						if let pathCopy = path?.copy() {
-							renderState.addClipPath(pathCopy, ctm: context.ctm, fillRule: clipRule)
-						}
-						context.clip(using: clipRule)
-						pendingClip = nil
-						if let path { context.addPath(path) }
+					if pathState.closeSubpath() {
+						context.closePath()
 					}
+					applyPendingClipIfNeeded(preservePath: true)
 					context.strokePath()
+					pathState.beginPath()
 				case .SC(let colors):
 					renderState.colorState.setStrokeColor(colors.map { CGFloat($0) })
 					renderState.colorState.applyStrokeColor(to: context)
@@ -406,9 +381,13 @@ extension PdfContentStream {
 					textPosition.lineMatrix = textPosition.lineMatrix.translatedBy(x: 0, y: -textState.leading)
 					textPosition.textMatrix = textPosition.lineMatrix
 				case .v(let x2, let y2, let x3, let y3):
+					guard let currentPoint = pathState.currentPoint else {
+						break
+					}
+					_ = pathState.addCurve(to: CGPoint(x: CGFloat(x3), y: CGFloat(y3)))
 					context.addCurve(
 						to: CGPoint(x: CGFloat(x3), y: CGFloat(y3)),
-						control1: context.currentPointOfPath,
+						control1: currentPoint,
 						control2: CGPoint(x: CGFloat(x2), y: CGFloat(y2))
 					)
 				case .w(let width):
@@ -418,10 +397,14 @@ extension PdfContentStream {
 				case .`W*`:
 					pendingClip = .evenOdd
 				case .y(let x2, let y2, let x3, let y3):
+					guard let currentPoint = pathState.currentPoint else {
+						break
+					}
+					_ = pathState.addCurve(to: CGPoint(x: CGFloat(x3), y: CGFloat(y3)))
 					context.addCurve(
 						to: CGPoint(x: CGFloat(x3), y: CGFloat(y3)),
 						control1: CGPoint(x: CGFloat(x2), y: CGFloat(y2)),
-						control2: context.currentPointOfPath
+						control2: currentPoint
 					)
 				}
 				return true
@@ -452,4 +435,57 @@ extension PdfContentStream {
 		return AA
 	}
 
+}
+
+struct PdfGraphicsPathState {
+	private(set) var currentPoint: CGPoint?
+	private var subpathStart: CGPoint?
+	private(set) var hasDrawableSegments = false
+
+	mutating func beginPath() {
+		currentPoint = nil
+		subpathStart = nil
+		hasDrawableSegments = false
+	}
+
+	mutating func move(to point: CGPoint) {
+		currentPoint = point
+		subpathStart = point
+	}
+
+	mutating func addLine(to point: CGPoint) -> Bool {
+		guard currentPoint != nil else {
+			return false
+		}
+
+		currentPoint = point
+		hasDrawableSegments = true
+		return true
+	}
+
+	mutating func addCurve(to point: CGPoint) -> Bool {
+		guard currentPoint != nil else {
+			return false
+		}
+
+		currentPoint = point
+		hasDrawableSegments = true
+		return true
+	}
+
+	mutating func addRect(_ rect: CGRect) {
+		subpathStart = CGPoint(x: rect.minX, y: rect.minY)
+		currentPoint = subpathStart
+		hasDrawableSegments = true
+	}
+
+	mutating func closeSubpath() -> Bool {
+		guard let subpathStart, currentPoint != nil else {
+			return false
+		}
+
+		currentPoint = subpathStart
+		hasDrawableSegments = true
+		return true
+	}
 }
