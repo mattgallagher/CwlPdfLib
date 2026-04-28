@@ -12,12 +12,10 @@ extension PdfPage {
 		var extracted = [PdfExtractedFeature]()
 
 		if features.contains(.annotations) {
-			let annotations = pageDictionary[.Annots]?
-				.array(lookup: lookup)?
-				.compactMap { $0.dictionary(lookup: lookup) }
-				?? []
-			for (index, annotation) in annotations.enumerated() {
+			let annotationObjects = pageDictionary[.Annots]?.array(lookup: lookup) ?? []
+			for (index, annotationObject) in annotationObjects.enumerated() {
 				guard
+					let annotation = annotationObject.dictionary(lookup: lookup),
 					let rectArray = annotation[.Rect]?.array(lookup: lookup),
 					let rect = PdfRect(array: rectArray, lookup: lookup)
 				else {
@@ -28,7 +26,7 @@ extension PdfPage {
 					PdfExtractedFeature(
 						bounds: rect,
 						matrix: .identity,
-						payload: .annotation(annotationType: type, annotationIndex: index)
+						payload: .annotation(annotationType: type, annotationIndex: index, objectIdentifier: annotationObject.reference)
 					)
 				)
 			}

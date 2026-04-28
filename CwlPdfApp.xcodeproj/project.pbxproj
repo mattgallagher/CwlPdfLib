@@ -23,7 +23,7 @@
 		BBC85D912983ECE405A367F3 /* PageViewPreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PageViewPreview.swift; sourceTree = "<group>"; };
 		BE954613C5D2CC7461CC9618 /* CwlPdfApp.xctestplan */ = {isa = PBXFileReference; path = CwlPdfApp.xctestplan; sourceTree = "<group>"; };
 		E8898324D51417072CAD3976 /* Preview.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Preview.xcassets; sourceTree = "<group>"; };
-		F263AC0E111AB1E104E02C40 /* CwlPdfLib */ = {isa = PBXFileReference; lastKnownFileType = folder; name = CwlPdfLib; path = .; sourceTree = SOURCE_ROOT; };
+		FF163B13490A42592CA6B5B6 /* CwlPdfLib */ = {isa = PBXFileReference; lastKnownFileType = folder; name = CwlPdfLib; path = .; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -67,19 +67,11 @@
 			path = Previews;
 			sourceTree = "<group>";
 		};
-		9CC93F79255800540F0F247C /* Packages */ = {
-			isa = PBXGroup;
-			children = (
-				F263AC0E111AB1E104E02C40 /* CwlPdfLib */,
-			);
-			name = Packages;
-			sourceTree = "<group>";
-		};
 		F1E594B2C58129C723C1FFFD = {
 			isa = PBXGroup;
 			children = (
 				5A2B923FA85F95572E5BDEB7 /* CwlPdfApp */,
-				9CC93F79255800540F0F247C /* Packages */,
+				FF163B13490A42592CA6B5B6 /* CwlPdfLib */,
 				4010AED93ED2F082E22A497A /* Products */,
 			);
 			indentWidth = 4;
@@ -118,9 +110,10 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+				};
 			};
 			buildConfigurationList = F0B5E778DC8C3E21A38E0CF2 /* Build configuration list for PBXProject "CwlPdfApp" */;
-			compatibilityVersion = "Xcode 14.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -133,6 +126,7 @@
 				BA98D4F772BF4A081E665BC4 /* XCLocalSwiftPackageReference "." */,
 			);
 			preferredProjectObjectVersion = 77;
+			productRefGroup = 4010AED93ED2F082E22A497A /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (

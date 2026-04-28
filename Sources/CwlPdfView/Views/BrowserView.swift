@@ -45,12 +45,42 @@ public struct PdfBrowserView: View {
 			case nil: Text("Nothing selected")
 			}
 		}
+		.environment(\.navigateToObject, NavigateToObjectAction { identifier in
+			guard let layout = document.pdf.lookup.allObjectLayouts
+				.last(where: { $0.objectIdentifier == identifier })
+			else { return }
+			sidebarContent = .objects
+			selection = .object(layout)
+		})
 		.onAppear {
 			if let firstPage = document.pdf.pages.first?.id {
 				selection = .page(firstPage)
 			}
 		}
 		.animation(.default, value: sidebarContent.sidebarVisibility)
+	}
+}
+
+struct NavigateToObjectAction {
+	let action: (PdfObjectIdentifier) -> Void
+	func callAsFunction(_ identifier: PdfObjectIdentifier) {
+		action(identifier)
+	}
+}
+
+extension EnvironmentValues {
+	@Entry var navigateToObject: NavigateToObjectAction = NavigateToObjectAction { _ in }
+}
+
+struct ObjectIdentifierLink: View {
+	let identifier: PdfObjectIdentifier
+	@Environment(\.navigateToObject) private var navigateToObject
+
+	var body: some View {
+		Button(identifier.debugDescription) {
+			navigateToObject(identifier)
+		}
+		.buttonStyle(.link)
 	}
 }
 

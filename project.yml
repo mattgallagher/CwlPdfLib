@@ -6,6 +6,12 @@ options:
   tabWidth: 4
   indentWidth: 4
   schemePathPrefix: ../
+  localPackagesGroup: ""
+  groupOrdering:
+    - order:
+        - CwlPdfApp
+        - CwlPdfLib
+        - Products
 
 settings:
   base:

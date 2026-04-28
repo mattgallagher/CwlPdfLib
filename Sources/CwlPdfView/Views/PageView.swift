@@ -27,7 +27,7 @@ struct PageView: View {
 					extractedFeatures: extractedFeatures,
 					selectedFeatureIndex: selectedFeatureIndex
 				)
-				.frame(minWidth: 200, maxWidth: 500)
+				.frame(minWidth: 200, maxWidth: 300, alignment: .leading)
 			}
 		}
 		.background {
@@ -118,8 +118,10 @@ private struct FeatureInspectorView: View {
 
 				switch feature.payload {
 				case .image(let stream, let objectIdentifier):
-					let objectDescription = objectIdentifier?.debugDescription ?? "inline"
-					Text(verbatim: "Image object: \(objectDescription)")
+					HStack(spacing: 4) {
+						Text("Image object:")
+						ObjectIdentifierLabel(identifier: objectIdentifier)
+					}
 					Text(verbatim: "Image stream: \(stream.dictionary)")
 				case .text(let utf8Text, let font):
 					let fontName = font.postScriptName ?? "unknown"
@@ -127,10 +129,14 @@ private struct FeatureInspectorView: View {
 					Text(verbatim: "Size: \(font.size)")
 					Text(verbatim: "Text: \(utf8Text)")
 						.textSelection(.enabled)
-				case .annotation(let type, let annotationIndex):
+				case .annotation(let type, let annotationIndex, let objectIdentifier):
 					let annotationType = type ?? "unknown"
 					Text(verbatim: "Annotation type: \(annotationType)")
 					Text(verbatim: "Annotation index: \(annotationIndex)")
+					HStack(spacing: 4) {
+						Text("Annotation object:")
+						ObjectIdentifierLabel(identifier: objectIdentifier)
+					}
 				}
 
 				Group {
@@ -146,6 +152,18 @@ private struct FeatureInspectorView: View {
 		}
 		.frame(maxHeight: .infinity, alignment: .top)
 		.padding(12)
+	}
+}
+
+private struct ObjectIdentifierLabel: View {
+	let identifier: PdfObjectIdentifier?
+
+	var body: some View {
+		if let identifier {
+			ObjectIdentifierLink(identifier: identifier)
+		} else {
+			Text("inline")
+		}
 	}
 }
 

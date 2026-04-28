@@ -28,7 +28,7 @@ public struct PdfExtractedFeature: Sendable {
 	}
 
 	public enum Payload: Sendable {
-		case annotation(annotationType: String?, annotationIndex: Int)
+		case annotation(annotationType: String?, annotationIndex: Int, objectIdentifier: PdfObjectIdentifier?)
 		case image(stream: PdfStream, objectIdentifier: PdfObjectIdentifier?)
 		case text(utf8Text: String, font: PdfExtractedFont)
 	}
