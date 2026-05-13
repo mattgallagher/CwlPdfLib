@@ -82,13 +82,8 @@ public struct PdfDecryption: Sendable {
 			throw PdfDecryptionError.invalidEncryptionDictionary("Missing P value")
 		}
 
-		// Get document ID from trailer
-		guard
-			let idArray = trailer[.ID]?.array(lookup: nil),
-			let documentId = idArray.first?.string(lookup: nil)
-		else {
-			throw PdfDecryptionError.missingDocumentId
-		}
+		// Get document ID from trailer (only required for R<5; AESV3 key derivation doesn't use it)
+		let documentId = trailer[.ID]?.array(lookup: nil)?.first?.string(lookup: nil)
 
 		// Parse EncryptMetadata (default true)
 		self.encryptMetadata = encryptDictionary[.EncryptMetadata]?.boolean(lookup: nil) ?? true
@@ -190,7 +185,10 @@ public struct PdfDecryption: Sendable {
 				)
 			}
 		} else {
-			// R=2,3,4: MD5-based key derivation
+			// R=2,3,4: MD5-based key derivation requires the document ID
+			guard let documentId else {
+				throw PdfDecryptionError.missingDocumentId
+			}
 			let fileKey = PdfKeyDerivation.computeFileEncryptionKey(
 				password: passwordToTry,
 				ownerKey: ownerKey,

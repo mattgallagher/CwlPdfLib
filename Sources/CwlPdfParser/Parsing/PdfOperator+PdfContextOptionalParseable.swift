@@ -42,7 +42,8 @@ extension PdfOperator: PdfContextOptionalParseable {
 					return PdfOperator.`b*`
 				case .BDC:
 					guard
-						let properties = stack.popLast()?.dictionary(lookup: nil),
+						let properties = stack.popLast(),
+						properties.dictionary(lookup: nil) != nil || properties.name(lookup: nil) != nil,
 						let tag = stack.popLast()?.name(lookup: nil) else {
 						throw PdfParseError(context: context, failure: .missingRequiredParameters)
 					}
@@ -108,7 +109,8 @@ extension PdfOperator: PdfContextOptionalParseable {
 					return PdfOperator.Do(name)
 				case .DP:
 					guard
-						let properties = stack.popLast()?.dictionary(lookup: nil),
+						let properties = stack.popLast(),
+						properties.dictionary(lookup: nil) != nil || properties.name(lookup: nil) != nil,
 						let tag = stack.popLast()?.name(lookup: nil) else {
 						throw PdfParseError(context: context, failure: .missingRequiredParameters)
 					}

@@ -11,7 +11,7 @@ public enum PdfOperator: Sendable, Equatable {
 	case `B*` // eofill, stroke
 	case b // closepath, fill, stroke
 	case `b*` // closepath, eofill, stroke
-	case BDC(PdfDictionary, String) // begin marked sequence with property list
+	case BDC(PdfObject, String) // begin marked sequence with property list (PdfObject is either a dictionary or a name referencing the page's /Properties resource)
 	case BI // being inline image
 	case BMC(String) // begin marked content sequence
 	case BT // begin text object
@@ -24,7 +24,7 @@ public enum PdfOperator: Sendable, Equatable {
 	case d0 // set char width, Type 3 font
 	case d1 // set glyph width, Type 3 font
 	case Do(String) // draw XObject 
-	case DP(PdfDictionary, String) // define marked content point with property list
+	case DP(PdfObject, String) // define marked content point with property list (PdfObject is either a dictionary or a name referencing the page's /Properties resource)
 	case EI // end inline image
 	case EMC // end marked content sequence
 	case ET // end text object
