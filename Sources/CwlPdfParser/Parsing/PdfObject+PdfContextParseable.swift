@@ -30,6 +30,7 @@ extension PdfObject: PdfContextParseable {
 		
 		let objectIdentifier = PdfObjectIdentifier(number: number, generation: generation)
 		context.objectIdentifier = objectIdentifier
+		context.decryption = lookup?.decryption
 		
 		try PdfToken
 			.parse(context: &context)
@@ -137,7 +138,7 @@ extension PdfObject: PdfContextParseable {
 			case .dictionaryOpen:
 				element = .dictionaryOpen
 			case .hex(let bytes, _, _):
-				element = .object(.string(bytes))
+				element = .object(.string(context.decryptString(bytes)))
 			case .identifier(let range):
 				if context.slice[reslice: range].elementsEqual(PdfParseIdentifier.R.rawValue.utf8) {
 					guard
@@ -149,9 +150,9 @@ extension PdfObject: PdfContextParseable {
 						throw PdfParseError(context: context, failure: .unexpectedToken)
 					}
 					element = .object(.reference(PdfObjectIdentifier(number: number, generation: generation)))
-				} else if context.slice[reslice: range].elementsEqual(PdfParseIdentifier.`true`.rawValue.utf8) {
+				} else if context.slice[reslice: range].elementsEqual(PdfParseIdentifier.true.rawValue.utf8) {
 					element = .object(.boolean(true))
-				} else if context.slice[reslice: range].elementsEqual(PdfParseIdentifier.`false`.rawValue.utf8) {
+				} else if context.slice[reslice: range].elementsEqual(PdfParseIdentifier.false.rawValue.utf8) {
 					element = .object(.boolean(false))
 				} else if context.slice[reslice: range].elementsEqual(PdfParseIdentifier.null.rawValue.utf8) {
 					element = .object(.null)
@@ -165,7 +166,7 @@ extension PdfObject: PdfContextParseable {
 			case .real(let sign, let value, _):
 				element = .object(.real(sign * value))
 			case .string(let bytes, let range):
-				element = .object(.string(bytes + context.data(range: range)))
+				element = .object(.string(context.decryptString(bytes + context.data(range: range))))
 			case .closeAngle, .openAngle, .stringEscape, .stringOctal:
 				// These types are internal only and returned only if an end-of-range is
 				// encountered, unexpectedly.

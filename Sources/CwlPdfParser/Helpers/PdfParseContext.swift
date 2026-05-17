@@ -1,9 +1,10 @@
-// CwlPdfLib. Copyright © 2025 Matt Gallagher. See LICENSE file for usage permissions.
+// CwlPdfLib. Copyright © 2026 Matt Gallagher. See LICENSE file for usage permissions.
 
 import Foundation
 
 struct PdfParseContext {
 	var slice: OffsetSlice<UnsafeRawBufferPointer>
+	var decryption: PdfDecryption?
 	var objectIdentifier: PdfObjectIdentifier?
 	var skipComments = true
 	var errorIfEndOfRange = false
@@ -34,6 +35,17 @@ extension PdfParseContext {
 	
 	func data(range: Range<Int>) -> Data {
 		Data(slice[reslice: range])
+	}
+
+	func decryptString(_ data: Data) -> Data {
+		guard
+			let decryption,
+			let objectIdentifier,
+			let decrypted = try? decryption.decryptString(data: data, objectId: objectIdentifier)
+		else {
+			return data
+		}
+		return decrypted
 	}
 	
 	mutating func readEndOfLine() throws {

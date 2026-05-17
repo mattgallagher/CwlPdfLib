@@ -8,7 +8,7 @@ public struct PdfObjectLookup: Sendable {
 	let objectLayoutFromOffset: [Int: PdfObjectLayout]
 	let objectLayoutFromObjectStream: [PdfObjectIdentifier: PdfObjectLayout]
 
-	// Decryption handler for encrypted documents. Set after initialization when encryption is detected.
+	/// Decryption handler for encrypted documents. Set after initialization when encryption is detected.
 	var decryption: PdfDecryption?
 	
 	public func objectLayout(for objectIdentifier: PdfObjectIdentifier) throws -> PdfObjectLayout? {
@@ -32,12 +32,13 @@ public struct PdfObjectLookup: Sendable {
 	public func object(layout: PdfObjectLayout) throws -> PdfObject {
 		switch layout.storage {
 		case .uncompressed(let range):
-			return try source.parseContext(range: range) { context in
+			try source.parseContext(range: range) { context in
+				context.decryption = decryption
 				context.objectIdentifier = layout.objectIdentifier
 				return try PdfObject.parseIndirect(lookup: self, context: &context)
 			}
 		case .objectStream(let streamIdentifier, let index):
-			return try objectFromObjectStream(streamIdentifier: streamIdentifier, index: index, expectedIdentifier: layout.objectIdentifier)
+			try objectFromObjectStream(streamIdentifier: streamIdentifier, index: index, expectedIdentifier: layout.objectIdentifier)
 		}
 	}
 	
@@ -131,7 +132,7 @@ public struct PdfObjectLookup: Sendable {
 		try headerData.parseContext { context in
 			for _ in 0..<(count * 2) {
 				let token = try PdfToken.parse(context: &context)
-				values.append(try token.requireNaturalNumber(context: &context))
+				try values.append(token.requireNaturalNumber(context: &context))
 			}
 		}
 		guard values.count == count * 2 else {
@@ -154,6 +155,7 @@ public struct PdfObjectLookup: Sendable {
 		
 		let objectData = stream.data.subdata(in: objectStart..<objectEnd)
 		return try objectData.parseContext { context in
+			context.decryption = decryption
 			let objectIdentifier = PdfObjectIdentifier(number: objectNumbers[index], generation: 0)
 			if objectIdentifier != expectedIdentifier {
 				throw PdfParseError(failure: .objectNotFound, objectIdentifier: expectedIdentifier, range: 0..<stream.data.count)

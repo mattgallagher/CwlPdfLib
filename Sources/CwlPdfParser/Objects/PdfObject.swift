@@ -1,4 +1,4 @@
-// CwlPdfLib. Copyright © 2025 Matt Gallagher. See LICENSE file for usage permissions.
+// CwlPdfLib. Copyright © 2026 Matt Gallagher. See LICENSE file for usage permissions.
 
 import CommonCrypto
 import Foundation
@@ -103,27 +103,13 @@ public extension PdfObject {
 	}
 	
 	func string(lookup: PdfObjectLookup?) -> Data? {
-		string(lookup: lookup, objectId: nil)
-	}
-
-	/// Get string data with optional decryption.
-	/// - Parameters:
-	///   - lookup: The object lookup for resolving references and accessing decryption
-	///   - objectId: The object ID for decryption context (used when the string is part of a known object)
-	/// - Returns: The (decrypted) string data, or nil if this is not a string
-	func string(lookup: PdfObjectLookup?, objectId: PdfObjectIdentifier?) -> Data? {
 		switch self {
 		case .string(let data):
-			// Decrypt if we have a decryption handler and object ID
-			if let decryption = lookup?.decryption, let objectId {
-				return try? decryption.decryptString(data: data, objectId: objectId)
-			}
-			return data
+			data
 		case .reference(let reference):
-			// When resolving a reference, use the reference's ID for decryption
-			return try? lookup?.object(for: reference)?.string(lookup: lookup, objectId: reference)
+			try? lookup?.object(for: reference)?.string(lookup: lookup)
 		default:
-			return nil
+			nil
 		}
 	}
 	

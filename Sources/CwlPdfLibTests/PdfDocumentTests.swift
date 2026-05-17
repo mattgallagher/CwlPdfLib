@@ -1,9 +1,8 @@
 // CwlPdfLib. Copyright © 2026 Matt Gallagher. See LICENSE file for usage permissions.
 
+@testable import CwlPdfParser
 import Foundation
 import Testing
-
-@testable import CwlPdfParser
 
 struct PdfDocumentTests {
 	@Test(arguments: [
@@ -69,7 +68,7 @@ struct PdfDocumentTests {
 		if case .integer(let value) = document.trailer["Size"] {
 			size = value
 		}
-		#expect(size == (document.lookup.xrefTables.flatMap { $0.objectLocations.keys.map { $0.number } }.max() ?? 0) + 1)
+		#expect(size == (document.lookup.xrefTables.flatMap { $0.objectLocations.keys.map(\.number) }.max() ?? 0) + 1)
 	}
 	
 	@Test
@@ -173,6 +172,25 @@ struct PdfDocumentTests {
 		let operators = try parseContentOperators(document: document)
 		
 		#expect(containsTextLine(operators: operators, text: "This is some basic text"))
+	}
+
+	@Test(arguments: [
+		("single-text-line-encrypted-ownerpw-pdf.pdf", nil, "D:20260110015933Z00'00'"),
+		("single-text-line-encrypted-ownerpw-pdf.pdf", "pdf", "D:20260110015933Z00'00'"),
+		("single-text-line-pw-pdf.pdf", "pdf", "D:20260110020827Z00'00'")
+	])
+	func `GIVEN an encrypted pdf WHEN info dictionary loaded THEN nested strings decrypted`(filename: String, password: String?, date: String) throws {
+		let fileURL = try #require(Bundle.module.url(forResource: "Fixtures/Basic/\(filename)", withExtension: nil))
+		let document = try PdfDocument(
+			source: PdfDataSource(Data(contentsOf: fileURL, options: .mappedIfSafe)),
+			password: password
+		)
+		let infoIdentifier = try #require(document.trailer["Info"]?.reference)
+		let info = try #require(try document.lookup.object(for: infoIdentifier)?.dictionary(lookup: nil))
+
+		#expect(info["Title"]?.string(lookup: document.lookup)?.pdfTextToString() == "Untitled")
+		#expect(info["CreationDate"]?.string(lookup: document.lookup)?.pdfTextToString() == date)
+		#expect(info["ModDate"]?.string(lookup: document.lookup)?.pdfTextToString() == date)
 	}
 	
 	@Test(arguments: [
