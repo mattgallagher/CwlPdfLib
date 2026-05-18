@@ -11,18 +11,35 @@ extension PdfImage {
 	/// - Parameter lookup: The object lookup for resolving indirect references (used for SMask).
 	/// - Returns: A CGImage if successful, nil otherwise.
 	public func createCGImage(lookup: PdfObjectLookup?) -> CGImage? {
-		switch encoding {
+		let baseImage = switch encoding {
 		case .jpeg:
 			createJPEGImage()
 		case .jpeg2000:
 			createJPEG2000Image()
 		case .raw:
-			createRawBitmapImage(lookup: lookup)
+			createRawBitmapImage()
 		}
+		
+		guard let baseImage else {
+			return nil
+		}
+		
+		if let softMaskStream = softMask,
+			let softMaskImage = try? PdfImage(stream: softMaskStream, lookup: lookup),
+			let maskCGImage = softMaskImage.createCGImage(lookup: lookup)
+		{
+			return applySoftMask(
+				to: baseImage,
+				mask: maskCGImage,
+				matte: matteColorRGB()
+			)
+		}
+		
+		return baseImage
 	}
-
+	
 	// MARK: - JPEG Image Creation
-
+	
 	private func createJPEGImage() -> CGImage? {
 		// Use ImageIO for more robust JPEG decoding
 		guard let imageSource = CGImageSourceCreateWithData(data as CFData, nil),
@@ -30,16 +47,16 @@ extension PdfImage {
 		else {
 			return nil
 		}
-
+		
 		// CMYK JPEGs in PDFs typically have inverted color values (0=full color, 255=no color)
 		// Check if we need to invert the CMYK data
 		if colorSpace.isCMYK {
 			return invertCMYKImage(image)
 		}
-
+		
 		return image
 	}
-
+	
 	/// Inverts CMYK color values in an image (255 - value for each component)
 	private func invertCMYKImage(_ image: CGImage) -> CGImage? {
 		let width = image.width
@@ -47,10 +64,10 @@ extension PdfImage {
 		let bytesPerPixel = 4
 		let bytesPerRow = width * bytesPerPixel
 		let totalBytes = height * bytesPerRow
-
+		
 		// Create a buffer for the pixel data
 		var pixelData = [UInt8](repeating: 0, count: totalBytes)
-
+		
 		// Create a CMYK color space and bitmap context
 		let cmykColorSpace = CGColorSpaceCreateDeviceCMYK()
 		guard let context = CGContext(
@@ -64,20 +81,20 @@ extension PdfImage {
 		) else {
 			return nil
 		}
-
+		
 		// Draw the original image into the context to get CMYK pixel data
 		context.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
-
+		
 		// Invert all CMYK values
 		for i in 0..<totalBytes {
 			pixelData[i] = 255 - pixelData[i]
 		}
-
+		
 		// Create a new image from the inverted data
 		guard let provider = CGDataProvider(data: Data(pixelData) as CFData) else {
 			return nil
 		}
-
+		
 		return CGImage(
 			width: width,
 			height: height,
@@ -92,9 +109,9 @@ extension PdfImage {
 			intent: .defaultIntent
 		)
 	}
-
+	
 	// MARK: - JPEG 2000 Image Creation
-
+	
 	private func createJPEG2000Image() -> CGImage? {
 		// Use ImageIO for JPEG 2000 decoding
 		guard let imageSource = CGImageSourceCreateWithData(data as CFData, nil) else {
@@ -102,22 +119,22 @@ extension PdfImage {
 		}
 		return CGImageSourceCreateImageAtIndex(imageSource, 0, nil)
 	}
-
+	
 	// MARK: - Raw Bitmap Image Creation
-
-	private func createRawBitmapImage(lookup: PdfObjectLookup?) -> CGImage? {
+	
+	private func createRawBitmapImage() -> CGImage? {
 		let cgColorSpace: CGColorSpace
-
+		
 		switch colorSpace {
 		case .deviceGray:
 			cgColorSpace = CGColorSpaceCreateDeviceGray()
-
+			
 		case .deviceRGB:
 			cgColorSpace = CGColorSpaceCreateDeviceRGB()
-
+			
 		case .deviceCMYK:
 			cgColorSpace = CGColorSpaceCreateDeviceCMYK()
-
+			
 		case .indexed(let base, let hival, let lookupTable):
 			// Create indexed color space
 			guard let lookupTable else {
@@ -135,7 +152,7 @@ extension PdfImage {
 				// Nested indexed or ICC-based not supported as indexed base
 				return nil
 			}
-
+			
 			guard let indexedSpace = CGColorSpace(
 				indexedBaseSpace: baseColorSpace,
 				last: hival,
@@ -144,7 +161,7 @@ extension PdfImage {
 				return nil
 			}
 			cgColorSpace = indexedSpace
-
+			
 		case .iccBased(let components, let profile):
 			// Try to create color space from ICC profile using modern API
 			if let iccColorSpace = profile.withUnsafeBytes({ bytes in
@@ -161,18 +178,13 @@ extension PdfImage {
 				}
 			}
 		}
-
+		
 		let componentsPerPixel = colorSpace.componentsPerPixel
 		let bitsPerPixel = bitsPerComponent * componentsPerPixel
 		let bytesPerRow = (width * bitsPerPixel + 7) / 8
-
-		// Handle soft mask if present
-		var alphaInfo: CGImageAlphaInfo = .none
-		if softMask != nil {
-			// We'll apply the soft mask after creating the base image
-			alphaInfo = .none
-		}
-
+		
+		let alphaInfo: CGImageAlphaInfo = .none
+		
 		// Determine bitmap info based on color space
 		let bitmapInfo = switch colorSpace {
 		case .deviceCMYK:
@@ -182,18 +194,18 @@ extension PdfImage {
 		default:
 			CGBitmapInfo(rawValue: alphaInfo.rawValue)
 		}
-
+		
 		guard let provider = CGDataProvider(data: data as CFData) else {
 			return nil
 		}
-
+		
 		// Create decode array for CGImage if needed
 		var decodeArray: [CGFloat]?
 		if let decode {
 			decodeArray = decode.map { CGFloat($0) }
 		}
-
-		let baseImage = decodeArray.withUnsafeBufferPointerOrNil { decodePtr in
+		
+		return decodeArray.withUnsafeBufferPointerOrNil { decodePtr in
 			CGImage(
 				width: width,
 				height: height,
@@ -208,31 +220,13 @@ extension PdfImage {
 				intent: .defaultIntent
 			)
 		}
-
-		guard let baseImage else {
-			return nil
-		}
-
-		// Apply soft mask if present
-		if let softMaskStream = softMask,
-			let softMaskImage = try? PdfImage(stream: softMaskStream, lookup: lookup),
-			let maskCGImage = softMaskImage.createCGImage(lookup: lookup)
-		{
-			if let matteColor = matteColorRGB() {
-				return applySoftMaskWithMatte(baseImage: baseImage, maskImage: maskCGImage, matteColor: matteColor)
-			} else {
-				return baseImage.masking(maskCGImage)
-			}
-		}
-
-		return baseImage
 	}
-
+	
 	private func matteColorRGB() -> (r: UInt8, g: UInt8, b: UInt8)? {
 		guard let matte else {
 			return nil
 		}
-
+		
 		switch colorSpace {
 		case .deviceGray:
 			guard let value = matte.first else { return nil }
@@ -264,124 +258,90 @@ extension PdfImage {
 			)
 		}
 	}
-
-	private func applySoftMaskWithMatte(baseImage: CGImage, maskImage: CGImage, matteColor: (r: UInt8, g: UInt8, b: UInt8)) -> CGImage? {
-		let width = baseImage.width
+	
+	private func applySoftMask(
+		to baseImage: CGImage,
+		mask maskImage: CGImage,
+		matte: (r: UInt8, g: UInt8, b: UInt8)? = nil
+	) -> CGImage? {
+		
+		let width  = baseImage.width
 		let height = baseImage.height
-		guard
-			width > 0,
-			height > 0
-		else {
-			return nil
+		
+		// -------------------------------------------------------------------------
+		// 1. Decode base image → interleaved ARGB8888
+		// -------------------------------------------------------------------------
+		guard var baseBuffer = try? vImage_Buffer(cgImage: baseImage, format: .nonPremultipliedARGB) else { return nil }
+		defer { baseBuffer.free() }
+		
+		// -------------------------------------------------------------------------
+		// 2. Decode mask → Planar8 (already grayscale, no luminance step needed)
+		// -------------------------------------------------------------------------
+		guard var maskBuffer = try? vImage_Buffer(cgImage: maskImage, format: .gray8) else { return nil }
+		defer { maskBuffer.free() }
+		
+		// -------------------------------------------------------------------------
+		// 3. Scale mask to base image dimensions if needed
+		// -------------------------------------------------------------------------
+		if maskBuffer.width != vImagePixelCount(width) || maskBuffer.height != vImagePixelCount(height) {
+			guard var scaled = try? vImage_Buffer(width: width, height: height, bitsPerPixel: 8) else { return nil }
+			defer { scaled.free() }
+			let err = vImageScale_Planar8(&maskBuffer, &scaled, nil, vImage_Flags(kvImageHighQualityResampling))
+			guard err == kvImageNoError else { return nil }
+			swap(&scaled, &maskBuffer)
 		}
-
-		var argbPixels = [UInt8](repeating: 0, count: width * height * 4)
-		guard
-			let argbContext = CGContext(
-				data: &argbPixels,
-				width: width,
-				height: height,
-				bitsPerComponent: 8,
-				bytesPerRow: width * 4,
-				space: CGColorSpaceCreateDeviceRGB(),
-				bitmapInfo: CGImageAlphaInfo.noneSkipFirst.rawValue | CGBitmapInfo.byteOrder32Big.rawValue
-			)
-		else {
-			return nil
+		
+		// -------------------------------------------------------------------------
+		// 4. vImageOverwriteChannels_ARGB8888 sets the alpha
+		// -------------------------------------------------------------------------
+		let err = vImageOverwriteChannels_ARGB8888(
+			&maskBuffer,
+			&baseBuffer,
+			&baseBuffer,
+			0x8, // value 0x8 represents channel 0, aka alpha
+			vImage_Flags(kvImageNoFlags)
+		)
+		guard err == kvImageNoError else { return nil }
+		
+		// -------------------------------------------------------------------------
+		// 5. If there's a matte — vImageAlphaBlend_ARGB8888 over the matte
+		// -------------------------------------------------------------------------
+		if let matte {
+			guard var matteBuffer = try? vImage_Buffer(width: width, height: height, bitsPerPixel: 8) else { return nil }
+			defer { matteBuffer.free() }
+			vImageBufferFill_ARGB8888(&matteBuffer, [1, matte.r, matte.g, matte.b], vImage_Flags(kvImageNoFlags))
+			vImageAlphaBlend_ARGB8888(&baseBuffer, &matteBuffer, &baseBuffer, vImage_Flags(kvImageNoFlags))
 		}
-		argbContext.draw(baseImage, in: CGRect(x: 0, y: 0, width: width, height: height))
+		
+		return try? baseBuffer.createCGImage(format: .nonPremultipliedARGB)
+	}
+}
 
-		var maskPixels = [UInt8](repeating: 0, count: width * height)
-		guard
-			let maskContext = CGContext(
-				data: &maskPixels,
-				width: width,
-				height: height,
-				bitsPerComponent: 8,
-				bytesPerRow: width,
-				space: CGColorSpaceCreateDeviceGray(),
-				bitmapInfo: CGImageAlphaInfo.none.rawValue
-			)
-		else {
-			return nil
-		}
-		maskContext.draw(maskImage, in: CGRect(x: 0, y: 0, width: width, height: height))
+// MARK: - vImage_CGImageFormat extensions
 
-		var argbBuffer = argbPixels.withUnsafeMutableBufferPointer {
-			vImage_Buffer(
-				data: $0.baseAddress,
-				height: vImagePixelCount(height),
-				width: vImagePixelCount(width),
-				rowBytes: width * 4
-			)
-		}
-
-		var alphaBuffer = maskPixels.withUnsafeMutableBufferPointer {
-			vImage_Buffer(
-				data: $0.baseAddress,
-				height: vImagePixelCount(height),
-				width: vImagePixelCount(width),
-				rowBytes: width
-			)
-		}
-
-		guard
-			var red = try? vImage_Buffer(width: width, height: height, bitsPerPixel: 8),
-			var green = try? vImage_Buffer(width: width, height: height, bitsPerPixel: 8),
-			var blue = try? vImage_Buffer(width: width, height: height, bitsPerPixel: 8),
-			var alpha = try? vImage_Buffer(width: width, height: height, bitsPerPixel: 8)
-		else {
-			return nil
-		}
-		defer {
-			red.free()
-			green.free()
-			blue.free()
-			alpha.free()
-		}
-
-		vImageConvert_ARGB8888toPlanar8(&argbBuffer, &alpha, &red, &green, &blue, vImage_Flags(kvImageNoFlags))
-		vImageCopyBuffer(&alphaBuffer, &alpha, 1, vImage_Flags(kvImageNoFlags))
-
-		let pixelCount = width * height
-		let redPtr = red.data.assumingMemoryBound(to: UInt8.self)
-		let greenPtr = green.data.assumingMemoryBound(to: UInt8.self)
-		let bluePtr = blue.data.assumingMemoryBound(to: UInt8.self)
-		let alphaPtr = alpha.data.assumingMemoryBound(to: UInt8.self)
-		let matteR = Int(matteColor.r)
-		let matteG = Int(matteColor.g)
-		let matteB = Int(matteColor.b)
-
-		for index in 0..<pixelCount {
-			let alphaValue = Int(alphaPtr[index])
-			let invAlpha = 255 - alphaValue
-
-			let correctedR = Int(redPtr[index]) - (invAlpha * matteR + 127) / 255
-			let correctedG = Int(greenPtr[index]) - (invAlpha * matteG + 127) / 255
-			let correctedB = Int(bluePtr[index]) - (invAlpha * matteB + 127) / 255
-
-			redPtr[index] = UInt8(min(255, max(0, correctedR)))
-			greenPtr[index] = UInt8(min(255, max(0, correctedG)))
-			bluePtr[index] = UInt8(min(255, max(0, correctedB)))
-		}
-
-		vImageConvert_Planar8toARGB8888(&alpha, &red, &green, &blue, &argbBuffer, vImage_Flags(kvImageNoFlags))
-
-		guard
-			let outputContext = CGContext(
-				data: &argbPixels,
-				width: width,
-				height: height,
-				bitsPerComponent: 8,
-				bytesPerRow: width * 4,
-				space: CGColorSpaceCreateDeviceRGB(),
-				bitmapInfo: CGImageAlphaInfo.premultipliedFirst.rawValue | CGBitmapInfo.byteOrder32Big.rawValue
-			)
-		else {
-			return nil
-		}
-
-		return outputContext.makeImage()
+extension vImage_CGImageFormat {
+	static var nonPremultipliedARGB: vImage_CGImageFormat {
+		vImage_CGImageFormat(
+			bitsPerComponent: 8,
+			bitsPerPixel: 32,
+			colorSpace: Unmanaged.passRetained(CGColorSpaceCreateDeviceRGB()),
+			bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.first.rawValue).union(.byteOrder32Big),
+			version: 0,
+			decode: nil,
+			renderingIntent: .defaultIntent
+		)
+	}
+	
+	static var gray8: vImage_CGImageFormat {
+		vImage_CGImageFormat(
+			bitsPerComponent: 8,
+			bitsPerPixel: 8,
+			colorSpace: Unmanaged.passRetained(CGColorSpaceCreateDeviceGray()),
+			bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.none.rawValue),
+			version: 0,
+			decode: nil,
+			renderingIntent: .defaultIntent
+		)
 	}
 }
 
