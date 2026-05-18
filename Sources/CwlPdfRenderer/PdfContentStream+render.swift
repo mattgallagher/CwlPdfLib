@@ -161,9 +161,7 @@ extension PdfContentStream {
 							break
 						}
 						// Images are drawn in a 1x1 unit square; the CTM positions and scales them
-						if xobjectStream.dictionary[.Length]?.integer(lookup: lookup) != 39364 {
-							context.draw(cgImage, in: CGRect(x: 0, y: 0, width: 1, height: 1))
-						}
+						context.draw(cgImage, in: CGRect(x: 0, y: 0, width: 1, height: 1))
 					}
 					// Handle Form XObjects (nested content streams)
 					else if xobjectStream.dictionary.isForm(lookup: lookup) {

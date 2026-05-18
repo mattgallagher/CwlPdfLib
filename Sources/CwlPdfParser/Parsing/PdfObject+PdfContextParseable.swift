@@ -65,7 +65,7 @@ extension PdfObject: PdfContextParseable {
 				objectId: context.objectIdentifier,
 				isImage: dictionary.isImage(lookup: lookup)
 			)
-			object = .stream(PdfStream(dictionary: dictionary, data: data))
+			object = .stream(PdfStream(objectIdentifier: objectIdentifier, dictionary: dictionary, data: data))
 			
 			try PdfToken
 				.parse(context: &context)

@@ -2,10 +2,9 @@
 
 import CoreGraphics
 import CwlPdfParser
+@testable import CwlPdfRenderer
 import Foundation
 import Testing
-
-@testable import CwlPdfRenderer
 
 struct PdfContentStreamRenderTests {
 	@Test
@@ -16,6 +15,42 @@ struct PdfContentStreamRenderTests {
 
 		#expect(pixel(atX: 10, y: 10, in: image) == .black)
 		#expect(pixel(atX: 30, y: 30, in: image) == .black)
+	}
+
+	@Test
+	func `GIVEN an inherited clip and no local soft mask WHEN SMask None is applied THEN the inherited clip remains active`() throws {
+		guard let context = CGContext(
+			data: nil,
+			width: 40,
+			height: 40,
+			bitsPerComponent: 8,
+			bytesPerRow: 0,
+			space: CGColorSpaceCreateDeviceRGB(),
+			bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+		) else {
+			Issue.record("Failed to create CGContext")
+			return
+		}
+
+		context.setFillColor(CGColor(gray: 1, alpha: 1))
+		context.fill(CGRect(x: 0, y: 0, width: 40, height: 40))
+		context.clip(to: CGRect(x: 0, y: 0, width: 20, height: 40))
+
+		let gstate = PdfExtGState(
+			dictionary: [
+				.SMask: .name(.None)
+			],
+			lookup: nil
+		)
+		var renderState = RenderState()
+		context.apply(gstate, renderState: &renderState, renderStack: [], lookup: nil)
+
+		context.setFillColor(CGColor(gray: 0, alpha: 1))
+		context.fill(CGRect(x: 0, y: 0, width: 40, height: 40))
+		let image = try #require(context.makeImage())
+
+		#expect(pixel(atX: 10, y: 10, in: image) == .black)
+		#expect(pixel(atX: 30, y: 10, in: image) == .white)
 	}
 }
 

@@ -125,9 +125,12 @@ extension CGContext {
 
 		// Handle soft mask
 		if gstate.softMaskNone {
+			let hadSoftMask = renderState.activeSoftMask != nil
 			renderState.clearSoftMask()
-			resetClip()
-			reapplyClips(renderState: renderState, renderStack: renderStack)
+			if hadSoftMask {
+				resetClip()
+				reapplyClips(renderState: renderState, renderStack: renderStack)
+			}
 		} else if let smaskData = gstate.softMask {
 			renderState.applySoftMask(
 				smaskData,

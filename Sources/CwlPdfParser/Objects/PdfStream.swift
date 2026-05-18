@@ -3,6 +3,9 @@
 import Foundation
 
 public struct PdfStream: Sendable, Hashable {
+	// The objectIdentifier is primarily used for debugging
+	public let objectIdentifier: PdfObjectIdentifier
+	
 	public let dictionary: PdfDictionary
 	public let data: Data
 }
@@ -20,7 +23,7 @@ extension PdfStream: CustomDebugStringConvertible {
 
 public extension PdfDictionary {
 	func isImage(lookup: PdfObjectLookup?) -> Bool {
-		if let type = self[.Type]?.name(lookup: lookup), type == .XObject, let subtype = self[.Subtype]?.name(lookup: lookup) {
+		if let subtype = self[.Subtype]?.name(lookup: lookup) {
 			subtype == .Image
 		} else {
 			false
@@ -28,7 +31,7 @@ public extension PdfDictionary {
 	}
 	
 	func isForm(lookup: PdfObjectLookup?) -> Bool {
-		if let type = self[.Type]?.name(lookup: lookup), type == .XObject, let subtype = self[.Subtype]?.name(lookup: lookup) {
+		if let subtype = self[.Subtype]?.name(lookup: lookup) {
 			subtype == .Form
 		} else {
 			false

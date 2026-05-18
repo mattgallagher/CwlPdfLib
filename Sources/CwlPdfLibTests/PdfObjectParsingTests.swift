@@ -39,10 +39,14 @@ struct PdfObjectParsingTests {
 			(
 				"blank-page.pdf",
 				PdfObjectIdentifier(number: 3, generation: 0),
-				PdfObject.stream(PdfStream(dictionary: [
-					"Filter": .name("FlateDecode"),
-					"Length": .integer(11)
-				], data: Data("q Q".utf8)))
+				PdfObject.stream(PdfStream(
+					objectIdentifier: PdfObjectIdentifier(number: 3, generation: 0),
+					dictionary: [
+						"Filter": .name("FlateDecode"),
+						"Length": .integer(11)
+					],
+					data: Data("q Q".utf8))
+				)
 			),
 			(
 				"blank-page.pdf",
