@@ -110,7 +110,7 @@ extension PdfContentStream {
 					guard features.contains(.text) else {
 						for item in array {
 							if case .offset(let offset) = item {
-								let displacement = -(offset / 1000) * (state.textState.horizontalScale / 100)
+								let displacement = textDisplacementForTJOffset(offset, state: state.textState)
 								let translation = CGAffineTransform(translationX: displacement, y: 0)
 								state.textPosition.textMatrix = translation.concatenating(state.textPosition.textMatrix)
 							}
@@ -120,7 +120,7 @@ extension PdfContentStream {
 					for item in array {
 						switch item {
 						case .offset(let offset):
-							let displacement = -(offset / 1000) * (state.textState.horizontalScale / 100)
+							let displacement = textDisplacementForTJOffset(offset, state: state.textState)
 							let translation = CGAffineTransform(translationX: displacement, y: 0)
 							state.textPosition.textMatrix = translation.concatenating(state.textPosition.textMatrix)
 						case .text(let text):
@@ -177,13 +177,13 @@ private func extractTextFeature(
 	let fontSize = max(CGFloat(state.textState.fontSize), 0.000_001)
 	let textTransform = state.textPosition.textMatrix.scaledBy(x: fontSize, y: fontSize).concatenating(state.ctm)
 
-	let metrics = textMetrics(data: data, state: state.textState)
-	let ascent = metrics.ascent
-	let descent = metrics.descent
+	let measurement = measureTextRun(data, state: state.textState)
+	let ascent = measurement.ascentInTextSpace
+	let descent = measurement.descentInTextSpace
 	let localRect = CGRect(
 		x: 0,
 		y: descent,
-		width: max(metrics.advance, 0),
+		width: max(measurement.advanceInTextSpace, 0),
 		height: max(ascent - descent, 0)
 	)
 
@@ -194,10 +194,10 @@ private func extractTextFeature(
 		size: Double(state.textState.fontSize)
 	)
 
-	let advanceTransform = CGAffineTransform(translationX: metrics.advance, y: 0)
+	let advanceTransform = CGAffineTransform(translationX: measurement.advanceInUserSpace, y: 0)
 	state.textPosition.textMatrix = advanceTransform.concatenating(state.textPosition.textMatrix)
 
-	guard !text.isEmpty || metrics.advance > 0 else {
+	guard !text.isEmpty || measurement.advanceInTextSpace > 0 else {
 		return nil
 	}
 
@@ -206,57 +206,6 @@ private func extractTextFeature(
 		matrix: textTransform.pdfOrientationMatrix,
 		payload: .text(utf8Text: text, font: font)
 	)
-}
-
-private func textMetrics(data: Data, state: TextState) -> (advance: CGFloat, ascent: CGFloat, descent: CGFloat) {
-	let hScale = state.horizontalScale / 100
-
-	let (ascentGlyphSpace, descentGlyphSpace) = if let font = state.font {
-		(font.common.ascent ?? 800, font.common.descent ?? -200)
-	} else {
-		(800, -200)
-	}
-	let ascent = CGFloat(ascentGlyphSpace) / 1000
-	let descent = CGFloat(descentGlyphSpace) / 1000
-
-	guard let font = state.font else {
-		let fallbackAdvance = CGFloat(data.count) * 0.6 * hScale
-		return (fallbackAdvance, ascent, descent)
-	}
-
-	switch font.kind {
-	case .simple(let simple):
-		var cursor: CGFloat = 0
-		for byte in data {
-			let code = Int(byte)
-			let width = if simple.widths.indices.contains(code - simple.firstChar) {
-				simple.widths[code - simple.firstChar]
-			} else {
-				simple.missingWidth ?? 0
-			}
-			cursor += CGFloat(width / 1000) * hScale
-			cursor += (state.charSpace + (code == 0x20 ? state.wordSpace : 0)) * hScale
-		}
-		return (cursor, ascent, descent)
-	case .composite(let composite):
-		var cursor: CGFloat = 0
-		for cid in composite.cmap.decode(data) {
-			let width = composite.descendantFont.widths.width(for: cid) ?? composite.descendantFont.defaultWidth
-			cursor += CGFloat(width / 1000) * hScale
-			cursor += (state.charSpace + (cid == 0x20 ? state.wordSpace : 0)) * hScale
-		}
-		return (cursor, ascent, descent)
-	case .type3(let type3):
-		var cursor: CGFloat = 0
-		for byte in data {
-			let code = Int(byte)
-			let index = code - type3.firstChar
-			let width = if type3.widths.indices.contains(index) { type3.widths[index] } else { 0.0 }
-			cursor += CGFloat(width / 1000) * hScale
-			cursor += (state.charSpace + (code == 0x20 ? state.wordSpace : 0)) * hScale
-		}
-		return (cursor, ascent, descent)
-	}
 }
 
 private func decodeText(data: Data, font: PdfFont<CTFont>?) -> String {

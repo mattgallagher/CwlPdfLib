@@ -21,6 +21,86 @@ struct TextPosition {
 	var lineMatrix = CGAffineTransform.identity
 }
 
+struct TextRunMeasurement {
+	let advanceInTextSpace: CGFloat
+	let advanceInUserSpace: CGFloat
+	let ascentInTextSpace: CGFloat
+	let descentInTextSpace: CGFloat
+}
+
+func textDisplacementForTJOffset(_ offset: Double, state: TextState) -> CGFloat {
+	-(offset / 1000) * state.fontSize * (state.horizontalScale / 100)
+}
+
+func measureTextRun(_ data: Data, state: TextState) -> TextRunMeasurement {
+	let hScale = state.horizontalScale / 100
+	let fontSize = max(state.fontSize, 0.000_001)
+
+	let (ascentGlyphSpace, descentGlyphSpace) = if let font = state.font {
+		(font.common.ascent ?? 800, font.common.descent ?? -200)
+	} else {
+		(800, -200)
+	}
+	let ascent = CGFloat(ascentGlyphSpace) / 1000
+	let descent = CGFloat(descentGlyphSpace) / 1000
+
+	guard let font = state.font else {
+		let advanceInTextSpace = CGFloat(data.count) * 0.6 * hScale
+		return TextRunMeasurement(
+			advanceInTextSpace: advanceInTextSpace,
+			advanceInUserSpace: advanceInTextSpace * fontSize,
+			ascentInTextSpace: ascent,
+			descentInTextSpace: descent
+		)
+	}
+
+	func spacing(isSpace: Bool) -> CGFloat {
+		(CGFloat(state.charSpace) + (isSpace ? CGFloat(state.wordSpace) : 0)) * hScale
+	}
+
+	let advanceInTextSpace: CGFloat
+	switch font.kind {
+	case .simple(let simple):
+		var cursor: CGFloat = 0
+		for byte in data {
+			let code = Int(byte)
+			let width = if simple.widths.indices.contains(code - simple.firstChar) {
+				simple.widths[code - simple.firstChar]
+			} else {
+				simple.missingWidth ?? 0
+			}
+			cursor += CGFloat(width / 1000) * hScale
+			cursor += spacing(isSpace: code == 0x20)
+		}
+		advanceInTextSpace = cursor
+	case .composite(let composite):
+		var cursor: CGFloat = 0
+		for cid in composite.cmap.decode(data) {
+			let width = composite.descendantFont.widths.width(for: cid) ?? composite.descendantFont.defaultWidth
+			cursor += CGFloat(width / 1000) * hScale
+			cursor += spacing(isSpace: cid == 0x20)
+		}
+		advanceInTextSpace = cursor
+	case .type3(let type3):
+		var cursor: CGFloat = 0
+		for byte in data {
+			let code = Int(byte)
+			let index = code - type3.firstChar
+			let width = if type3.widths.indices.contains(index) { type3.widths[index] } else { 0.0 }
+			cursor += CGFloat(width / 1000) * hScale
+			cursor += spacing(isSpace: code == 0x20)
+		}
+		advanceInTextSpace = cursor
+	}
+
+	return TextRunMeasurement(
+		advanceInTextSpace: advanceInTextSpace,
+		advanceInUserSpace: advanceInTextSpace * fontSize,
+		ascentInTextSpace: ascent,
+		descentInTextSpace: descent
+	)
+}
+
 extension CGContext {
 	func showText(_ data: Data, state: TextState, position: inout TextPosition, lookup: PdfObjectLookup?) {
 		guard let pdfFont = state.font else { return }
@@ -101,6 +181,7 @@ extension CGContext {
 		var glyphs = [CGGlyph](repeating: 0, count: chars.count)
 		var advances = [CGPoint](repeating: .zero, count: chars.count)
 		let ctFont = state.font?.platformFont ?? CTFontCreateWithName("Helvetica" as CFString, 1, nil)
+		let fontSize = CGFloat(state.fontSize)
 		CTFontGetGlyphsForCharacters(ctFont, &chars, &glyphs, chars.count)
 		advances.withUnsafeMutableBufferPointer { bufferPointer in
 			bufferPointer.withMemoryRebound(to: CGSize.self) { buffer in
@@ -115,10 +196,10 @@ extension CGContext {
 			x += (state.charSpace + (chars[i] == 0x0020 ? state.wordSpace : 0)) * state.horizontalScale / 100
 		}
 		saveGState()
-		concatenate(position.textMatrix.scaledBy(x: state.fontSize, y: state.fontSize))
+		concatenate(position.textMatrix.scaledBy(x: fontSize, y: fontSize))
 		CTFontDrawGlyphs(ctFont, glyphs, advances, chars.count, self)
 		restoreGState()
-		position.textMatrix = CGAffineTransform(translationX: x, y: 0).concatenating(position.textMatrix)
+		position.textMatrix = CGAffineTransform(translationX: x * fontSize, y: 0).concatenating(position.textMatrix)
 	}
 	
 	func decodeSimpleFont(_ data: Data, font: PdfFont<CTFont>) -> GlyphRun {
@@ -196,7 +277,7 @@ extension CGContext {
 				y: CGFloat(state.rise)
 			))
 			
-			cursor += adv * hScale // don't multiply by fontSize since CTFontDrawGlyphs will multiply the advances by the rendering matrix which already contains fontSize
+			cursor += adv * hScale
 			let spacing = (CGFloat(state.charSpace) + (glyph.isSpace ? CGFloat(state.wordSpace) : 0)) * hScale
 			cursor += spacing
 		}
@@ -217,7 +298,7 @@ extension CGContext {
 		restoreGState()
 		
 		// Advance text matrix
-		position.textMatrix = CGAffineTransform(translationX: cursor, y: 0).concatenating(position.textMatrix)
+		position.textMatrix = CGAffineTransform(translationX: cursor * fontSize, y: 0).concatenating(position.textMatrix)
 	}
 }
 

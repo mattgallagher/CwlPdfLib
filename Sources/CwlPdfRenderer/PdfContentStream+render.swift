@@ -352,8 +352,7 @@ extension PdfContentStream {
 						switch item {
 						case .offset(let offset):
 							// Offset is in thousandths of text space units
-							// Must use matrix concatenation to account for textMatrix scaling
-							let displacement = -(offset / 1000) * (textState.horizontalScale / 100)
+							let displacement = textDisplacementForTJOffset(offset, state: textState)
 							let translation = CGAffineTransform(translationX: displacement, y: 0)
 							textPosition.textMatrix = translation.concatenating(textPosition.textMatrix)
 						case .text(let text):

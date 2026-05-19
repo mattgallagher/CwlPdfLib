@@ -34,4 +34,59 @@ struct PdfFontRenderingTests {
 			#expect(glyph.gid != 0, "Expected byte \(byte) to map to a real glyph")
 		}
 	}
+
+	@Test
+	func `GIVEN CTFont glyph run WHEN drawing THEN text matrix advance includes font size`() throws {
+		let ctFont = CTFontCreateWithName("Helvetica" as CFString, 1, nil)
+		let glyph = try #require(glyphForTest(character: "A", font: ctFont))
+		let run = GlyphRun(
+			glyphs: [Glyph(gid: glyph, advance: 500, isSpace: false)],
+			writingMode: .horizontal
+		)
+		let state = TextState(fontSize: 12)
+		let measurement = measureTextRun(Data([0x41]), state: state)
+
+		#expect(abs(measurement.advanceInUserSpace - 7.2) < 0.000_001)
+
+		guard let context = CGContext(
+			data: nil,
+			width: 32,
+			height: 32,
+			bitsPerComponent: 8,
+			bytesPerRow: 0,
+			space: CGColorSpaceCreateDeviceRGB(),
+			bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+		) else {
+			Issue.record("Failed to create CGContext")
+			return
+		}
+
+		var position = TextPosition()
+		context.drawGlyphRun(run, ctFont: ctFont, state: state, position: &position)
+
+		#expect(position.textMatrix.tx == 6)
+	}
+
+	@Test
+	func `GIVEN TJ offset WHEN measured for rendering and extraction THEN font size is included`() {
+		let state = TextState(horizontalScale: 100, fontSize: 9)
+
+		#expect(textDisplacementForTJOffset(277.7778, state: state) == -2.5000002)
+	}
+}
+
+private func glyphForTest(character: Character, font: CTFont) -> CGGlyph? {
+	guard let scalar = character.unicodeScalars.onlyElement else {
+		return nil
+	}
+	var uniChar = UniChar(scalar.value)
+	var glyph: CGGlyph = 0
+	let success = CTFontGetGlyphsForCharacters(font, &uniChar, &glyph, 1)
+	return success && glyph != 0 ? glyph : nil
+}
+
+private extension Collection {
+	var onlyElement: Element? {
+		count == 1 ? first : nil
+	}
 }

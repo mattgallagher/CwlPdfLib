@@ -54,6 +54,22 @@ struct PdfFeatureExtractionTests {
 	}
 
 	@Test
+	func `GIVEN single line text WHEN extracting THEN bounds advance reflects font size`() throws {
+		let document = try basicFixtureDocument(filename: "single-text-line.pdf")
+		let page = try #require(document.pages.first)
+
+		let features = page.extract(features: .text, lookup: document.lookup)
+		let textFeature = try #require(features.first)
+		guard case .text(let utf8Text, let font) = textFeature.payload else {
+			Issue.record("Expected text payload")
+			return
+		}
+
+		#expect(!utf8Text.isEmpty)
+		#expect(textFeature.bounds.width > font.size * 2)
+	}
+
+	@Test
 	func `GIVEN image heavy fixture WHEN extracting images THEN image features are discoverable`() throws {
 		let document = try basicFixtureDocument(filename: "three-page-images-annots.pdf")
 		let allImageFeatures = document.pages.flatMap { page in
@@ -89,7 +105,7 @@ struct PdfFeatureExtractionTests {
 			)
 		}
 		let textByFont = Dictionary(grouping: textFeatures, by: { $0.postScriptName ?? "" }).mapValues { samples in
-			samples.map { $0.text }.joined()
+			samples.map(\.text).joined()
 		}
 
 		#expect(textByFont["Georgia2"]?.contains("I Dansk Blindesamfund hjælper") == true)
