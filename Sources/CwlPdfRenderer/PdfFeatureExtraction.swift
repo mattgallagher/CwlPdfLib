@@ -35,10 +35,12 @@ public struct PdfExtractedFeature: Sendable {
 }
 
 public struct PdfExtractedFont: Sendable {
+	public let objectIdentifier: PdfObjectIdentifier?
 	public let postScriptName: String?
 	public let size: Double
 
-	public init(postScriptName: String?, size: Double) {
+	public init(objectIdentifier: PdfObjectIdentifier? = nil, postScriptName: String?, size: Double) {
+		self.objectIdentifier = objectIdentifier
 		self.postScriptName = postScriptName
 		self.size = size
 	}

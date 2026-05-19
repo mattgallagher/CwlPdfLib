@@ -1,10 +1,21 @@
-// CwlPdfLib. Copyright © 2025 Matt Gallagher. See LICENSE file for usage permissions.
+// CwlPdfLib. Copyright © 2026 Matt Gallagher. See LICENSE file for usage permissions.
 
 import Foundation
 
 extension RandomAccessCollection where Element == UInt8 {
 	func utf8() -> String {
 		String(decoding: self, as: UTF8.self)
+	}
+
+	func pdfDocEncodedString() -> String {
+		var scalars = String.UnicodeScalarView()
+		scalars.reserveCapacity(count)
+
+		for byte in self {
+			scalars.append(pdfDocEncodingToUnicodeScalar(byte))
+		}
+
+		return String(scalars)
 	}
 	
 	var asBigEndianUInt32: UInt32 {
@@ -30,8 +41,14 @@ public extension RandomAccessCollection where Element == UInt8 {
 		else if starts(with: [0xEF, 0xBB, 0xBF]), let result = String(bytes: dropFirst(3), encoding: .utf8) {
 			return result
 		}
+		
 		// Use PDFDocEncoding
-		return String(String.UnicodeScalarView(map(pdfDocEncodingToUnicodeScalar)))
+		var scalars = String.UnicodeScalarView()
+		scalars.reserveCapacity(count)
+		for byte in self {
+			scalars.append(pdfDocEncodingToUnicodeScalar(byte))
+		}
+		return String(scalars)
 	}
 }
 

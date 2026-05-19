@@ -32,7 +32,7 @@ let package = Package(
 		),
 		.testTarget(
 			name: "CwlPdfLibTests",
-			dependencies: ["CwlPdfParser", "CwlPdfRenderer"],
+			dependencies: ["CwlPdfParser", "CwlPdfRenderer", "CwlPdfView"],
 			resources: [.copy("Fixtures")]
 		)
 	]

@@ -93,10 +93,17 @@ extension PdfContentStream {
 						break
 					}
 					state.textState.fontSize = size
-					guard let fontDictionary = resolveResourceDictionary(category: .Font, key: fontKey, lookup: lookup) else {
+					guard let fontObject = resources?[PdfResourceCategory.Font.rawValue]?.dictionary(lookup: lookup)?[fontKey] else {
 						state.textState.font = nil
+						state.textState.fontObjectIdentifier = nil
 						break
 					}
+					guard let fontDictionary = fontObject.dictionary(lookup: lookup) else {
+						state.textState.font = nil
+						state.textState.fontObjectIdentifier = nil
+						break
+					}
+					state.textState.fontObjectIdentifier = fontObject.reference
 					state.textState.font = try? PdfFont(fontDictionary: fontDictionary, lookup: lookup) { data in
 						CGDataProvider(data: data as CFData)
 							.flatMap(CGFont.init)
@@ -190,6 +197,7 @@ private func extractTextFeature(
 	let transformedRect = localRect.applying(textTransform).standardized
 	let text = decodeText(data: data, font: state.textState.font)
 	let font = PdfExtractedFont(
+		objectIdentifier: state.textState.fontObjectIdentifier,
 		postScriptName: state.textState.font?.postScriptName,
 		size: Double(state.textState.fontSize)
 	)

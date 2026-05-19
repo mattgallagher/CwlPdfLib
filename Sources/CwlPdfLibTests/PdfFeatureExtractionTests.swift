@@ -54,6 +54,21 @@ struct PdfFeatureExtractionTests {
 	}
 
 	@Test
+	func `GIVEN text content WHEN extracting text only THEN font object references are preserved`() throws {
+		let document = try basicFixtureDocument(filename: "single-text-line.pdf")
+		let page = try #require(document.pages.first)
+
+		let features = page.extract(features: .text, lookup: document.lookup)
+		#expect(features.contains { feature in
+			guard case .text(_, let font) = feature.payload else {
+				return false
+			}
+
+			return font.objectIdentifier != nil
+		})
+	}
+
+	@Test
 	func `GIVEN single line text WHEN extracting THEN bounds advance reflects font size`() throws {
 		let document = try basicFixtureDocument(filename: "single-text-line.pdf")
 		let page = try #require(document.pages.first)

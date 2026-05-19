@@ -11,6 +11,7 @@ struct TextState {
 	var horizontalScale: CGFloat = 100
 	var leading: CGFloat = 0
 	var font: PdfFont<CTFont>?
+	var fontObjectIdentifier: PdfObjectIdentifier?
 	var fontSize: CGFloat = 12
 	var renderMode: Int = 0
 	var rise: CGFloat = 0

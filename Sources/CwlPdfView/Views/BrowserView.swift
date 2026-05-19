@@ -21,7 +21,6 @@ public struct PdfBrowserView: View {
 				case .hidden: EmptyView()
 				}
 			}
-			.toolbar(removing: .sidebarToggle)
 			.navigationSplitViewColumnWidth(min: 220, ideal: 250)
 			.toolbar {
 				ToolbarItemGroup(placement: .principal) {
@@ -29,7 +28,8 @@ public struct PdfBrowserView: View {
 						Label("Pages", systemImage: "book.pages").tag(SidebarContent.pages)
 						Label("Objects", systemImage: "shippingbox").tag(SidebarContent.objects)
 					}
-					.pickerStyle(.segmented)
+					.pickerStyle(.menu)
+					.labelStyle(.titleAndIcon)
 				}
 			}
 		} detail: {

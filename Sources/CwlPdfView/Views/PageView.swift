@@ -24,6 +24,7 @@ struct PageView: View {
 
 			if inspectorVisible {
 				FeatureInspectorView(
+					page: page,
 					extractedFeatures: extractedFeatures,
 					selectedFeatureIndex: selectedFeatureIndex
 				)
@@ -99,10 +100,15 @@ private struct PageCanvas: View {
 			.shadow(color: Color.black.opacity(0.1), radius: 4, x: 0, y: 2)
 			.padding(8)
 		}
+		.contentShape(Rectangle())
+		.onTapGesture {
+			selectedFeatureIndex = nil
+		}
 	}
 }
 
 private struct FeatureInspectorView: View {
+	let page: PdfPage
 	let extractedFeatures: [PdfExtractedFeature]
 	let selectedFeatureIndex: Int?
 
@@ -125,7 +131,10 @@ private struct FeatureInspectorView: View {
 					Text(verbatim: "Image stream: \(stream.dictionary)")
 				case .text(let utf8Text, let font):
 					let fontName = font.postScriptName ?? "unknown"
-					Text(verbatim: "Font: \(fontName)")
+					HStack(spacing: 4) {
+						Text(verbatim: "Font: \(fontName)")
+						ObjectIdentifierLabel(identifier: font.objectIdentifier)
+					}
 					Text(verbatim: "Size: \(font.size)")
 					Text(verbatim: "Text: \(utf8Text)")
 						.textSelection(.enabled)
@@ -146,8 +155,11 @@ private struct FeatureInspectorView: View {
 				.font(.caption)
 				.foregroundStyle(.secondary)
 			} else {
-				Text("Click a text region to inspect extracted details.")
-					.foregroundStyle(.secondary)
+				HStack(spacing: 4) {
+					Text("Page object:")
+					ObjectIdentifierLink(identifier: page.objectLayout.objectIdentifier)
+				}
+				Text(verbatim: "Page dictionary: \(page.pageDictionary)")
 			}
 		}
 		.frame(maxHeight: .infinity, alignment: .top)
