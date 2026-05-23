@@ -13,14 +13,19 @@ extension PdfPage {
 		let deviceScaleX = max(hypot(context.ctm.a, context.ctm.c), 1)
 		let deviceScaleY = max(hypot(context.ctm.b, context.ctm.d), 1)
 		
-		for contentStream in contentStreams(lookup: lookup) {
-			contentStream.render(
+		let contentStreams = contentStreams(lookup: lookup)
+		if let firstContentStream = contentStreams.first {
+			PdfRenderer.performWithRenderState(
+				for: firstContentStream,
 				in: context,
 				pageBounds: rect,
-				lookup: lookup,
 				deviceScaleX: deviceScaleX,
 				deviceScaleY: deviceScaleY
-			)
+			) { state in
+				for contentStream in contentStreams {
+					state.render(contentStream, in: context, lookup: lookup)
+				}
+			}
 		}
 		
 		for

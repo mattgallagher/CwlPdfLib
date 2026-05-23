@@ -18,6 +18,64 @@ struct PdfContentStreamRenderTests {
 	}
 
 	@Test
+	func `GIVEN a path split across page content streams WHEN rendered THEN graphics state is preserved`() throws {
+		let document = try PdfDocument(
+			source: PdfDataSource(
+				minimalPdfData(
+					contentStreams: [
+						"0 g 10 10 m 30 10 l",
+						"30 30 l 10 30 l h f"
+					]
+				)
+			)
+		)
+		let page = try #require(document.pages.first)
+		let image = try #require(page.renderedImage(lookup: document.lookup, scale: 1))
+
+		#expect(pixel(atX: 20, y: 20, in: image) == .black)
+		#expect(pixel(atX: 5, y: 5, in: image) == .white)
+	}
+
+	@Test
+	func `GIVEN a compound rectangle with reversed winding WHEN filled THEN the inner rectangle is hollow`() throws {
+		let document = try PdfDocument(
+			source: PdfDataSource(minimalPdfData(contentStream: "0 g 5 5 30 30 re 10 30 20 -20 re f"))
+		)
+		let page = try #require(document.pages.first)
+		let image = try #require(page.renderedImage(lookup: document.lookup, scale: 1))
+
+		#expect(pixel(atX: 7, y: 7, in: image) == .black)
+		#expect(pixel(atX: 20, y: 20, in: image) == .white)
+	}
+
+	@Test
+	func `GIVEN a separation color space WHEN filled THEN the tint transform supplies the color`() throws {
+		let resources = """
+		/Resources << /ColorSpace << /CS0 [
+		/Separation /Silver /DeviceCMYK
+		<< /FunctionType 2 /Domain [0 1] /C0 [0 0 0 0]
+		/C1 [0.288243 0.214786 0.223178 0.0285039]
+		/N 1 /Range [0 1 0 1 0 1 0 1] >>
+		] >> >>
+		"""
+		let document = try PdfDocument(
+			source: PdfDataSource(
+				minimalPdfData(
+					contentStream: "/CS0 cs 1 scn 0 0 40 40 re f",
+					pageResources: resources
+				)
+			)
+		)
+		let page = try #require(document.pages.first)
+		let image = try #require(page.renderedImage(lookup: document.lookup, scale: 1))
+		let color = try #require(rgbaPixel(atX: 20, y: 20, in: image))
+
+		#expect(color.red > 120)
+		#expect(color.green > 120)
+		#expect(color.blue > 120)
+	}
+
+	@Test
 	func `GIVEN an inherited clip and no local soft mask WHEN SMask None is applied THEN the inherited clip remains active`() throws {
 		guard let context = CGContext(
 			data: nil,
@@ -55,6 +113,21 @@ struct PdfContentStreamRenderTests {
 }
 
 private func pixel(atX x: Int, y: Int, in image: CGImage) -> PixelColor? {
+	guard let pixel = rgbaPixel(atX: x, y: y, in: image) else {
+		return nil
+	}
+
+	switch (pixel.red, pixel.green, pixel.blue, pixel.alpha) {
+	case (0, 0, 0, 255):
+		return .black
+	case (255, 255, 255, 255):
+		return .white
+	default:
+		return .other
+	}
+}
+
+private func rgbaPixel(atX x: Int, y: Int, in image: CGImage) -> RGBAPixel? {
 	guard
 		x >= 0,
 		y >= 0,
@@ -69,19 +142,19 @@ private func pixel(atX x: Int, y: Int, in image: CGImage) -> PixelColor? {
 	let bytes = CFDataGetBytePtr(data)
 	let bytesPerPixel = image.bitsPerPixel / 8
 	let offset = y * image.bytesPerRow + x * bytesPerPixel
-	let red = bytes?[offset]
-	let green = bytes?[offset + 1]
-	let blue = bytes?[offset + 2]
-	let alpha = bytes?[offset + 3]
+	return RGBAPixel(
+		red: bytes?[offset] ?? 0,
+		green: bytes?[offset + 1] ?? 0,
+		blue: bytes?[offset + 2] ?? 0,
+		alpha: bytes?[offset + 3] ?? 0
+	)
+}
 
-	switch (red, green, blue, alpha) {
-	case (0, 0, 0, 255):
-		return .black
-	case (255, 255, 255, 255):
-		return .white
-	default:
-		return .other
-	}
+private struct RGBAPixel {
+	let red: UInt8
+	let green: UInt8
+	let blue: UInt8
+	let alpha: UInt8
 }
 
 private enum PixelColor {
@@ -90,14 +163,22 @@ private enum PixelColor {
 	case white
 }
 
-private func minimalPdfData(contentStream: String) -> Data {
-	let streamData = Data(contentStream.utf8)
+private func minimalPdfData(contentStream: String, pageResources: String = "") -> Data {
+	minimalPdfData(contentStreams: [contentStream], pageResources: pageResources)
+}
+
+private func minimalPdfData(contentStreams: [String], pageResources: String = "") -> Data {
+	let contentReferences = (0..<contentStreams.count)
+		.map { "\($0 + 4) 0 R" }
+		.joined(separator: " ")
 	let objects = [
 		"1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n",
 		"2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n",
-		"3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 40 40] /Contents 4 0 R >>\nendobj\n",
-		"4 0 obj\n<< /Length \(streamData.count) >>\nstream\n\(contentStream)\nendstream\nendobj\n"
-	]
+		"3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 40 40] /Contents [\(contentReferences)] \(pageResources) >>\nendobj\n"
+	] + contentStreams.enumerated().map { index, contentStream in
+		let streamData = Data(contentStream.utf8)
+		return "\((index + 4)) 0 obj\n<< /Length \(streamData.count) >>\nstream\n\(contentStream)\nendstream\nendobj\n"
+	}
 
 	var pdf = "%PDF-1.4\n"
 	var offsets = [0]

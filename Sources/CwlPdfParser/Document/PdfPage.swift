@@ -33,7 +33,7 @@ public struct PdfPage: Sendable, Hashable, Identifiable {
 		// If the page doesn't provide sizes, use the document size
 		return documentPageSize
 	}
-	
+
 	public func contentStreams(lookup: PdfObjectLookup?) -> [PdfContentStream] {
 		let resources = pageDictionary[.Resources]?.dictionary(lookup: lookup)
 		guard let contents = pageDictionary[.Contents] else {

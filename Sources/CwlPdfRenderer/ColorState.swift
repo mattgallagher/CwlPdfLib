@@ -92,6 +92,18 @@ struct ColorState {
 			}
 			// Fallback based on component count
 			return createFallbackColor(componentCount: componentCount, components: components, alpha: alpha)
+		case .separation(_, let alternate, let tintTransform):
+			guard
+				let tint = components.first,
+				let alternateComponents = tintTransform.evaluate([Double(tint)])
+			else {
+				return nil
+			}
+			return createCGColor(
+				colorSpace: alternate,
+				components: alternateComponents.map { CGFloat($0) },
+				alpha: alpha
+			)
 		case .indexed(let base, _, let lookup):
 			// For indexed colors, look up the actual color from the palette
 			guard let index = components.first.map({ Int($0) }), let lookupData = lookup else {

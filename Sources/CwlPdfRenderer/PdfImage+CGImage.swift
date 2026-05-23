@@ -140,6 +140,8 @@ extension PdfImage {
 				default: return nil
 				}
 			}
+		case .separation:
+			return nil
 		}
 		
 		let componentsPerPixel = colorSpace.componentsPerPixel

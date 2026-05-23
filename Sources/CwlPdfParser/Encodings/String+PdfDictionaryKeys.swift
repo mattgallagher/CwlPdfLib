@@ -163,4 +163,5 @@ public extension String {
 	static let Range = "Range"
 	static let Size = "Size"
 	static let BitsPerSample = "BitsPerSample"
+	static let Separation = "Separation"
 }

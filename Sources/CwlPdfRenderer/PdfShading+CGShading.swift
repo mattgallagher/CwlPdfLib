@@ -91,6 +91,8 @@ extension PdfShading {
 		case .indexed:
 			// Indexed color spaces need special handling - use base color space
 			return CGColorSpaceCreateDeviceRGB()
+		case .separation(_, let alternate, _):
+			return createCGColorSpace(from: alternate)
 		}
 	}
 

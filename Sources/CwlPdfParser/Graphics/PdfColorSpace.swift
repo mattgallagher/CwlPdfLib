@@ -8,6 +8,7 @@ public enum PdfColorSpace: Sendable, Hashable {
 	case deviceCMYK
 	indirect case indexed(base: PdfColorSpace, hival: Int, lookup: Data?)
 	case iccBased(components: Int, profile: Data)
+	indirect case separation(name: String, alternate: PdfColorSpace, tintTransform: PdfFunction)
 
 	public init?(name: String) {
 		switch name {
@@ -34,6 +35,8 @@ public enum PdfColorSpace: Sendable, Hashable {
 			1 // Indexed uses a single index value per pixel
 		case .iccBased(let components, _):
 			components
+		case .separation:
+			1
 		}
 	}
 
@@ -44,6 +47,8 @@ public enum PdfColorSpace: Sendable, Hashable {
 			true
 		case .iccBased(let components, _):
 			components == 4
+		case .separation(_, let alternate, _):
+			alternate.isCMYK
 		default:
 			false
 		}
@@ -63,6 +68,18 @@ public enum PdfColorSpace: Sendable, Hashable {
 			// Array format: [/ColorSpaceType params...]
 			if let typeName = firstElement.name(lookup: lookup) {
 				switch typeName {
+				case .Separation:
+					// [/Separation name alternateSpace tintTransform]
+					guard
+						array.count >= 4,
+						let name = array[1].name(lookup: lookup),
+						let alternate = parse(array[2], lookup: lookup),
+						let tintTransform = PdfFunction.parse(array[3], lookup: lookup)
+					else {
+						return nil
+					}
+					return .separation(name: name, alternate: alternate, tintTransform: tintTransform)
+
 				case .Indexed:
 					// [/Indexed baseColorSpace hival lookupData]
 					guard array.count >= 4 else { return nil }
@@ -108,6 +125,8 @@ public extension PdfColorSpace {
 			base1 == base2 && hival1 == hival2 && lookup1 == lookup2
 		case (.iccBased(let c1, let p1), .iccBased(let c2, let p2)):
 			c1 == c2 && p1 == p2
+		case (.separation(let name1, let alternate1, let tintTransform1), .separation(let name2, let alternate2, let tintTransform2)):
+			name1 == name2 && alternate1 == alternate2 && tintTransform1 == tintTransform2
 		default:
 			false
 		}
@@ -130,6 +149,11 @@ public extension PdfColorSpace {
 			hasher.combine(4)
 			hasher.combine(components)
 			hasher.combine(profile)
+		case .separation(let name, let alternate, let tintTransform):
+			hasher.combine(5)
+			hasher.combine(name)
+			hasher.combine(alternate)
+			hasher.combine(tintTransform)
 		}
 	}
 }

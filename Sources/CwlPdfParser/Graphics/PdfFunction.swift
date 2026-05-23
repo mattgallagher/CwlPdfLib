@@ -3,7 +3,7 @@
 import Foundation
 
 /// Represents a PDF function (Types 0, 2, 3, 4) used for color interpolation in shadings.
-public enum PdfFunction: Sendable {
+public enum PdfFunction: Sendable, Hashable {
 	/// Type 0: Sampled function - uses a table of sample values
 	case sampled(SampledFunction)
 	/// Type 2: Exponential interpolation function
@@ -11,7 +11,7 @@ public enum PdfFunction: Sendable {
 	/// Type 3: Stitching function - combines multiple functions
 	case stitching(StitchingFunction)
 
-	public struct SampledFunction: Sendable {
+	public struct SampledFunction: Sendable, Hashable {
 		public let domain: [Double]
 		public let range: [Double]
 		public let size: [Int]
@@ -21,7 +21,7 @@ public enum PdfFunction: Sendable {
 		public let decode: [Double]?
 	}
 
-	public struct ExponentialFunction: Sendable {
+	public struct ExponentialFunction: Sendable, Hashable {
 		public let domain: [Double]
 		public let range: [Double]?
 		public let c0: [Double]
@@ -29,7 +29,7 @@ public enum PdfFunction: Sendable {
 		public let exponent: Double
 	}
 
-	public struct StitchingFunction: Sendable {
+	public struct StitchingFunction: Sendable, Hashable {
 		public let domain: [Double]
 		public let range: [Double]?
 		public let functions: [PdfFunction]

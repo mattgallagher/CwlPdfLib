@@ -1,6 +1,7 @@
 // CwlPdfLib. Copyright © 2026 Matt Gallagher. See LICENSE file for usage permissions.
 
 import CwlPdfParser
+import CwlPdfRenderer
 import SwiftUI
 
 struct ObjectView: View {
@@ -27,8 +28,8 @@ struct ObjectView: View {
 					DictionaryTable(layout: layout, dictionary: pdfStream.dictionary, isStream: true)
 					VStack(alignment: .leading) {
 						Text("Stream content").font(.headline)
-						if pdfStream.dictionary.isImage(lookup: nil), let image = NSImage(data: pdfStream.data) {
-							Image(nsImage: image)
+						if let image = pdfStream.cgImage(lookup: document.pdf.lookup) {
+							Image(decorative: image, scale: 1, orientation: .up)
 								.resizable()
 								.aspectRatio(contentMode: .fit)
 								.frame(maxWidth: .infinity, maxHeight: .infinity)

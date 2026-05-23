@@ -1,4 +1,4 @@
-// CwlPdfLib. Copyright © 2025 Matt Gallagher. See LICENSE file for usage permissions.
+// CwlPdfLib. Copyright © 2026 Matt Gallagher. See LICENSE file for usage permissions.
 
 import CwlPdfParser
 import SwiftUI
@@ -7,6 +7,7 @@ public struct PdfBrowserView: View {
 	@Binding var document: PdfFileDocument
 	@State var selection: SidebarSelection?
 	@State var sidebarContent: SidebarContent = .pages
+	@State private var history = BrowserHistory()
 	
 	public init(document: Binding<PdfFileDocument>) {
 		self._document = document
@@ -16,13 +17,33 @@ public struct PdfBrowserView: View {
 		NavigationSplitView(columnVisibility: $sidebarContent.sidebarVisibility) {
 			VStack {
 				switch sidebarContent {
-				case .objects: ObjectsTable(document: $document, selection: $selection)
-				case .pages: PagesTable(document: $document, selection: $selection)
+				case .objects:
+					ObjectsTable(document: $document, selection: objectSelectionBinding)
+				case .pages:
+					PagesTable(document: $document, selection: pageSelectionBinding)
 				case .hidden: EmptyView()
 				}
 			}
 			.navigationSplitViewColumnWidth(min: 220, ideal: 250)
 			.toolbar {
+				ToolbarItemGroup(placement: .navigation) {
+					Button {
+						guard let location = history.goBack() else { return }
+						apply(location, replayingHistory: true)
+					} label: {
+						Label("Back", systemImage: "chevron.backward")
+					}
+					.disabled(!history.canGoBack)
+
+					Button {
+						guard let location = history.goForward() else { return }
+						apply(location, replayingHistory: true)
+					} label: {
+						Label("Forward", systemImage: "chevron.forward")
+					}
+					.disabled(!history.canGoForward)
+				}
+
 				ToolbarItemGroup(placement: .principal) {
 					Picker("Sidebar content", selection: $sidebarContent.pickerSelection) {
 						Label("Pages", systemImage: "book.pages").tag(SidebarContent.pages)
@@ -49,15 +70,104 @@ public struct PdfBrowserView: View {
 			guard let layout = document.pdf.lookup.allObjectLayouts
 				.last(where: { $0.objectIdentifier == identifier })
 			else { return }
-			sidebarContent = .objects
-			selection = .object(layout)
+			navigate(to: BrowserLocation(sidebarContent: .objects, selection: .object(layout)))
 		})
 		.onAppear {
-			if let firstPage = document.pdf.pages.first?.id {
-				selection = .page(firstPage)
-			}
+			guard
+				selection == nil,
+				let firstPage = document.pdf.pages.first?.id
+			else { return }
+			navigate(to: BrowserLocation(sidebarContent: .pages, selection: .page(firstPage)))
 		}
 		.animation(.default, value: sidebarContent.sidebarVisibility)
+	}
+
+	private var objectSelectionBinding: Binding<SidebarSelection?> {
+		Binding(
+			get: { selection },
+			set: { newValue in
+				guard case .object(let layout) = newValue else { return }
+				navigate(to: BrowserLocation(sidebarContent: .objects, selection: .object(layout)))
+			}
+		)
+	}
+
+	private var pageSelectionBinding: Binding<SidebarSelection?> {
+		Binding(
+			get: { selection },
+			set: { newValue in
+				guard case .page(let page) = newValue else { return }
+				navigate(to: BrowserLocation(sidebarContent: .pages, selection: .page(page)))
+			}
+		)
+	}
+
+	private func navigate(to location: BrowserLocation) {
+		apply(location, replayingHistory: false)
+	}
+
+	private func apply(_ location: BrowserLocation, replayingHistory: Bool) {
+		sidebarContent = location.sidebarContent
+		selection = location.selection
+		if !replayingHistory {
+			history.record(location)
+		}
+	}
+}
+
+struct BrowserLocation: Equatable {
+	let sidebarContent: SidebarContent
+	let selection: SidebarSelection
+}
+
+struct BrowserHistory {
+	private(set) var locations = [BrowserLocation]()
+	private(set) var currentIndex: Int?
+
+	var canGoBack: Bool {
+		guard let currentIndex else { return false }
+		return currentIndex > 0
+	}
+
+	var canGoForward: Bool {
+		guard let currentIndex else { return false }
+		return currentIndex < locations.endIndex - 1
+	}
+
+	mutating func record(_ location: BrowserLocation) {
+		if currentLocation == location {
+			return
+		}
+		if let currentIndex {
+			locations.removeSubrange((currentIndex + 1)..<locations.endIndex)
+		}
+		locations.append(location)
+		self.currentIndex = locations.endIndex - 1
+	}
+
+	mutating func goBack() -> BrowserLocation? {
+		guard
+			let currentIndex,
+			currentIndex > 0
+		else { return nil }
+		let updatedIndex = currentIndex - 1
+		self.currentIndex = updatedIndex
+		return locations[updatedIndex]
+	}
+
+	mutating func goForward() -> BrowserLocation? {
+		guard
+			let currentIndex,
+			currentIndex < locations.endIndex - 1
+		else { return nil }
+		let updatedIndex = currentIndex + 1
+		self.currentIndex = updatedIndex
+		return locations[updatedIndex]
+	}
+
+	var currentLocation: BrowserLocation? {
+		guard let currentIndex else { return nil }
+		return locations[currentIndex]
 	}
 }
 
