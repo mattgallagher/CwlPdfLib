@@ -8,6 +8,7 @@ struct PdfRenderer {
 	var renderState: RenderState
 	var renderStateStack = [RenderState]()
 	var textState = TextState()
+	var textStateStack = [TextState]()
 	var textPosition = TextPosition()
 	var pendingClip: CGPathFillRule?
 	var pathState = PdfGraphicsPathState()
@@ -291,8 +292,10 @@ struct PdfRenderer {
 				case .q:
 					context.saveGState()
 					renderStateStack.append(renderState)
+					textStateStack.append(textState)
 				case .Q:
 					renderState = renderStateStack.popLast() ?? RenderState()
+					textState = textStateStack.popLast() ?? TextState()
 					context.restoreGState()
 					pendingClip = nil
 				case .re(let x, let y, let w, let h):

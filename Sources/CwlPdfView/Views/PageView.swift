@@ -43,7 +43,7 @@ struct PageView: View {
 				}
 			}
 		}
-		.task {
+		.task(id: page.id) {
 			extractedFeatures = await refreshExtractedFeatures(page: page, lookup: document.pdf.lookup)
 			if
 				let selectedFeatureIndex,

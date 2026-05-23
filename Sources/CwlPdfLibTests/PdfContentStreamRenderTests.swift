@@ -64,6 +64,48 @@ struct PdfContentStreamRenderTests {
 	}
 
 	@Test
+	func `GIVEN a font change inside graphics state save WHEN restored THEN previous text state is restored`() throws {
+		let resources = """
+		/Resources << /Font <<
+		/F1 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>
+		/F2 << /Type /Font /Subtype /Type1 /BaseFont /Symbol /Encoding /MacRomanEncoding >>
+		>> >>
+		"""
+		let document = try PdfDocument(
+			source: PdfDataSource(
+				minimalPdfData(
+					contentStream: "/F1 1 Tf q /F2 1 Tf Q",
+					pageResources: resources
+				)
+			)
+		)
+		let page = try #require(document.pages.first)
+		let content = page.content(lookup: document.lookup)
+		let stream = try #require(content.streams.first)
+		guard let context = CGContext(
+			data: nil,
+			width: 40,
+			height: 40,
+			bitsPerComponent: 8,
+			bytesPerRow: 0,
+			space: CGColorSpaceCreateDeviceRGB(),
+			bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+		) else {
+			Issue.record("Failed to create CGContext")
+			return
+		}
+		var renderer = PdfRenderer(deviceScaleX: 1, deviceScaleY: 1)
+
+		try renderer.render(stream, resources: content, in: context, lookup: document.lookup, cancellationCheck: {})
+
+		guard case .simple(let simple)? = renderer.textState.font?.kind else {
+			Issue.record("Expected a simple font")
+			return
+		}
+		#expect(simple.encoding.baseEncoding == .WinAnsiEncoding)
+	}
+
+	@Test
 	func `GIVEN a path split across page content streams WHEN rendered THEN graphics state is preserved`() throws {
 		let document = try PdfDocument(
 			source: PdfDataSource(
