@@ -10,7 +10,7 @@
 		5F4F5702CBD4B764116C3717 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 87BFE48BAE9A19F8CB0FFB46 /* Assets.xcassets */; };
 		6CB1103014E66277CE1689AE /* CwlPdfApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A7A902EABB5237711B3E165 /* CwlPdfApp.swift */; };
 		7D4378C88E4E1404BB635460 /* PageViewPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBC85D912983ECE405A367F3 /* PageViewPreview.swift */; };
-		9280F69DEF4066B952C90F3E /* CwlPdfLib in Frameworks */ = {isa = PBXBuildFile; productRef = C33210BDFA05B84530DA43BD /* CwlPdfLib */; };
+		9280F69DEF4066B952C90F3E /* CwlPdfView in Frameworks */ = {isa = PBXBuildFile; productRef = AD0C73A139408840A100543A /* CwlPdfView */; };
 		B9587B9C049285970FA8C9D0 /* Preview.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E8898324D51417072CAD3976 /* Preview.xcassets */; };
 		FEE81335EE7027EDD513E569 /* BrowserViewPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1300E380B10C4C373677B92B /* BrowserViewPreview.swift */; };
 /* End PBXBuildFile section */
@@ -31,7 +31,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				9280F69DEF4066B952C90F3E /* CwlPdfLib in Frameworks */,
+				9280F69DEF4066B952C90F3E /* CwlPdfView in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -96,7 +96,7 @@
 			);
 			name = CwlPdfApp;
 			packageProductDependencies = (
-				C33210BDFA05B84530DA43BD /* CwlPdfLib */,
+				AD0C73A139408840A100543A /* CwlPdfView */,
 			);
 			productName = CwlPdfApp;
 			productReference = 2BA2A169FD623A6B45CD318E /* CwlPdfApp.app */;
@@ -347,9 +347,9 @@
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		C33210BDFA05B84530DA43BD /* CwlPdfLib */ = {
+		AD0C73A139408840A100543A /* CwlPdfView */ = {
 			isa = XCSwiftPackageProductDependency;
-			productName = CwlPdfLib;
+			productName = CwlPdfView;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

@@ -9,8 +9,16 @@ let package = Package(
 	products: [
 		// Products define the executables and libraries a package produces, making them visible to other packages.
 		.library(
-			name: "CwlPdfLib",
-			targets: ["CwlPdfParser", "CwlPdfRenderer", "CwlPdfView"]
+			name: "CwlPdfParser",
+			targets: ["CwlPdfParser"]
+		),
+		.library(
+			name: "CwlPdfRenderer",
+			targets: ["CwlPdfRenderer"]
+		),
+		.library(
+			name: "CwlPdfView",
+			targets: ["CwlPdfView"]
 		)
 	],
 	targets: [
