@@ -2,7 +2,13 @@
 
 import CwlPdfParser
 import CwlPdfRenderer
+import ImageIO
 import SwiftUI
+import UniformTypeIdentifiers
+
+#if os(macOS)
+import AppKit
+#endif
 
 struct ObjectView: View {
 	@Binding var document: PdfFileDocument
@@ -28,11 +34,11 @@ struct ObjectView: View {
 					DictionaryTable(layout: layout, dictionary: pdfStream.dictionary, isStream: true)
 					VStack(alignment: .leading) {
 						Text("Stream content").font(.headline)
-						if let image = pdfStream.cgImage(lookup: document.pdf.lookup) {
-							Image(decorative: image, scale: 1, orientation: .up)
-								.resizable()
-								.aspectRatio(contentMode: .fit)
-								.frame(maxWidth: .infinity, maxHeight: .infinity)
+						if pdfStream.dictionary.isImage(lookup: document.pdf.lookup) {
+							ImageStreamView(
+								stream: pdfStream,
+								lookup: document.pdf.lookup
+							)
 						} else {
 							TextView(text: String(data: pdfStream.data, encoding: .utf8) ?? "<unknown: \(pdfStream.data.count) bytes>")
 						}
@@ -47,6 +53,124 @@ struct ObjectView: View {
 		case .failure(let error):
 			Text("Failed to parse \(error.localizedDescription)")
 		}
+	}
+}
+
+struct ImageStreamExport {
+	let data: Data
+	let contentType: UTType
+	let fileExtension: String
+
+	static func export(
+		stream: PdfStream,
+		lookup: PdfObjectLookup?,
+		applySoftMask: Bool
+	) -> ImageStreamExport? {
+		guard let pdfImage = try? PdfImage(stream: stream, lookup: lookup) else {
+			return nil
+		}
+
+		if applySoftMask == false || pdfImage.softMask == nil {
+			switch pdfImage.encoding {
+			case .jpeg:
+				return ImageStreamExport(data: pdfImage.data, contentType: .jpeg, fileExtension: "jpg")
+			case .jpeg2000:
+				return ImageStreamExport(
+					data: pdfImage.data,
+					contentType: UTType(filenameExtension: "jp2") ?? .data,
+					fileExtension: "jp2"
+				)
+			case .raw:
+				break
+			}
+		}
+
+		guard
+			let image = pdfImage.createCGImage(lookup: lookup, applySoftMask: applySoftMask),
+			let data = pngData(image: image)
+		else {
+			return nil
+		}
+
+		return ImageStreamExport(data: data, contentType: .png, fileExtension: "png")
+	}
+
+	private static func pngData(image: CGImage) -> Data? {
+		let data = NSMutableData()
+		guard let destination = CGImageDestinationCreateWithData(data, UTType.png.identifier as CFString, 1, nil) else {
+			return nil
+		}
+		CGImageDestinationAddImage(destination, image, nil)
+		guard CGImageDestinationFinalize(destination) else {
+			return nil
+		}
+		return data as Data
+	}
+}
+
+private struct ImageStreamView: View {
+	let stream: PdfStream
+	let lookup: PdfObjectLookup?
+	@State private var applySoftMask = true
+
+	private var hasSoftMask: Bool {
+		stream.dictionary[.SMask]?.stream(lookup: lookup) != nil
+	}
+
+	var body: some View {
+		VStack(alignment: .leading) {
+			HStack {
+				if hasSoftMask {
+					maskToggle
+				}
+				Button("Save...") {
+					saveImage()
+				}
+			}
+
+			if let image = stream.cgImage(lookup: lookup, applySoftMask: !hasSoftMask || applySoftMask) {
+				Image(decorative: image, scale: 1, orientation: .up)
+					.resizable()
+					.aspectRatio(contentMode: .fit)
+					.frame(maxWidth: .infinity, maxHeight: .infinity)
+			} else {
+				Text("<unknown image: \(stream.data.count) bytes>")
+			}
+		}
+		.frame(maxWidth: .infinity, maxHeight: .infinity)
+	}
+
+	@ViewBuilder
+	private var maskToggle: some View {
+		#if os(macOS)
+		Toggle("Apply mask", isOn: $applySoftMask)
+			.toggleStyle(.checkbox)
+		#else
+		Toggle("Apply mask", isOn: $applySoftMask)
+		#endif
+	}
+
+	private func saveImage() {
+		guard let export = ImageStreamExport.export(
+			stream: stream,
+			lookup: lookup,
+			applySoftMask: !hasSoftMask || applySoftMask
+		) else {
+			return
+		}
+
+		#if os(macOS)
+		let panel = NSSavePanel()
+		panel.allowedContentTypes = [export.contentType]
+		panel.nameFieldStringValue = [
+			stream.objectIdentifier.number.description,
+			stream.objectIdentifier.generation.description
+		].joined(separator: "-") + ".\(export.fileExtension)"
+		panel.canCreateDirectories = true
+		if panel.runModal() == .OK, let url = panel.url {
+			try? export.data.write(to: url)
+		}
+		#endif
 	}
 }
 

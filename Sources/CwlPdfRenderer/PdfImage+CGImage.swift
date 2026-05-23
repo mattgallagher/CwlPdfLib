@@ -8,9 +8,11 @@ import ImageIO
 
 extension PdfImage {
 	/// Creates a CGImage from the PDF image data.
-	/// - Parameter lookup: The object lookup for resolving indirect references (used for SMask).
+	/// - Parameters:
+	///   - lookup: The object lookup for resolving indirect references (used for SMask).
+	///   - applySoftMask: Whether an image SMask should be applied to the returned image.
 	/// - Returns: A CGImage if successful, nil otherwise.
-	public func createCGImage(lookup: PdfObjectLookup?) -> CGImage? {
+	public func createCGImage(lookup: PdfObjectLookup?, applySoftMask: Bool = true) -> CGImage? {
 		let baseImage = switch encoding {
 		case .jpeg:
 			createJPEGImage()
@@ -24,11 +26,12 @@ extension PdfImage {
 			return nil
 		}
 		
-		if let softMaskStream = softMask,
+		if applySoftMask,
+			let softMaskStream = softMask,
 			let softMaskImage = try? PdfImage(stream: softMaskStream, lookup: lookup),
 			let maskCGImage = softMaskImage.createCGImage(lookup: lookup)
 		{
-			return applySoftMask(
+			return self.applySoftMask(
 				to: baseImage,
 				mask: maskCGImage,
 				matte: matteColorRGB()

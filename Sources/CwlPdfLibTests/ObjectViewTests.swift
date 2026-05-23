@@ -2,7 +2,9 @@
 
 @testable import CwlPdfParser
 @testable import CwlPdfView
+import Foundation
 import Testing
+import UniformTypeIdentifiers
 
 @MainActor
 struct ObjectViewTests {
@@ -91,5 +93,69 @@ struct ObjectViewTests {
 			nil,
 			nil
 		])
+	}
+
+	@Test
+	func `GIVEN a JPEG image without mask WHEN exported THEN original data is used`() throws {
+		let jpegData = Data([0xff, 0xd8, 0xff, 0xd9])
+		let stream = PdfStream(
+			objectIdentifier: PdfObjectIdentifier(number: 10, generation: 0),
+			dictionary: [
+				.BitsPerComponent: .integer(8),
+				.ColorSpace: .name(.DeviceRGB),
+				.Filter: .name("DCTDecode"),
+				.Height: .integer(1),
+				.Subtype: .name(.Image),
+				.Width: .integer(1)
+			],
+			data: jpegData
+		)
+
+		let result = ImageStreamExport.export(
+			stream: stream,
+			lookup: nil,
+			applySoftMask: true
+		)
+		let export = try #require(result)
+		#expect(export.data == jpegData)
+		#expect(export.contentType == .jpeg)
+		#expect(export.fileExtension == "jpg")
+	}
+
+	@Test
+	func `GIVEN an image with soft mask WHEN exported THEN PNG data is used`() throws {
+		let mask = PdfStream(
+			objectIdentifier: PdfObjectIdentifier(number: 11, generation: 0),
+			dictionary: [
+				.BitsPerComponent: .integer(8),
+				.ColorSpace: .name(.DeviceGray),
+				.Height: .integer(1),
+				.Subtype: .name(.Image),
+				.Width: .integer(1)
+			],
+			data: Data([255])
+		)
+		let stream = PdfStream(
+			objectIdentifier: PdfObjectIdentifier(number: 12, generation: 0),
+			dictionary: [
+				.BitsPerComponent: .integer(8),
+				.ColorSpace: .name(.DeviceRGB),
+				.Height: .integer(1),
+				.SMask: .stream(mask),
+				.Subtype: .name(.Image),
+				.Width: .integer(1)
+			],
+			data: Data([255, 0, 0])
+		)
+
+		let result = ImageStreamExport.export(
+			stream: stream,
+			lookup: nil,
+			applySoftMask: true
+		)
+		let export = try #require(result)
+		#expect(export.contentType == .png)
+		#expect(export.fileExtension == "png")
+		#expect(export.data.starts(with: Data([0x89, 0x50, 0x4e, 0x47])))
 	}
 }
