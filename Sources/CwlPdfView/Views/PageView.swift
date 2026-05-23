@@ -43,74 +43,23 @@ struct PageView: View {
 				}
 			}
 		}
-		.onAppear {
-			refreshExtractedFeatures()
-		}
-		.id(page.id)
-	}
-
-	private func refreshExtractedFeatures() {
-		extractedFeatures = page.extract(features: .all, lookup: document.pdf.lookup)
-		
-		if
-			let selectedFeatureIndex,
-			!extractedFeatures.indices.contains(selectedFeatureIndex)
-		{
-			self.selectedFeatureIndex = nil
-		}
-	}
-}
-
-private struct PageCanvas: View {
-	private static let canvasInset: CGFloat = 8
-
-	let lookup: PdfObjectLookup
-	let page: PdfPage
-	let extractedFeatures: [PdfExtractedFeature]
-	@Binding var inspectorVisible: Bool
-	@Binding var selectedFeatureIndex: Int?
-
-	var body: some View {
-		GeometryReader { proxy in
-			let pageRect = page.renderBounds(lookup: lookup)
-			let layout = PageViewLayout(
-				size: proxy.size,
-				pageRect: pageRect,
-				inset: Self.canvasInset
-			)
-			ZStack(alignment: .topLeading) {
-				Canvas { context, _ in
-					context.concatenate(layout.pageTransform)
-					context.fill(Path(pageRect), with: .color(.white))
-					context.withCGContext { cgContext in
-						page.render(in: cgContext, lookup: lookup)
-					}
-				}
-
-				ForEach(Array(extractedFeatures.enumerated()), id: \.offset) { index, feature in
-					let viewRect = layout.viewRect(for: feature.bounds)
-					let isSelected = index == selectedFeatureIndex
-					let color = inspectorVisible ? Color.accentColor : Color.clear
-					Rectangle()
-						.fill(color.opacity(isSelected ? 0.3 : 0))
-						.overlay(Rectangle().stroke(color, lineWidth: isSelected ? 2 : 1))
-						.contentShape(Rectangle())
-						.onTapGesture {
-							selectedFeatureIndex = index
-							inspectorVisible = true
-						}
-						.frame(width: viewRect.width, height: viewRect.height)
-						.position(x: viewRect.midX, y: viewRect.midY)
-				}
+		.task {
+			extractedFeatures = await refreshExtractedFeatures(page: page, lookup: document.pdf.lookup)
+			if
+				let selectedFeatureIndex,
+				!extractedFeatures.indices.contains(selectedFeatureIndex)
+			{
+				self.selectedFeatureIndex = nil
 			}
-			.shadow(color: Color.black.opacity(0.1), radius: 4, x: 0, y: 2)
-		}
-		.contentShape(Rectangle())
-		.onTapGesture {
-			selectedFeatureIndex = nil
 		}
 	}
+
+	@concurrent
+	private func refreshExtractedFeatures(page: PdfPage, lookup: PdfObjectLookup) async -> [PdfExtractedFeature] {
+		return page.extract(features: .all, lookup: lookup)
+	}
 }
+
 
 private struct FeatureInspectorView: View {
 	let page: PdfPage
@@ -181,36 +130,5 @@ private struct ObjectIdentifierLabel: View {
 		} else {
 			Text("inline")
 		}
-	}
-}
-
-private struct PageViewLayout {
-	let pageRect: CGRect
-	let pageTransform: CGAffineTransform
-
-	init(size: CGSize, pageRect: CGRect, inset: CGFloat) {
-		self.pageRect = pageRect
-		let availableSize = CGSize(
-			width: max(size.width - inset * 2, 0),
-			height: max(size.height - inset * 2, 0)
-		)
-		let scaleFactor = min(
-			availableSize.width / pageRect.width,
-			availableSize.height / pageRect.height
-		)
-		let xMargin = inset + (availableSize.width - scaleFactor * pageRect.width) / 2
-		let yMargin = inset + (availableSize.height - scaleFactor * pageRect.height) / 2
-		self.pageTransform = CGAffineTransform(
-			a: scaleFactor,
-			b: 0,
-			c: 0,
-			d: -scaleFactor,
-			tx: xMargin - scaleFactor * pageRect.minX,
-			ty: yMargin + scaleFactor * pageRect.maxY
-		)
-	}
-
-	func viewRect(for pdfRect: PdfRect) -> CGRect {
-		pdfRect.cgRect.applying(pageTransform).standardized
 	}
 }

@@ -11,30 +11,74 @@ extension PdfContentStream {
 		deviceScaleX: CGFloat? = nil,
 		deviceScaleY: CGFloat? = nil
 	) {
+		try? render(
+			in: context,
+			pageBounds: pageBounds,
+			lookup: lookup,
+			deviceScaleX: deviceScaleX,
+			deviceScaleY: deviceScaleY,
+			cancellationCheck: {}
+		)
+	}
+
+	func render(
+		in context: CGContext,
+		pageBounds: CGRect? = nil,
+		lookup: PdfObjectLookup?,
+		deviceScaleX: CGFloat? = nil,
+		deviceScaleY: CGFloat? = nil,
+		cancellationCheck: () throws -> Void
+	) throws {
+		try cancellationCheck()
+		
 		context.saveGState()
 		defer {
 			context.restoreGState()
 		}
-
+		
 		var state = PdfRenderer(
 			deviceScaleX: deviceScaleX ?? max(hypot(context.ctm.a, context.ctm.c), 1),
 			deviceScaleY: deviceScaleY ?? max(hypot(context.ctm.b, context.ctm.d), 1)
 		)
-
+		
 		if let contextTransform {
 			context.concatenate(contextTransform)
 		}
-
+		
 		if let bbox = renderBBox ?? pageBounds {
 			let bboxPath = CGPath(rect: bbox, transform: nil)
 			context.addPath(bboxPath)
 			context.clip()
 			state.renderState.addClipPath(bboxPath, ctm: context.ctm, fillRule: .winding)
 		}
-
+		
 		for stream in streams {
-			state.render(stream, resources: self, in: context, lookup: lookup)
+			try cancellationCheck()
+			try state.render(
+				stream,
+				resources: self,
+				in: context,
+				lookup: lookup,
+				cancellationCheck: cancellationCheck
+			)
 		}
+	}
+
+	func render(
+		in context: CGContext,
+		lookup: PdfObjectLookup?,
+		deviceScaleX: CGFloat? = nil,
+		deviceScaleY: CGFloat? = nil,
+		cancellationCheck: () throws -> Void
+	) throws {
+		try render(
+			in: context,
+			pageBounds: nil,
+			lookup: lookup,
+			deviceScaleX: deviceScaleX,
+			deviceScaleY: deviceScaleY,
+			cancellationCheck: cancellationCheck
+		)
 	}
 }
 

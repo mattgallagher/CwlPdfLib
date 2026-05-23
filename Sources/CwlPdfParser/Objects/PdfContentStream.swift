@@ -89,13 +89,13 @@ public struct PdfAnnotationAppearanceContent: PdfContentStream {
 
 extension PdfStream {
 	/// Parses PDF content stream operators from the stream data.
-	public func parseContentOperators(_ visitor: (PdfOperator) -> Bool) throws {
+	public func parseContentOperators(_ visitor: (PdfOperator) throws -> Bool) throws {
 		try data.parseContext { context in
 			repeat {
 				guard let nextOperator = try PdfOperator.parseNext(context: &context) else {
 					return
 				}
-				if !visitor(nextOperator) {
+				if try !visitor(nextOperator) {
 					return
 				}
 			} while true

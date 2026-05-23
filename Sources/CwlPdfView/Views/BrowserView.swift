@@ -77,7 +77,11 @@ public struct PdfBrowserView: View {
 				selection == nil,
 				let firstPage = document.pdf.pages.first?.id
 			else { return }
-			navigate(to: BrowserLocation(sidebarContent: .pages, selection: .page(firstPage)))
+			Task {
+				// Avoid an "action tried to update multiple times per frame" warning by doing this
+				// in a Task
+				navigate(to: BrowserLocation(sidebarContent: .pages, selection: .page(firstPage)))
+			}
 		}
 		.animation(.default, value: sidebarContent.sidebarVisibility)
 	}

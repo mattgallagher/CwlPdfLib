@@ -8,6 +8,52 @@ import Testing
 
 struct PdfContentStreamRenderTests {
 	@Test
+	func `GIVEN an image render request WHEN page renderer completes THEN image has requested dimensions`() async throws {
+		let document = try PdfDocument(source: PdfDataSource(minimalPdfData(contentStream: "0 g 0 0 40 40 re f")))
+		let page = try #require(document.pages.first)
+		let image = try page.renderedImage(
+			lookup: document.lookup,
+			bounds: page.renderBounds(lookup: document.lookup),
+			pixelWidth: 80,
+			pixelHeight: 60,
+			cancellationCheck: {}
+		)
+		
+		#expect(image.width == 80)
+		#expect(image.height == 60)
+	}
+	
+	@Test
+	func `GIVEN a cancelled render WHEN operators are processed THEN render stops with cancellation`() throws {
+		let contentStream = Array(repeating: "0 0 1 rg 0 0 40 40 re f", count: 100).joined(separator: "\n")
+		let document = try PdfDocument(source: PdfDataSource(minimalPdfData(contentStream: contentStream)))
+		let page = try #require(document.pages.first)
+		guard let context = CGContext(
+			data: nil,
+			width: 40,
+			height: 40,
+			bitsPerComponent: 8,
+			bytesPerRow: 0,
+			space: CGColorSpaceCreateDeviceRGB(),
+			bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+		) else {
+			Issue.record("Failed to create CGContext")
+			return
+		}
+		var checks = 0
+		
+		#expect(throws: CancellationError.self) {
+			try page.render(in: context, lookup: document.lookup) {
+				checks += 1
+				if checks > 10 {
+					throw CancellationError()
+				}
+			}
+		}
+		#expect(checks == 11)
+	}
+	
+	@Test
 	func `GIVEN a pending clip before graphics state restore WHEN the path ends after restore THEN the deferred clip is discarded`() throws {
 		let document = try PdfDocument(source: PdfDataSource(minimalPdfData(contentStream: "0 g q 0 0 20 20 re W Q n 0 0 40 40 re f")))
 		let page = try #require(document.pages.first)

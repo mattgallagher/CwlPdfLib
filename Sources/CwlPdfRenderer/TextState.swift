@@ -104,11 +104,31 @@ func measureTextRun(_ data: Data, state: TextState) -> TextRunMeasurement {
 
 extension CGContext {
 	func showText(_ data: Data, state: TextState, position: inout TextPosition, lookup: PdfObjectLookup?) {
+		try? showText(data, state: state, position: &position, lookup: lookup, cancellationCheck: {})
+	}
+
+	func showText(
+		_ data: Data,
+		state: TextState,
+		position: inout TextPosition,
+		lookup: PdfObjectLookup?,
+		cancellationCheck: () throws -> Void
+	) throws {
+		try cancellationCheck()
+		
 		guard let pdfFont = state.font else { return }
 
 		// Handle Type3 fonts
 		if case .type3(let type3Data) = pdfFont.kind {
-			drawType3Text(data, font: pdfFont, type3Data: type3Data, state: state, position: &position, lookup: lookup)
+			try drawType3Text(
+				data,
+				font: pdfFont,
+				type3Data: type3Data,
+				state: state,
+				position: &position,
+				lookup: lookup,
+				cancellationCheck: cancellationCheck
+			)
 			return
 		}
 
@@ -126,13 +146,16 @@ extension CGContext {
 		type3Data: Type3FontData,
 		state: TextState,
 		position: inout TextPosition,
-		lookup: PdfObjectLookup?
-	) {
+		lookup: PdfObjectLookup?,
+		cancellationCheck: () throws -> Void
+	) throws {
 		let fontSize = state.fontSize
 		let fontMatrix = font.common.fontMatrix.cgAffineTransform
 		let hScale = state.horizontalScale / 100
 
 		for byte in data {
+			try cancellationCheck()
+			
 			let code = Int(byte)
 
 			// Get glyph name from encoding
@@ -152,6 +175,9 @@ extension CGContext {
 				? type3Data.widths[index] : 0
 
 			saveGState()
+			defer {
+				restoreGState()
+			}
 
 			// Apply positioning: textMatrix × fontSize × fontMatrix
 			concatenate(position.textMatrix)
@@ -159,9 +185,7 @@ extension CGContext {
 			concatenate(fontMatrix)
 
 			let charProcContent = PdfFormContent(stream: charProcStream, resources: type3Data.resources, lookup: lookup)
-			charProcContent.render(in: self, lookup: lookup)
-
-			restoreGState()
+			try charProcContent.render(in: self, lookup: lookup, cancellationCheck: cancellationCheck)
 
 			// Advance text position (width is in glyph space units, typically 1000 per em)
 			let spacing = (state.charSpace + (code == 0x20 ? state.wordSpace : 0)) * fontSize * hScale

@@ -53,19 +53,49 @@ struct PdfRenderer {
 		in context: CGContext,
 		lookup: PdfObjectLookup?
 	) {
+		try? render(
+			stream,
+			resources: resources,
+			in: context,
+			lookup: lookup,
+			cancellationCheck: {}
+		)
+	}
+
+	mutating func render(
+		_ stream: PdfStream,
+		resources: any PdfContentStream,
+		in context: CGContext,
+		lookup: PdfObjectLookup?,
+		cancellationCheck: () throws -> Void
+	) throws {
 		do {
 			try stream.parseContentOperators { op in
+				try cancellationCheck()
+				
 				switch op {
 				case .`'`(let text):
 					textPosition.lineMatrix = textPosition.lineMatrix.translatedBy(x: 0, y: -textState.leading)
 					textPosition.textMatrix = textPosition.lineMatrix
-					context.showText(text, state: textState, position: &textPosition, lookup: lookup)
+					try context.showText(
+						text,
+						state: textState,
+						position: &textPosition,
+						lookup: lookup,
+						cancellationCheck: cancellationCheck
+					)
 				case .`"`(let text, let cSpacing, let wSpacing):
 					textState.charSpace = cSpacing
 					textState.wordSpace = wSpacing
 					textPosition.lineMatrix = textPosition.lineMatrix.translatedBy(x: 0, y: -textState.leading)
 					textPosition.textMatrix = textPosition.lineMatrix
-					context.showText(text, state: textState, position: &textPosition, lookup: lookup)
+					try context.showText(
+						text,
+						state: textState,
+						position: &textPosition,
+						lookup: lookup,
+						cancellationCheck: cancellationCheck
+					)
 				case .B:
 					applyPendingClipIfNeeded(in: context, preservePath: true)
 					context.drawPath(using: .fillStroke)
@@ -143,6 +173,7 @@ struct PdfRenderer {
 					) else {
 						break
 					}
+					try cancellationCheck()
 					// Check if this is an image XObject
 					if xobjectStream.dictionary.isImage(lookup: lookup) {
 						guard
@@ -161,11 +192,12 @@ struct PdfRenderer {
 							resources: resources.resources,
 							lookup: lookup
 						)
-						formContent.render(
+						try formContent.render(
 							in: context,
 							lookup: lookup,
 							deviceScaleX: inheritedDeviceScaleX,
-							deviceScaleY: inheritedDeviceScaleY
+							deviceScaleY: inheritedDeviceScaleY,
+							cancellationCheck: cancellationCheck
 						)
 					}
 				case .DP:
@@ -313,6 +345,7 @@ struct PdfRenderer {
 					) else {
 						break
 					}
+					try cancellationCheck()
 					guard
 						let shading = PdfShading.parse(shadingDictionary, lookup: lookup),
 						let cgShading = shading.createCGShading()
@@ -343,9 +376,16 @@ struct PdfRenderer {
 							.map { CTFontCreateWithGraphicsFont($0, 1.0, nil, nil) }
 					}
 				case .Tj(let text):
-					context.showText(text, state: textState, position: &textPosition, lookup: lookup)
+					try context.showText(
+						text,
+						state: textState,
+						position: &textPosition,
+						lookup: lookup,
+						cancellationCheck: cancellationCheck
+					)
 				case .TJ(let array):
 					for item in array {
+						try cancellationCheck()
 						switch item {
 						case .offset(let offset):
 							// Offset is in thousandths of text space units
@@ -353,7 +393,13 @@ struct PdfRenderer {
 							let translation = CGAffineTransform(translationX: displacement, y: 0)
 							textPosition.textMatrix = translation.concatenating(textPosition.textMatrix)
 						case .text(let text):
-							context.showText(text, state: textState, position: &textPosition, lookup: lookup)
+							try context.showText(
+								text,
+								state: textState,
+								position: &textPosition,
+								lookup: lookup,
+								cancellationCheck: cancellationCheck
+							)
 						}
 					}
 				case .TL(let lead):
@@ -403,6 +449,8 @@ struct PdfRenderer {
 				}
 				return true
 			}
+		} catch is CancellationError {
+			throw CancellationError()
 		} catch {
 			print(error)
 		}

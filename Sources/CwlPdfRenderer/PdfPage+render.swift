@@ -3,24 +3,43 @@
 import CoreGraphics
 import CwlPdfParser
 
+/// Describes failures that can occur while rendering a PDF page into a `CGImage`.
+public enum PdfPageImageRenderError: Error, Sendable {
+	case contextCreationFailed
+	case imageCreationFailed
+	case invalidSize
+}
+
 extension PdfPage {
 	public func renderBounds(lookup: PdfObjectLookup?) -> CGRect {
 		return pageRect(lookup: lookup).cgRect
 	}
 
 	public func render(in context: CGContext, lookup: PdfObjectLookup?) {
+		try? render(in: context, lookup: lookup, cancellationCheck: {})
+	}
+
+	/// Renders the page into the context and periodically invokes `cancellationCheck`.
+	public func render(
+		in context: CGContext,
+		lookup: PdfObjectLookup?,
+		cancellationCheck: () throws -> Void
+	) throws {
+		try cancellationCheck()
+		
 		let rect = renderBounds(lookup: lookup)
 		let deviceScaleX = max(hypot(context.ctm.a, context.ctm.c), 1)
 		let deviceScaleY = max(hypot(context.ctm.b, context.ctm.d), 1)
 		
 		let content = content(lookup: lookup)
 		if !content.streams.isEmpty {
-			content.render(
+			try content.render(
 				in: context,
 				pageBounds: rect,
 				lookup: lookup,
 				deviceScaleX: deviceScaleX,
-				deviceScaleY: deviceScaleY
+				deviceScaleY: deviceScaleY,
+				cancellationCheck: cancellationCheck
 			)
 		}
 		
@@ -29,6 +48,8 @@ extension PdfPage {
 				.array(lookup: lookup)?
 				.compactMap({ $0.dictionary(lookup: lookup) }) ?? []
 		{
+			try cancellationCheck()
+			
 			guard
 				let appearanceStream = annotation[.AP]?.dictionary(lookup: lookup)?[.N]?.stream(lookup: lookup),
 				let annotationRect = annotation[.Rect]?.array(lookup: lookup).flatMap({ PdfRect(array: $0, lookup: lookup) })
@@ -42,12 +63,13 @@ extension PdfPage {
 				resources: nil,
 				lookup: lookup
 			)
-			appearance.render(
+			try appearance.render(
 				in: context,
 				pageBounds: rect,
 				lookup: lookup,
 				deviceScaleX: deviceScaleX,
-				deviceScaleY: deviceScaleY
+				deviceScaleY: deviceScaleY,
+				cancellationCheck: cancellationCheck
 			)
 		}
 	}
@@ -66,32 +88,94 @@ extension PdfPage {
 		let bounds = renderBounds(lookup: lookup)
 		let pixelWidth = Int((bounds.width * scale).rounded(.up))
 		let pixelHeight = Int((bounds.height * scale).rounded(.up))
+		return try? renderedImage(
+			pixelWidth: pixelWidth,
+			pixelHeight: pixelHeight,
+			backgroundColor: backgroundColor,
+			cancellationCheck: {}
+		) { context in
+			context.scaleBy(x: scale, y: scale)
+			context.translateBy(x: -bounds.minX, y: -bounds.minY + bounds.height)
+			context.scaleBy(x: 1, y: -1)
+			render(in: context, lookup: lookup)
+		}
+	}
+	
+	/// Renders the page into a `CGImage` with the supplied pixel dimensions.
+	public func renderedImage(
+		lookup: PdfObjectLookup?,
+		bounds: CGRect,
+		pixelWidth: Int,
+		pixelHeight: Int,
+		backgroundColor: CGColor? = CGColor(gray: 1, alpha: 1),
+		cancellationCheck: () throws -> Void
+	) throws -> CGImage {
+		try cancellationCheck()
+		
+		guard
+			bounds.width > 0,
+			bounds.height > 0,
+			pixelWidth > 0,
+			pixelHeight > 0
+		else {
+			throw PdfPageImageRenderError.invalidSize
+		}
+		
+		return try renderedImage(
+			pixelWidth: pixelWidth,
+			pixelHeight: pixelHeight,
+			backgroundColor: backgroundColor,
+			cancellationCheck: cancellationCheck
+		) { context in
+			context.scaleBy(
+				x: CGFloat(pixelWidth) / bounds.width,
+				y: CGFloat(pixelHeight) / bounds.height
+			)
+			context.translateBy(x: -bounds.minX, y: -bounds.minY)
+			try render(in: context, lookup: lookup, cancellationCheck: cancellationCheck)
+		}
+	}
+	
+	private func renderedImage(
+		pixelWidth: Int,
+		pixelHeight: Int,
+		backgroundColor: CGColor?,
+		cancellationCheck: () throws -> Void,
+		render: (CGContext) throws -> Void
+	) throws -> CGImage {
+		try cancellationCheck()
+		
 		guard
 			pixelWidth > 0,
-			pixelHeight > 0,
-			let context = CGContext(
-				data: nil,
-				width: pixelWidth,
-				height: pixelHeight,
-				bitsPerComponent: 8,
-				bytesPerRow: 0,
-				space: CGColorSpaceCreateDeviceRGB(),
-				bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
-			)
+			pixelHeight > 0
 		else {
-			return nil
+			throw PdfPageImageRenderError.invalidSize
+		}
+		
+		guard let context = CGContext(
+			data: nil,
+			width: pixelWidth,
+			height: pixelHeight,
+			bitsPerComponent: 8,
+			bytesPerRow: 0,
+			space: CGColorSpaceCreateDeviceRGB(),
+			bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+		) else {
+			throw PdfPageImageRenderError.contextCreationFailed
 		}
 		
 		if let backgroundColor {
 			context.setFillColor(backgroundColor)
-			// Fill the full bitmap extent in device space so fractional page bounds
-			// don't leave a transparent strip on the top/right edges.
 			context.fill(CGRect(x: 0, y: 0, width: pixelWidth, height: pixelHeight))
 		}
-		context.scaleBy(x: scale, y: scale)
-		context.translateBy(x: -bounds.minX, y: -bounds.minY + bounds.height)
-		context.scaleBy(x: 1, y: -1)
-		render(in: context, lookup: lookup)
-		return context.makeImage()
+		
+		try cancellationCheck()
+		try render(context)
+		
+		guard let image = context.makeImage() else {
+			throw PdfPageImageRenderError.imageCreationFailed
+		}
+		
+		return image
 	}
 }
