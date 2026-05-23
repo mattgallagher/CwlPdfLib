@@ -13,19 +13,15 @@ extension PdfPage {
 		let deviceScaleX = max(hypot(context.ctm.a, context.ctm.c), 1)
 		let deviceScaleY = max(hypot(context.ctm.b, context.ctm.d), 1)
 		
-		let contentStreams = contentStreams(lookup: lookup)
-		if let firstContentStream = contentStreams.first {
-			PdfRenderer.performWithRenderState(
-				for: firstContentStream,
+		let content = content(lookup: lookup)
+		if !content.streams.isEmpty {
+			content.render(
 				in: context,
 				pageBounds: rect,
+				lookup: lookup,
 				deviceScaleX: deviceScaleX,
 				deviceScaleY: deviceScaleY
-			) { state in
-				for contentStream in contentStreams {
-					state.render(contentStream, in: context, lookup: lookup)
-				}
-			}
+			)
 		}
 		
 		for
@@ -35,18 +31,18 @@ extension PdfPage {
 		{
 			guard
 				let appearanceStream = annotation[.AP]?.dictionary(lookup: lookup)?[.N]?.stream(lookup: lookup),
-				let annotationRect = annotation[.Rect]?.array(lookup: lookup).map({ PdfRect(array: $0, lookup: lookup) })
+				let annotationRect = annotation[.Rect]?.array(lookup: lookup).flatMap({ PdfRect(array: $0, lookup: lookup) })
 			else {
 				continue
 			}
 			
-			let contentStream = PdfContentStream(
+			let appearance = PdfAnnotationAppearanceContent(
 				stream: appearanceStream,
-				resources: nil,
 				annotationRect: annotationRect,
+				resources: nil,
 				lookup: lookup
 			)
-			contentStream.render(
+			appearance.render(
 				in: context,
 				pageBounds: rect,
 				lookup: lookup,

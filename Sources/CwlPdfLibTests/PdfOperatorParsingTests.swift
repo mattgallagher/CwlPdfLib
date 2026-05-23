@@ -1,4 +1,4 @@
-// CwlPdfLib. Copyright © 2025 Matt Gallagher. See LICENSE file for usage permissions.
+// CwlPdfLib. Copyright © 2026 Matt Gallagher. See LICENSE file for usage permissions.
 
 import Foundation
 import Testing
@@ -14,10 +14,10 @@ struct PdfOperatorParsingTests {
 		let fileURL = try #require(Bundle.module.url(forResource: "Fixtures/Basic/\(filename)", withExtension: nil))
 		let document = try PdfDocument(source: PdfDataSource(Data(contentsOf: fileURL, options: .mappedIfSafe)))
 		let page = try #require(document.pages.first)
-		let contentStream = try #require(page.contentStreams(lookup: document.lookup).first)
+		let stream = try #require(page.content(lookup: document.lookup).streams.first)
 		
 		var parsed = [PdfOperator]()
-		try contentStream.parse { op in
+		try stream.parseContentOperators { op in
 			parsed.append(op)
 			return true
 		}
@@ -173,4 +173,3 @@ func textShapesShadingOperators() -> [PdfOperator] {
 		CwlPdfParser.PdfOperator.Q
 	]
 }
-

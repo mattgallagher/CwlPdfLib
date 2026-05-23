@@ -72,9 +72,11 @@ private func findSoftMaskDiagnostic(
 	lookup: PdfObjectLookup?,
 	gstateName: String
 ) throws -> SoftMaskDiagnostic? {
-	for contentStream in page.contentStreams(lookup: lookup) {
+	let content = page.content(lookup: lookup)
+	for stream in content.streams {
 		if let diagnostic = try findSoftMaskDiagnostic(
-			in: contentStream,
+			in: stream,
+			resources: content,
 			lookup: lookup,
 			gstateName: gstateName,
 			initialCTM: .identity
@@ -86,7 +88,8 @@ private func findSoftMaskDiagnostic(
 }
 
 private func findSoftMaskDiagnostic(
-	in contentStream: PdfContentStream,
+	in stream: PdfStream,
+	resources: any PdfContentStream,
 	lookup: PdfObjectLookup?,
 	gstateName: String,
 	initialCTM: CGAffineTransform
@@ -96,7 +99,7 @@ private func findSoftMaskDiagnostic(
 	var parseError: Error?
 	var result: SoftMaskDiagnostic?
 
-	try contentStream.parse { op in
+	try stream.parseContentOperators { op in
 		switch op {
 		case .cm(let a, let b, let c, let d, let tx, let ty):
 			ctm = CGAffineTransform(a: a, b: b, c: c, d: d, tx: tx, ty: ty).concatenating(ctm)
@@ -107,7 +110,7 @@ private func findSoftMaskDiagnostic(
 		case .gs(let name):
 			guard
 				name == gstateName,
-				let gstateDictionary = contentStream.resolveResourceDictionary(
+				let gstateDictionary = resources.resolveResourceDictionary(
 					category: .ExtGState,
 					key: name,
 					lookup: lookup
@@ -126,7 +129,7 @@ private func findSoftMaskDiagnostic(
 			return false
 		case .Do(let xobjectName):
 			guard
-				let xobjectStream = contentStream.resolveResourceStream(
+				let xobjectStream = resources.resolveResourceStream(
 					category: .XObject,
 					key: xobjectName,
 					lookup: lookup
@@ -135,16 +138,16 @@ private func findSoftMaskDiagnostic(
 			else {
 				break
 			}
-			let formContentStream = PdfContentStream(
+			let formContent = PdfFormContent(
 				stream: xobjectStream,
-				resources: nil,
-				annotationRect: nil,
+				resources: resources.resources,
 				lookup: lookup
 			)
-			let formInitialCTM = (formContentStream.contextTransform ?? .identity).concatenating(ctm)
+			let formInitialCTM = (formContent.contextTransform ?? .identity).concatenating(ctm)
 			do {
 				if let nested = try findSoftMaskDiagnostic(
-					in: formContentStream,
+					in: formContent.stream,
+					resources: formContent,
 					lookup: lookup,
 					gstateName: gstateName,
 					initialCTM: formInitialCTM

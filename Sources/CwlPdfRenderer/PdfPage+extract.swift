@@ -36,9 +36,9 @@ extension PdfPage {
 			return extracted
 		}
 
-		for contentStream in contentStreams(lookup: lookup) {
-			extracted.append(contentsOf: contentStream.extract(features: features, lookup: lookup, initialCTM: .identity))
-		}
+		extracted.append(
+			contentsOf: content(lookup: lookup).extract(features: features, lookup: lookup, initialCTM: .identity)
+		)
 
 		return extracted
 	}

@@ -158,14 +158,8 @@ extension CGContext {
 			concatenate(CGAffineTransform(scaleX: fontSize, y: fontSize))
 			concatenate(fontMatrix)
 
-			// Create and render the CharProc content stream
-			let charProcContentStream = PdfContentStream(
-				stream: charProcStream,
-				resources: type3Data.resources,
-				annotationRect: nil,
-				lookup: lookup
-			)
-			charProcContentStream.render(in: self, pageBounds: nil, lookup: lookup)
+			let charProcContent = PdfFormContent(stream: charProcStream, resources: type3Data.resources, lookup: lookup)
+			charProcContent.render(in: self, lookup: lookup)
 
 			restoreGState()
 

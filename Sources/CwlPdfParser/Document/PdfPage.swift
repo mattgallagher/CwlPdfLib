@@ -1,4 +1,4 @@
-// CwlPdfLib. Copyright © 2025 Matt Gallagher. See LICENSE file for usage permissions.
+// CwlPdfLib. Copyright © 2026 Matt Gallagher. See LICENSE file for usage permissions.
 
 import Foundation
 
@@ -34,22 +34,20 @@ public struct PdfPage: Sendable, Hashable, Identifiable {
 		return documentPageSize
 	}
 
-	public func contentStreams(lookup: PdfObjectLookup?) -> [PdfContentStream] {
+	/// Returns the page's ordered content streams with the page resource dictionary.
+	public func content(lookup: PdfObjectLookup?) -> PdfPageContent {
 		let resources = pageDictionary[.Resources]?.dictionary(lookup: lookup)
 		guard let contents = pageDictionary[.Contents] else {
-			return []
+			return PdfPageContent(streams: [], resources: resources)
 		}
 
 		if let stream = contents.stream(lookup: lookup) {
-			return [PdfContentStream(stream: stream, resources: resources, annotationRect: nil, lookup: lookup)]
+			return PdfPageContent(streams: [stream], resources: resources)
 		} else if let array = contents.array(lookup: lookup) {
-			return array.compactMap { element in
-				guard let stream = element.stream(lookup: lookup) else { return nil }
-				return PdfContentStream(stream: stream, resources: resources, annotationRect: nil, lookup: lookup)
-			}
+			return PdfPageContent(streams: array.compactMap { $0.stream(lookup: lookup) }, resources: resources)
 		}
 
-		return []
+		return PdfPageContent(streams: [], resources: resources)
 	}
 }
 

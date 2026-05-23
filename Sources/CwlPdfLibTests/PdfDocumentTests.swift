@@ -214,9 +214,9 @@ struct PdfDocumentTests {
 
 private func parseContentOperators(document: PdfDocument) throws -> [PdfOperator] {
 	let page = try #require(document.pages.first)
-	let contentStream = try #require(page.contentStreams(lookup: document.lookup).first)
+	let stream = try #require(page.content(lookup: document.lookup).streams.first)
 	var parsed = [PdfOperator]()
-	try contentStream.parse { op in
+	try stream.parseContentOperators { op in
 		parsed.append(op)
 		return true
 	}

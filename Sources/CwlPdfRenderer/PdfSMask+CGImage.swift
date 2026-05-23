@@ -61,15 +61,13 @@ extension PdfSMask {
 		context.translateBy(x: -cgBBox.minX, y: -cgBBox.minY)
 		
 		// Render the transparency group
-		let contentStream = PdfContentStream(
+		let content = PdfFormContent(
 			stream: transparencyGroup,
 			resources: nil,
-			annotationRect: nil,
 			lookup: lookup
 		)
-		contentStream.render(
+		content.render(
 			in: context,
-			pageBounds: nil,
 			lookup: lookup,
 			deviceScaleX: scaleX,
 			deviceScaleY: scaleY

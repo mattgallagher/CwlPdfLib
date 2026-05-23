@@ -14,9 +14,9 @@ struct PdfFontRenderingTests {
 			path: "PDFUA-Reference-Files_1-1_2024_02/PDFUA-Ref-2-01_Magazine-danish.pdf"
 		)
 		let page = try #require(document.pages.indices.contains(2) ? document.pages[2] : nil)
-		let contentStream = try #require(page.contentStreams(lookup: document.lookup).first)
+		let content = page.content(lookup: document.lookup)
 		let fontDictionary = try #require(
-			contentStream.resolveResourceDictionary(category: .Font, key: "TT0", lookup: document.lookup)
+			content.resolveResourceDictionary(category: .Font, key: "TT0", lookup: document.lookup)
 		)
 
 		let font = try PdfFont(fontDictionary: fontDictionary, lookup: document.lookup) { data in

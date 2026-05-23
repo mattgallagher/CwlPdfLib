@@ -20,38 +20,6 @@ struct PdfRenderer {
 		inheritedDeviceScaleY = deviceScaleY
 	}
 
-	static func performWithRenderState(
-		for contentStream: PdfContentStream,
-		in context: CGContext,
-		pageBounds: CGRect?,
-		deviceScaleX: CGFloat? = nil,
-		deviceScaleY: CGFloat? = nil,
-		_ body: (inout PdfRenderer) throws -> Void
-	) rethrows {
-		context.saveGState()
-		defer {
-			context.restoreGState()
-		}
-
-		var state = PdfRenderer(
-			deviceScaleX: deviceScaleX ?? max(hypot(context.ctm.a, context.ctm.c), 1),
-			deviceScaleY: deviceScaleY ?? max(hypot(context.ctm.b, context.ctm.d), 1)
-		)
-
-		if let contextTransform = contentStream.contextTransform {
-			context.concatenate(contextTransform)
-		}
-
-		if let bbox = contentStream.bbox?.cgRect ?? pageBounds {
-			let bboxPath = CGPath(rect: bbox, transform: nil)
-			context.addPath(bboxPath)
-			context.clip()
-			state.renderState.addClipPath(bboxPath, ctm: context.ctm, fillRule: .winding)
-		}
-
-		try body(&state)
-	}
-
 	mutating func applyPendingClipIfNeeded(
 		in context: CGContext,
 		preservePath: Bool
@@ -80,12 +48,13 @@ struct PdfRenderer {
 	}
 
 	mutating func render(
-		_ contentStream: PdfContentStream,
+		_ stream: PdfStream,
+		resources: any PdfContentStream,
 		in context: CGContext,
 		lookup: PdfObjectLookup?
 	) {
 		do {
-			try contentStream.parse { op in
+			try stream.parseContentOperators { op in
 				switch op {
 				case .`'`(let text):
 					textPosition.lineMatrix = textPosition.lineMatrix.translatedBy(x: 0, y: -textState.leading)
@@ -145,7 +114,7 @@ struct PdfRenderer {
 					if let deviceColorSpace = PdfColorSpace(name: name) {
 						renderState.colorState.strokeColorSpace = deviceColorSpace
 					} else if
-						let colorSpaceArray = contentStream.resolveResourceArray(category: .ColorSpace, key: name, lookup: lookup),
+						let colorSpaceArray = resources.resolveResourceArray(category: .ColorSpace, key: name, lookup: lookup),
 						let colorSpace = PdfColorSpace.parse(.array(colorSpaceArray), lookup: lookup)
 					{
 						renderState.colorState.strokeColorSpace = colorSpace
@@ -154,7 +123,7 @@ struct PdfRenderer {
 					if let deviceColorSpace = PdfColorSpace(name: name) {
 						renderState.colorState.fillColorSpace = deviceColorSpace
 					} else if
-						let colorSpaceArray = contentStream.resolveResourceArray(category: .ColorSpace, key: name, lookup: lookup),
+						let colorSpaceArray = resources.resolveResourceArray(category: .ColorSpace, key: name, lookup: lookup),
 						let colorSpace = PdfColorSpace.parse(.array(colorSpaceArray), lookup: lookup)
 					{
 						renderState.colorState.fillColorSpace = colorSpace
@@ -167,7 +136,7 @@ struct PdfRenderer {
 				case .d1:
 					break
 				case .Do(let xobjectName):
-					guard let xobjectStream = contentStream.resolveResourceStream(
+					guard let xobjectStream = resources.resolveResourceStream(
 						category: .XObject,
 						key: xobjectName,
 						lookup: lookup
@@ -187,15 +156,13 @@ struct PdfRenderer {
 					}
 					// Handle Form XObjects (nested content streams)
 					else if xobjectStream.dictionary.isForm(lookup: lookup) {
-						let formContentStream = PdfContentStream(
+						let formContent = PdfFormContent(
 							stream: xobjectStream,
-							resources: nil,
-							annotationRect: nil,
+							resources: resources.resources,
 							lookup: lookup
 						)
-						formContentStream.render(
+						formContent.render(
 							in: context,
-							pageBounds: nil,
 							lookup: lookup,
 							deviceScaleX: inheritedDeviceScaleX,
 							deviceScaleY: inheritedDeviceScaleY
@@ -231,7 +198,7 @@ struct PdfRenderer {
 					renderState.colorState.setFillGray(CGFloat(gray))
 					renderState.colorState.applyFillColor(to: context)
 				case .gs(let name):
-					guard let gstateDictionary = contentStream.resolveResourceDictionary(
+					guard let gstateDictionary = resources.resolveResourceDictionary(
 						category: .ExtGState,
 						key: name,
 						lookup: lookup
@@ -339,7 +306,7 @@ struct PdfRenderer {
 					renderState.colorState.setFillColor(colors.map { CGFloat($0) })
 					renderState.colorState.applyFillColor(to: context)
 				case .sh(let shadingName):
-					guard let shadingDictionary = contentStream.resolveResourceDictionary(
+					guard let shadingDictionary = resources.resolveResourceDictionary(
 						category: .Shading,
 						key: shadingName,
 						lookup: lookup
@@ -365,7 +332,7 @@ struct PdfRenderer {
 				case .Tf(let fontKey, let size):
 					textState.fontSize = size
 					guard
-						let fontDictionary = contentStream.resolveResourceDictionary(category: .Font, key: fontKey, lookup: lookup)
+						let fontDictionary = resources.resolveResourceDictionary(category: .Font, key: fontKey, lookup: lookup)
 					else {
 						textState.font = nil
 						break
