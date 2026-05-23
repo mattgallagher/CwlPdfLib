@@ -21,10 +21,10 @@ struct ObjectView: View {
 		case .success(let object):
 			switch object {
 			case .dictionary(let dictionary):
-				DictionaryTable(layout: layout, dictionary: dictionary)
+				DictionaryTable(layout: layout, dictionary: dictionary, isStream: false)
 			case .stream(let pdfStream):
 				VSplitView {
-					DictionaryTable(layout: layout, dictionary: pdfStream.dictionary)
+					DictionaryTable(layout: layout, dictionary: pdfStream.dictionary, isStream: true)
 					VStack(alignment: .leading) {
 						Text("Stream content").font(.headline)
 						if pdfStream.dictionary.isImage(lookup: nil), let image = NSImage(data: pdfStream.data) {
@@ -39,7 +39,7 @@ struct ObjectView: View {
 					.frame(maxWidth: .infinity, maxHeight: .infinity)
 				}
 			case .array(let array):
-				ArrayTable(array: array)
+				ArrayTable(layout: layout, array: array)
 			default:
 				SingleValueTable(value: object)
 			}
@@ -53,8 +53,13 @@ private struct DictionaryTable: View {
 	let keyColumnTitle: String
 	let rows: [DictionaryTableRow]
 
-	init(layout: PdfObjectLayout, dictionary: PdfDictionary) {
-		self.keyColumnTitle = "\(layout.debugDescription): Keys"
+	init(layout: PdfObjectLayout, dictionary: PdfDictionary, isStream: Bool) {
+		let name = if isStream {
+			PdfObject.stream(PdfStream(objectIdentifier: PdfObjectIdentifier(number: 0, generation: 0), dictionary: [:], data: Data())).typeName
+		} else {
+			PdfObject.dictionary([:]).typeName
+		}
+		self.keyColumnTitle = "\(layout.debugDescription) (\(name))"
 		self.rows = dictionary
 			.sorted { $0.key < $1.key }
 			.flatMap { DictionaryTableRow.rows(key: $0.key, value: $0.value) }
@@ -78,7 +83,9 @@ struct DictionaryTableRow: Identifiable {
 	let key: String?
 	let valueKeyPath: String?
 	let indentLevel: Int
-	let value: PdfObject
+	let prefixText: String?
+	let suffixText: String?
+	let value: PdfObject?
 
 	var displayKey: String {
 		key ?? ""
@@ -89,6 +96,8 @@ struct DictionaryTableRow: Identifiable {
 			key: key,
 			valueKeyPath: nil,
 			indentLevel: 0,
+			prefixText: nil,
+			suffixText: nil,
 			value: value,
 			idPrefix: key
 		)
@@ -98,49 +107,124 @@ struct DictionaryTableRow: Identifiable {
 		key: String?,
 		valueKeyPath: String?,
 		indentLevel: Int,
+		prefixText: String?,
+		suffixText: String?,
 		value: PdfObject,
 		idPrefix: String
 	) -> [DictionaryTableRow] {
 		switch value {
 		case .array(let array):
-			if array.isEmpty {
-				return [DictionaryTableRow(id: idPrefix, key: key, valueKeyPath: valueKeyPath, indentLevel: indentLevel, value: value)]
+			if array.isEmpty || array.count == 1, let inlineValue = array.first {
+				return [DictionaryTableRow(
+					id: idPrefix,
+					key: key,
+					valueKeyPath: valueKeyPath,
+					indentLevel: indentLevel,
+					prefixText: [prefixText, "["].compactMap(\.self).joined(separator: " "),
+					suffixText: ["]", suffixText].compactMap(\.self).joined(separator: " "),
+					value: inlineValue
+				)]
+			} else if array.isEmpty {
+				return [DictionaryTableRow(
+					id: idPrefix,
+					key: key,
+					valueKeyPath: valueKeyPath,
+					indentLevel: indentLevel,
+					prefixText: [prefixText, "["].compactMap(\.self).joined(separator: " "),
+					suffixText: ["]", suffixText].compactMap(\.self).joined(separator: " "),
+					value: nil
+				)]
 			}
 
-			return array.enumerated().reduce(into: [DictionaryTableRow]()) { result, entry in
-				let childIndentLevel: Int = if entry.offset == 0 {
-					indentLevel
-				} else {
-					indentLevel + ((valueKeyPath != nil || indentLevel > 0) ? 1 : 0)
-				}
+			var result = [DictionaryTableRow(
+				id: idPrefix,
+				key: key,
+				valueKeyPath: valueKeyPath,
+				indentLevel: indentLevel,
+				prefixText: [prefixText, "["].compactMap(\.self).joined(separator: " "),
+				suffixText: nil,
+				value: nil
+			)]
 
+			for entry in array.enumerated() {
 				result.append(contentsOf: rows(
-					key: entry.offset == 0 ? key : nil,
-					valueKeyPath: entry.offset == 0 ? valueKeyPath : nil,
-					indentLevel: childIndentLevel,
+					key: nil,
+					valueKeyPath: nil,
+					indentLevel: indentLevel + 1,
+					prefixText: nil,
+					suffixText: nil,
 					value: entry.element,
 					idPrefix: "\(idPrefix)-\(entry.offset)"
 				))
 			}
+
+			result.append(DictionaryTableRow(
+				id: "\(idPrefix)-close",
+				key: nil,
+				valueKeyPath: nil,
+				indentLevel: indentLevel,
+				prefixText: "]",
+				suffixText: suffixText,
+				value: nil
+			))
+
+			return result
 		case .dictionary(let dictionary):
 			if dictionary.isEmpty {
-				return [DictionaryTableRow(id: idPrefix, key: key, valueKeyPath: valueKeyPath, indentLevel: indentLevel, value: value)]
+				return [DictionaryTableRow(
+					id: idPrefix,
+					key: key,
+					valueKeyPath: valueKeyPath,
+					indentLevel: indentLevel,
+					prefixText: [prefixText, "<<"].compactMap(\.self).joined(separator: " "),
+					suffixText: [">>", suffixText].compactMap(\.self).joined(separator: " "),
+					value: nil
+				)]
 			}
 
-			return dictionary
-				.sorted { $0.key < $1.key }
-				.enumerated()
-				.reduce(into: [DictionaryTableRow]()) { result, entry in
-					result.append(contentsOf: rows(
-						key: entry.offset == 0 ? key : nil,
-						valueKeyPath: [valueKeyPath, entry.element.key].compactMap(\.self).joined(separator: "."),
-						indentLevel: indentLevel,
-						value: entry.element.value,
-						idPrefix: "\(idPrefix).\(entry.element.key)"
-					))
-				}
+			var result = [DictionaryTableRow(
+				id: idPrefix,
+				key: key,
+				valueKeyPath: valueKeyPath,
+				indentLevel: indentLevel,
+				prefixText: [prefixText, "<<"].compactMap(\.self).joined(separator: " "),
+				suffixText: nil,
+				value: nil
+			)]
+
+			for entry in dictionary.sorted(by: { $0.key < $1.key }) {
+				result.append(contentsOf: rows(
+					key: nil,
+					valueKeyPath: entry.key,
+					indentLevel: indentLevel + 1,
+					prefixText: nil,
+					suffixText: nil,
+					value: entry.value,
+					idPrefix: "\(idPrefix).\(entry.key)"
+				))
+			}
+
+			result.append(DictionaryTableRow(
+				id: "\(idPrefix)-close",
+				key: nil,
+				valueKeyPath: nil,
+				indentLevel: indentLevel,
+				prefixText: ">>",
+				suffixText: suffixText,
+				value: nil
+			))
+
+			return result
 		default:
-			return [DictionaryTableRow(id: idPrefix, key: key, valueKeyPath: valueKeyPath, indentLevel: indentLevel, value: value)]
+			return [DictionaryTableRow(
+				id: idPrefix,
+				key: key,
+				valueKeyPath: valueKeyPath,
+				indentLevel: indentLevel,
+				prefixText: prefixText,
+				suffixText: suffixText,
+				value: value
+			)]
 		}
 	}
 }
@@ -150,27 +234,45 @@ private struct DictionaryValueCell: View {
 
 	var body: some View {
 		HStack(alignment: .firstTextBaseline, spacing: 6) {
-			Color.clear
-				.frame(width: CGFloat(row.indentLevel) * 16)
+			if row.indentLevel > 0 {
+				HStack(spacing: 0) {
+					ForEach(0..<row.indentLevel, id: \.self) { _ in
+						Color.clear.frame(width: 8)
+						Divider()
+						Color.clear.frame(width: 8)
+					}
+				}
+				.padding(.vertical, -8)
+			}
 			if let valueKeyPath = row.valueKeyPath {
 				Text("\(valueKeyPath):")
 					.foregroundStyle(.secondary)
 			}
-			PdfObjectValueCell(value: row.value)
+			if let prefixText = row.prefixText {
+				Text(prefixText)
+			}
+			if let value = row.value {
+				PdfObjectValueCell(value: value)
+			}
+			if let suffixText = row.suffixText {
+				Text(suffixText)
+			}
 		}
 	}
 }
 
 private struct ArrayTable: View {
 	let entries: [Entry]
+	let layout: PdfObjectLayout
 
-	init(array: PdfArray) {
+	init(layout: PdfObjectLayout, array: PdfArray) {
+		self.layout = layout
 		self.entries = array.enumerated().map { Entry(index: $0.offset, value: $0.element) }
 	}
 
 	var body: some View {
 		Table(entries) {
-			TableColumn(PdfObject.array([]).typeName) { entry in
+			TableColumn("\(layout.debugDescription) (\(PdfObject.array([]).typeName))") { entry in
 				PdfObjectValueCell(value: entry.value)
 			}
 		}

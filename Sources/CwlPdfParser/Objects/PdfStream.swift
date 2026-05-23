@@ -8,6 +8,12 @@ public struct PdfStream: Sendable, Hashable {
 	
 	public let dictionary: PdfDictionary
 	public let data: Data
+	
+	public init(objectIdentifier: PdfObjectIdentifier, dictionary: PdfDictionary, data: Data) {
+		self.objectIdentifier = objectIdentifier
+		self.dictionary = dictionary
+		self.data = data
+	}
 }
 
 extension PdfStream: CustomDebugStringConvertible {
