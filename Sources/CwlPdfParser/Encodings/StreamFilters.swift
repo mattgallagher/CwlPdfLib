@@ -17,7 +17,7 @@ extension PdfParseContext {
 			return Data()
 		}
 		guard var data = slice.pop(length: length).map(Data.init(_:)) else {
-			throw PdfParseError(context: self, failure: .objectEndedUnexpectedly)
+			throw PdfParseError(context: self, failure: .endOfRange)
 		}
 
 		// Apply implicit decryption if no explicit Crypt filter in the chain
