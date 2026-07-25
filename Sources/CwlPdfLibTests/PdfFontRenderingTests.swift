@@ -9,6 +9,30 @@ import Testing
 
 struct PdfFontRenderingTests {
 	@Test
+	func `GIVEN unusable descriptor metrics and no platform font WHEN measuring text THEN font bounding box is used`() throws {
+		let fontDictionary: PdfDictionary = [
+			.Encoding: .name("WinAnsiEncoding"),
+			.FirstChar: .integer(65),
+			.FontDescriptor: .dictionary([
+				.Ascent: .integer(0),
+				.Descent: .integer(0),
+				.FontBBox: .array([.integer(-100), .integer(-250), .integer(900), .integer(900)])
+			]),
+			.Subtype: .name(.Type1),
+			.Widths: .array([.integer(600)])
+		]
+		let font: PdfFont<CTFont> = try PdfFont(
+			fontDictionary: fontDictionary,
+			lookup: nil,
+			fontFromData: { _ in nil }
+		)
+		let measurement = measureTextRun(Data([65]), state: TextState(font: font))
+
+		#expect(measurement.ascentInTextSpace == 0.9)
+		#expect(measurement.descentInTextSpace == -0.25)
+	}
+
+	@Test
 	func `GIVEN embedded Georgia2 font WHEN decoding WinAnsi text THEN glyph run uses real glyphs instead of notdef`() throws {
 		let document = try fixtureDocument(
 			path: "PDFUA-Reference-Files_1-1_2024_02/PDFUA-Ref-2-01_Magazine-danish.pdf"
@@ -47,6 +71,8 @@ struct PdfFontRenderingTests {
 		let measurement = measureTextRun(Data([0x41]), state: state)
 
 		#expect(abs(measurement.advanceInUserSpace - 7.2) < 0.000_001)
+		#expect(measurement.ascentInTextSpace == 0.8)
+		#expect(measurement.descentInTextSpace == -0.2)
 
 		guard let context = CGContext(
 			data: nil,

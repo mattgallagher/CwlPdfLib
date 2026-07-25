@@ -36,14 +36,7 @@ func textDisplacementForTJOffset(_ offset: Double, state: TextState) -> CGFloat 
 func measureTextRun(_ data: Data, state: TextState) -> TextRunMeasurement {
 	let hScale = state.horizontalScale / 100
 	let fontSize = max(state.fontSize, 0.000_001)
-
-	let (ascentGlyphSpace, descentGlyphSpace) = if let font = state.font {
-		(font.common.ascent ?? 800, font.common.descent ?? -200)
-	} else {
-		(800, -200)
-	}
-	let ascent = CGFloat(ascentGlyphSpace) / 1000
-	let descent = CGFloat(descentGlyphSpace) / 1000
+	let (ascent, descent) = textVerticalMetrics(font: state.font)
 
 	guard let font = state.font else {
 		let advanceInTextSpace = CGFloat(data.count) * 0.6 * hScale
@@ -100,6 +93,44 @@ func measureTextRun(_ data: Data, state: TextState) -> TextRunMeasurement {
 		ascentInTextSpace: ascent,
 		descentInTextSpace: descent
 	)
+}
+
+private func textVerticalMetrics(font: PdfFont<CTFont>?) -> (ascent: CGFloat, descent: CGFloat) {
+	let fallback = (ascent: CGFloat(0.8), descent: CGFloat(-0.2))
+	guard let font else {
+		return fallback
+	}
+
+	if
+		let ascent = font.common.ascent,
+		let descent = font.common.descent,
+		ascent.isFinite,
+		descent.isFinite,
+		ascent > descent
+	{
+		return (CGFloat(ascent) / 1000, CGFloat(descent) / 1000)
+	}
+
+	if let platformFont = font.platformFont {
+		let pointSize = CTFontGetSize(platformFont)
+		if pointSize > 0 {
+			let ascent = CTFontGetAscent(platformFont) / pointSize
+			let descent = -CTFontGetDescent(platformFont) / pointSize
+			if ascent.isFinite, descent.isFinite, ascent > descent {
+				return (ascent, descent)
+			}
+		}
+	}
+
+	if let fontBBox = font.common.fontBBox {
+		let ascent = CGFloat(fontBBox.y + fontBBox.height) / 1000
+		let descent = CGFloat(fontBBox.y) / 1000
+		if ascent.isFinite, descent.isFinite, ascent > descent {
+			return (ascent, descent)
+		}
+	}
+
+	return fallback
 }
 
 extension CGContext {

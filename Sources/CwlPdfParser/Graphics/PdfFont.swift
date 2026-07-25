@@ -41,6 +41,9 @@ public struct PdfFont<PlatformFont> {
 			ascent: descriptorDict?[.Ascent]?.real(lookup: lookup),
 			descent: descriptorDict?[.Descent]?.real(lookup: lookup),
 			capHeight: descriptorDict?[.CapHeight]?.real(lookup: lookup),
+			fontBBox: descriptorDict?[.FontBBox]?
+				.array(lookup: lookup)
+				.flatMap { PdfRect(array: $0, lookup: lookup) },
 			italicAngle: descriptorDict?[.ItalicAngle]?.real(lookup: lookup)
 		)
 
@@ -167,6 +170,8 @@ public struct PDFFontCommon {
 	public let ascent: Double?
 	public let descent: Double?
 	public let capHeight: Double?
+	/// The font descriptor bounding box in glyph-space units.
+	public let fontBBox: PdfRect?
 	public let italicAngle: Double?
 }
 

@@ -8,6 +8,36 @@ import Testing
 
 struct PdfFeatureExtractionTests {
 	@Test
+	func `GIVEN zero descriptor metrics WHEN extracting embedded text THEN platform metrics provide nonzero bounds`() throws {
+		let document = try fixtureDocument(
+			path: "PDFUA-Reference-Files_1-1_2024_02/PDFUA-Ref-2-03_AcademicAbstract.pdf"
+		)
+		let page = try #require(document.pages.first)
+		let features = page.extract(features: .text, lookup: document.lookup)
+		let startIndex = try #require(features.firstIndex { feature in
+			guard case .text(let text, _) = feature.payload else {
+				return false
+			}
+			return text == "Dietrich"
+		})
+		let nameFeatures = features[startIndex...min(startIndex + 6, features.count - 1)]
+		let name = nameFeatures.compactMap { feature in
+			guard case .text(let text, _) = feature.payload else {
+				return nil
+			}
+			return text
+		}.joined()
+
+		#expect(name == "Dietrich von Seggern ")
+		for feature in nameFeatures {
+			guard case .text(let text, _) = feature.payload, !text.trimmingCharacters(in: .whitespaces).isEmpty else {
+				continue
+			}
+			#expect(feature.bounds.height > 0)
+		}
+	}
+
+	@Test
 	func `GIVEN page annotations WHEN extracting annotations only THEN only annotation features are returned`() throws {
 		let document = try basicFixtureDocument(filename: "three-page-images-annots.pdf")
 		let page = try #require(document.pages.first)
