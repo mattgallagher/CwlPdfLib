@@ -12,24 +12,30 @@ public struct PdfPage: Sendable, Hashable, Identifiable {
 		objectLayout
 	}
 	
+	func rectangle(for boxName: String, lookup: PdfObjectLookup?) -> PdfRect? {
+		guard let box = pageDictionary[boxName]?.array(lookup: lookup), let rect = PdfRect(
+			array: box,
+			lookup: lookup
+		) else {
+			return nil
+		}
+		return rect
+	}
+	
 	/// Returns the page rectangle in PDF coordinates (typically CropBox or MediaBox)
 	public func pageRect(lookup: PdfObjectLookup?) -> PdfRect {
-		// Try to get CropBox first (PDF specification preference)
-		if let cropBox = pageDictionary[.CropBox]?.array(lookup: lookup), let rect = PdfRect(
-			array: cropBox,
-			lookup: lookup
-		) {
-			return rect
+		let cropBox = rectangle(for: .CropBox, lookup: lookup)
+		let mediaBox = rectangle(for: .MediaBox, lookup: lookup)
+		if let cropBox, let mediaBox {
+			return cropBox.intersection(mediaBox) ?? mediaBox
+		} else if let cropBox {
+			return cropBox
 		}
-		
-		// Fall back to MediaBox if CropBox is not present
-		if let mediaBox = pageDictionary[.MediaBox]?.array(lookup: lookup), let rect = PdfRect(
-			array: mediaBox,
-			lookup: lookup
-		) {
-			return rect
+
+		if let mediaBox {
+			return mediaBox
 		}
-		
+
 		// If the page doesn't provide sizes, use the document size
 		return documentPageSize
 	}

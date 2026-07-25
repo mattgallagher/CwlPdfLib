@@ -210,6 +210,22 @@ struct PdfDocumentTests {
 		#expect((pageRect?.width ?? 0) > 0)
 		#expect((pageRect?.height ?? 0) > 0)
 	}
+
+	@Test
+	func `GIVEN a CropBox larger than MediaBox WHEN pageRect read THEN rectangle is constrained to MediaBox`() throws {
+		let fileURL = try #require(
+			Bundle.module.url(
+				forResource: "Fixtures/PDFUA-Reference-Files_1-1_2024_02/PDFUA-Ref-2-08_BookChapter.pdf",
+				withExtension: nil
+			)
+		)
+		let document = try PdfDocument(
+			source: PdfDataSource(Data(contentsOf: fileURL, options: .mappedIfSafe))
+		)
+		let page = try #require(document.pages.first)
+
+		#expect(page.pageRect(lookup: document.lookup) == PdfRect(x: 33, y: 33, width: 612, height: 783))
+	}
 }
 
 private func parseContentOperators(document: PdfDocument) throws -> [PdfOperator] {

@@ -1,4 +1,4 @@
-// CwlPdfLib. Copyright © 2025 Matt Gallagher. See LICENSE file for usage permissions.
+// CwlPdfLib. Copyright © 2026 Matt Gallagher. See LICENSE file for usage permissions.
 
 public struct PdfRect: Sendable, Hashable {
 	public let x: Double
@@ -11,6 +11,27 @@ public struct PdfRect: Sendable, Hashable {
 		self.y = y
 		self.width = width
 		self.height = height
+	}
+
+	/// Returns the rectangle shared by this rectangle and `other`, or `nil` when they do not overlap.
+	public func intersection(_ other: PdfRect) -> PdfRect? {
+		let intersectionX = max(x, other.x)
+		let intersectionY = max(y, other.y)
+		let intersectionMaxX = min(x + width, other.x + other.width)
+		let intersectionMaxY = min(y + height, other.y + other.height)
+		guard
+			intersectionX < intersectionMaxX,
+			intersectionY < intersectionMaxY
+		else {
+			return nil
+		}
+
+		return PdfRect(
+			x: intersectionX,
+			y: intersectionY,
+			width: intersectionMaxX - intersectionX,
+			height: intersectionMaxY - intersectionY
+		)
 	}
 	
 	public init?(array: PdfArray, lookup: PdfObjectLookup?) {
