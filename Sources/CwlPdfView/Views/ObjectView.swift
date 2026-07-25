@@ -72,6 +72,8 @@ struct ImageStreamExport {
 
 		if applySoftMask == false || pdfImage.softMask == nil {
 			switch pdfImage.encoding {
+			case .jbig2:
+				break
 			case .jpeg:
 				return ImageStreamExport(data: pdfImage.data, contentType: .jpeg, fileExtension: "jpg")
 			case .jpeg2000:

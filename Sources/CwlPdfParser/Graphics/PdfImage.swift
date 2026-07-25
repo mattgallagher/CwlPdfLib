@@ -13,6 +13,8 @@ public struct PdfImage: Sendable {
 	public let interpolate: Bool
 	public let intent: String?
 	public let imageMask: Bool
+	/// Decoded global segments referenced by `/DecodeParms/JBIG2Globals`.
+	public let jbig2Globals: Data?
 	public let softMask: PdfStream?
 	public let matte: [Double]?
 
@@ -42,6 +44,11 @@ public struct PdfImage: Sendable {
 
 		// Parse the filter to determine encoding
 		self.encoding = Self.parseEncoding(dict[.Filter], lookup: lookup)
+		self.jbig2Globals = Self.parseJbig2Globals(
+			filters: Self.parseFilters(dict[.Filter], lookup: lookup),
+			decodeParameters: dict[.DecodeParms],
+			lookup: lookup
+		)
 
 		// The stream data - may be encoded (JPEG) or decoded (raw bitmap)
 		self.data = stream.data
@@ -63,19 +70,7 @@ public struct PdfImage: Sendable {
 	}
 
 	static func parseEncoding(_ filterObj: PdfObject?, lookup: PdfObjectLookup?) -> ImageEncoding {
-		guard let filterObj else {
-			return .raw
-		}
-
-		// Filter can be a single name or an array of names
-		let filters: [String]
-		if let name = filterObj.name(lookup: lookup) {
-			filters = [name]
-		} else if let array = filterObj.array(lookup: lookup) {
-			filters = array.compactMap { $0.name(lookup: lookup) }
-		} else {
-			return .raw
-		}
+		let filters = parseFilters(filterObj, lookup: lookup)
 
 		// Check for JPEG encoding
 		if filters.contains("DCTDecode") || filters.contains("DCT") {
@@ -87,13 +82,47 @@ public struct PdfImage: Sendable {
 			return .jpeg2000
 		}
 
+		if filters.contains("JBIG2Decode") {
+			return .jbig2
+		}
+
 		// FlateDecode or other filters result in raw bitmap data after decoding
 		return .raw
+	}
+
+	private static func parseFilters(_ filterObj: PdfObject?, lookup: PdfObjectLookup?) -> [String] {
+		guard let filterObj else {
+			return []
+		}
+		if let name = filterObj.name(lookup: lookup) {
+			return [name]
+		}
+		return filterObj.array(lookup: lookup)?.compactMap { $0.name(lookup: lookup) } ?? []
+	}
+
+	private static func parseJbig2Globals(
+		filters: [String],
+		decodeParameters: PdfObject?,
+		lookup: PdfObjectLookup?
+	) -> Data? {
+		guard let filterIndex = filters.firstIndex(of: "JBIG2Decode") else {
+			return nil
+		}
+		let parameterArray = decodeParameters?.array(lookup: lookup)
+		let parameters = parameterArray.flatMap { array in
+			array.indices.contains(filterIndex) ? array[filterIndex] : nil
+		} ?? decodeParameters
+		return parameters?
+			.dictionary(lookup: lookup)?[.JBIG2Globals]?
+			.stream(lookup: lookup)?
+			.data
 	}
 
 }
 
 public enum ImageEncoding: Sendable, Hashable {
+	/// JBIG2 compressed bi-level image data.
+	case jbig2
 	case raw // Uncompressed bitmap data
 	case jpeg // DCTDecode - JPEG compressed
 	case jpeg2000 // JPXDecode - JPEG 2000 compressed

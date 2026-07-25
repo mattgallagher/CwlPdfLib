@@ -178,13 +178,23 @@ struct PdfRenderer {
 					// Check if this is an image XObject
 					if xobjectStream.dictionary.isImage(lookup: lookup) {
 						guard
-							let pdfImage = try? PdfImage(stream: xobjectStream, lookup: lookup),
-							let cgImage = pdfImage.createCGImage(lookup: lookup)
+							let pdfImage = try? PdfImage(stream: xobjectStream, lookup: lookup)
 						else {
 							break
 						}
-						// Images are drawn in a 1x1 unit square; the CTM positions and scales them
-						context.draw(cgImage, in: CGRect(x: 0, y: 0, width: 1, height: 1))
+						let imageBounds = CGRect(x: 0, y: 0, width: 1, height: 1)
+						if pdfImage.imageMask {
+							guard let mask = pdfImage.createCGImageMask() else {
+								break
+							}
+							context.saveGState()
+							context.clip(to: imageBounds, mask: mask)
+							context.fill(imageBounds)
+							context.restoreGState()
+						} else if let cgImage = pdfImage.createCGImage(lookup: lookup) {
+							// Images are drawn in a 1x1 unit square; the CTM positions and scales them
+							context.draw(cgImage, in: imageBounds)
+						}
 					}
 					// Handle Form XObjects (nested content streams)
 					else if xobjectStream.dictionary.isForm(lookup: lookup) {

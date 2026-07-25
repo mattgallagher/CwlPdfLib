@@ -26,6 +26,7 @@ public extension String {
 	static let CropBox = "CropBox"
 	static let Decode = "Decode"
 	static let DecodeParms = "DecodeParms"
+	static let JBIG2Globals = "JBIG2Globals"
 	static let DescendantFonts = "DescendantFonts"
 	static let Descent = "Descent"
 	static let DeviceCMYK = "DeviceCMYK"

@@ -5,6 +5,7 @@ import CoreGraphics
 import CwlPdfParser
 import Foundation
 import ImageIO
+import PdfiumFxcodec
 
 extension PdfImage {
 	/// Creates a CGImage from the PDF image data.
@@ -14,6 +15,8 @@ extension PdfImage {
 	/// - Returns: A CGImage if successful, nil otherwise.
 	public func createCGImage(lookup: PdfObjectLookup?, applySoftMask: Bool = true) -> CGImage? {
 		let baseImage = switch encoding {
+		case .jbig2:
+			createJBIG2Image(asMask: false)
 		case .jpeg:
 			createJPEGImage()
 		case .jpeg2000:
@@ -39,6 +42,112 @@ extension PdfImage {
 		}
 		
 		return baseImage
+	}
+
+	/// Creates a Core Graphics stencil mask from an `/ImageMask true` image.
+	public func createCGImageMask() -> CGImage? {
+		guard imageMask else {
+			return nil
+		}
+		return switch encoding {
+		case .jbig2:
+			createJBIG2Image(asMask: true)
+		case .jpeg, .jpeg2000, .raw:
+			createRawMaskImage()
+		}
+	}
+
+	private func createJBIG2Image(asMask: Bool) -> CGImage? {
+		guard
+			let jbig2Width = UInt32(exactly: width),
+			let jbig2Height = UInt32(exactly: height),
+			jbig2Width > 0,
+			jbig2Height > 0
+		else {
+			return nil
+		}
+		let stride = pdfium_fxcodec_jbig2_stride(jbig2Width)
+		guard
+			stride > 0,
+			height <= Int.max / stride
+		else {
+			return nil
+		}
+		var decoded = Data(count: stride * height)
+		let result = decoded.withUnsafeMutableBytes { destinationBuffer in
+			data.withUnsafeBytes { sourceBuffer in
+				jbig2Globals.withUnsafeBytesOrNil { globalsBuffer in
+					pdfium_fxcodec_jbig2_decode(
+						sourceBuffer.bindMemory(to: UInt8.self).baseAddress,
+						sourceBuffer.count,
+						globalsBuffer?.bindMemory(to: UInt8.self).baseAddress,
+						globalsBuffer?.count ?? 0,
+						jbig2Width,
+						jbig2Height,
+						destinationBuffer.bindMemory(to: UInt8.self).baseAddress,
+						destinationBuffer.count,
+						stride
+					)
+				}
+			}
+		}
+		guard result == PdfiumFxcodecResultSuccess else {
+			return nil
+		}
+		guard let provider = CGDataProvider(data: decoded as CFData) else {
+			return nil
+		}
+		let decodeValues = decode?.map { CGFloat($0) }
+		return decodeValues.withUnsafeBufferPointerOrNil { decodePointer in
+			if asMask {
+				return CGImage(
+					maskWidth: width,
+					height: height,
+					bitsPerComponent: 1,
+					bitsPerPixel: 1,
+					bytesPerRow: stride,
+					provider: provider,
+					decode: decodePointer?.baseAddress,
+					shouldInterpolate: interpolate
+				)
+			}
+			return CGImage(
+				width: width,
+				height: height,
+				bitsPerComponent: 1,
+				bitsPerPixel: 1,
+				bytesPerRow: stride,
+				space: CGColorSpaceCreateDeviceGray(),
+				bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.none.rawValue),
+				provider: provider,
+				decode: decodePointer?.baseAddress,
+				shouldInterpolate: interpolate,
+				intent: .defaultIntent
+			)
+		}
+	}
+
+	private func createRawMaskImage() -> CGImage? {
+		guard encoding == .raw else {
+			return nil
+		}
+		let bytesPerRow = (width + 7) / 8
+		guard let provider = CGDataProvider(data: data as CFData) else {
+			return nil
+		}
+		let decodeValues = decode?.map { CGFloat($0) }
+		return decodeValues.withUnsafeBufferPointerOrNil { decodePointer in
+			CGImage(
+				maskWidth: width,
+				height: height,
+				bitsPerComponent: 1,
+				bitsPerPixel: 1,
+				bytesPerRow: bytesPerRow,
+				provider: provider,
+				decode: decodePointer?.baseAddress,
+				shouldInterpolate: interpolate
+			)
+		}
 	}
 	
 	// MARK: - JPEG Image Creation
@@ -321,6 +430,17 @@ private extension Optional where Wrapped: Collection {
 		}
 		return try Array(self).withUnsafeBufferPointer { ptr in
 			try body(ptr)
+		}
+	}
+}
+
+private extension Optional where Wrapped == Data {
+	func withUnsafeBytesOrNil<R>(_ body: (UnsafeRawBufferPointer?) throws -> R) rethrows -> R {
+		guard let self else {
+			return try body(nil)
+		}
+		return try self.withUnsafeBytes { buffer in
+			try body(buffer)
 		}
 	}
 }

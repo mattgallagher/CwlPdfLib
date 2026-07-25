@@ -25,11 +25,19 @@ let package = Package(
 		// Targets are the basic building blocks of a package, defining a module or a test suite.
 		// Targets can depend on other targets in this package and products from dependencies.
 		.target(
+			name: "PdfiumFxcodec",
+			path: "Sources/PdfiumFxcodec",
+			publicHeadersPath: "include",
+			cxxSettings: [
+				.headerSearchPath("Vendor/pdfium")
+			]
+		),
+		.target(
 			name: "CwlPdfParser"
 		),
 		.target(
 			name: "CwlPdfRenderer",
-			dependencies: ["CwlPdfParser"]
+			dependencies: ["CwlPdfParser", "PdfiumFxcodec"]
 		),
 		.target(
 			name: "CwlPdfView",
@@ -43,5 +51,6 @@ let package = Package(
 			dependencies: ["CwlPdfParser", "CwlPdfRenderer", "CwlPdfView"],
 			resources: [.copy("Fixtures")]
 		)
-	]
+	],
+	cxxLanguageStandard: .cxx20
 )

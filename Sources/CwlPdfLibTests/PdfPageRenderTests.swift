@@ -17,7 +17,8 @@ struct PdfPageRenderTests {
 		("Basic/three-page-images-annots.pdf", 1, nil, 0.0004),
 		("Basic/three-page-images-annots.pdf", 2, nil, 0.0004),
 		("Basic/three-page-images-annots.pdf", 3, nil, 0.0004),
-		("PDFUA-Reference-Files_1-1_2024_02/PDFUA-Ref-2-01_Magazine-danish.pdf", 3, CGRect(x: 24, y: 126, width: 334, height: 430), 0.0006)
+		("PDFUA-Reference-Files_1-1_2024_02/PDFUA-Ref-2-01_Magazine-danish.pdf", 3, CGRect(x: 24, y: 126, width: 334, height: 430), 0.0006),
+		("PDFUA-Reference-Files_1-1_2024_02/PDFUA-Ref-2-01_Magazine-danish.pdf", 27, CGRect(x: 950, y: 530, width: 180, height: 200), 0.003)
 	])
 	func `GIVEN a fixture page WHEN rendered by CwlPdfRenderer and PDFKit THEN pixel difference remains below threshold`(fixturePath: String, pageNumber: Int, cropRect: CGRect?, threshold: Double) throws {
 		let fileURL = try #require(fixtureURL(path: fixturePath))
@@ -64,7 +65,7 @@ struct PdfPageRenderTests {
 		#expect(
 			difference.normalizedTotal < threshold,
 			"""
-			Expected less than 0.01% pixel difference but found \(difference.normalizedTotal * 100)% for \(fixturePath) page \(pageNumber).
+			Expected less than \(threshold * 100)% pixel difference but found \(difference.normalizedTotal * 100)% for \(fixturePath) page \(pageNumber).
 			rgb=\(difference.normalizedRGB * 100)% alpha=\(difference.normalizedAlpha * 100)% differentPixels=\(difference.differentPixels)/\(difference.totalPixels)
 			layout ours: \(difference.lhsLayout)
 			layout pdfkit: \(difference.rhsLayout)

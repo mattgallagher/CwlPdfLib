@@ -50,7 +50,11 @@ extension PdfParseContext {
 				throw PdfParseError(context: self, failure: .unsupportedFilter)
 			case "FlateDecode", "Fl":
 				data = try flateDecodeWithPredictor(data: data, params: params)
-			case "JBIG2Decode": throw PdfParseError(context: self, failure: .unsupportedFilter)
+			case "JBIG2Decode":
+				if isImage {
+					break
+				}
+				throw PdfParseError(context: self, failure: .unsupportedFilter)
 			case "JPXDecode":
 				if isImage {
 					break
