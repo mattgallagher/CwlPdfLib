@@ -252,7 +252,7 @@ extension PdfImage {
 				default: return nil
 				}
 			}
-		case .separation:
+		case .deviceN, .separation:
 			return nil
 		}
 		

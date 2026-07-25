@@ -10,6 +10,8 @@ public enum PdfFunction: Sendable, Hashable {
 	case exponential(ExponentialFunction)
 	/// Type 3: Stitching function - combines multiple functions
 	case stitching(StitchingFunction)
+	/// Type 4: PostScript calculator function
+	case calculator(CalculatorFunction)
 
 	public struct SampledFunction: Sendable, Hashable {
 		public let domain: [Double]
@@ -64,8 +66,9 @@ public enum PdfFunction: Sendable, Hashable {
 			return parseExponential(dictionary: dictionary, lookup: lookup)
 		case 3:
 			return parseStitching(dictionary: dictionary, lookup: lookup)
+		case 4:
+			return parseCalculator(dictionary: dictionary, data: streamData, lookup: lookup)
 		default:
-			// Type 4 (PostScript calculator) not supported
 			return nil
 		}
 	}
@@ -151,6 +154,8 @@ public enum PdfFunction: Sendable, Hashable {
 			return evaluateSampled(f, inputs: inputs)
 		case .stitching(let f):
 			return evaluateStitching(f, inputs: inputs)
+		case .calculator(let f):
+			return f.evaluate(inputs)
 		}
 	}
 

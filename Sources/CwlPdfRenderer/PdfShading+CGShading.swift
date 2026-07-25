@@ -76,6 +76,8 @@ extension PdfShading {
 			return CGColorSpaceCreateDeviceRGB()
 		case .deviceCMYK:
 			return CGColorSpace(name: CGColorSpace.genericCMYK)
+		case .deviceN:
+			return nil
 		case .iccBased(let components, let profile):
 			if let provider = CGDataProvider(data: profile as CFData),
 			   let iccColorSpace = CGColorSpace(iccData: provider) {

@@ -31,6 +31,7 @@ public extension String {
 	static let Descent = "Descent"
 	static let DeviceCMYK = "DeviceCMYK"
 	static let DeviceGray = "DeviceGray"
+	static let DeviceN = "DeviceN"
 	static let DeviceRGB = "DeviceRGB"
 	static let Differences = "Differences"
 	static let DocOpen = "DocOpen"

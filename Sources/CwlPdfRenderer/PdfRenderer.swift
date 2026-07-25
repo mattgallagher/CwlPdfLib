@@ -170,21 +170,11 @@ struct PdfRenderer {
 					let transform = CGAffineTransform(a: a, b: b, c: c, d: d, tx: tx, ty: ty)
 					context.concatenate(transform)
 				case .CS(let name):
-					if let deviceColorSpace = PdfColorSpace(name: name) {
-						renderState.colorState.strokeColorSpace = deviceColorSpace
-					} else if
-						let colorSpaceArray = content.resolveResourceArray(category: .ColorSpace, key: name, lookup: lookup),
-						let colorSpace = PdfColorSpace.parse(.array(colorSpaceArray), lookup: lookup)
-					{
+					if let colorSpace = resolveColorSpace(name: name, content: content, lookup: lookup) {
 						renderState.colorState.strokeColorSpace = colorSpace
 					}
 				case .cs(let name):
-					if let deviceColorSpace = PdfColorSpace(name: name) {
-						renderState.colorState.fillColorSpace = deviceColorSpace
-					} else if
-						let colorSpaceArray = content.resolveResourceArray(category: .ColorSpace, key: name, lookup: lookup),
-						let colorSpace = PdfColorSpace.parse(.array(colorSpaceArray), lookup: lookup)
-					{
+					if let colorSpace = resolveColorSpace(name: name, content: content, lookup: lookup) {
 						renderState.colorState.fillColorSpace = colorSpace
 					}
 				case .d(let phase, let array):
@@ -263,10 +253,20 @@ struct PdfRenderer {
 					context.fillPath(using: .evenOdd)
 					pathState.beginPath()
 				case .G(let gray):
-					renderState.colorState.setStrokeGray(CGFloat(gray))
+					renderState.colorState.strokeColorSpace = resolveColorSpace(
+						name: .DeviceGray,
+						content: content,
+						lookup: lookup
+					) ?? .deviceGray
+					renderState.colorState.setStrokeColor([CGFloat(gray)])
 					renderState.colorState.applyStrokeColor(to: context)
 				case .g(let gray):
-					renderState.colorState.setFillGray(CGFloat(gray))
+					renderState.colorState.fillColorSpace = resolveColorSpace(
+						name: .DeviceGray,
+						content: content,
+						lookup: lookup
+					) ?? .deviceGray
+					renderState.colorState.setFillColor([CGFloat(gray)])
 					renderState.colorState.applyFillColor(to: context)
 				case .gs(let name):
 					guard let gstateDictionary = content.resolveResourceDictionary(
@@ -303,10 +303,20 @@ struct PdfRenderer {
 					}
 					context.setLineJoin(lineJoin)
 				case .K(let c, let m, let y, let k):
-					renderState.colorState.setStrokeCMYK(CGFloat(c), CGFloat(m), CGFloat(y), CGFloat(k))
+					renderState.colorState.strokeColorSpace = resolveColorSpace(
+						name: .DeviceCMYK,
+						content: content,
+						lookup: lookup
+					) ?? .deviceCMYK
+					renderState.colorState.setStrokeColor([CGFloat(c), CGFloat(m), CGFloat(y), CGFloat(k)])
 					renderState.colorState.applyStrokeColor(to: context)
 				case .k(let c, let m, let y, let k):
-					renderState.colorState.setFillCMYK(CGFloat(c), CGFloat(m), CGFloat(y), CGFloat(k))
+					renderState.colorState.fillColorSpace = resolveColorSpace(
+						name: .DeviceCMYK,
+						content: content,
+						lookup: lookup
+					) ?? .deviceCMYK
+					renderState.colorState.setFillColor([CGFloat(c), CGFloat(m), CGFloat(y), CGFloat(k)])
 					renderState.colorState.applyFillColor(to: context)
 				case .l(let x, let y):
 					guard pathState.addLine(to: CGPoint(x: CGFloat(x), y: CGFloat(y))) else {
@@ -348,10 +358,20 @@ struct PdfRenderer {
 					context.addLine(to: CGPoint(x: minX, y: maxY))
 					context.closePath()
 				case .RG(let r, let g, let b):
-					renderState.colorState.setStrokeRGB(CGFloat(r), CGFloat(g), CGFloat(b))
+					renderState.colorState.strokeColorSpace = resolveColorSpace(
+						name: .DeviceRGB,
+						content: content,
+						lookup: lookup
+					) ?? .deviceRGB
+					renderState.colorState.setStrokeColor([CGFloat(r), CGFloat(g), CGFloat(b)])
 					renderState.colorState.applyStrokeColor(to: context)
 				case .rg(let r, let g, let b):
-					renderState.colorState.setFillRGB(CGFloat(r), CGFloat(g), CGFloat(b))
+					renderState.colorState.fillColorSpace = resolveColorSpace(
+						name: .DeviceRGB,
+						content: content,
+						lookup: lookup
+					) ?? .deviceRGB
+					renderState.colorState.setFillColor([CGFloat(r), CGFloat(g), CGFloat(b)])
 					renderState.colorState.applyFillColor(to: context)
 				case .ri:
 					break
@@ -496,5 +516,40 @@ struct PdfRenderer {
 			print(error)
 		}
 
+	}
+
+	private func resolveColorSpace(
+		name: String,
+		content: any PdfContentStream,
+		lookup: PdfObjectLookup?
+	) -> PdfColorSpace? {
+		let defaultName: String? = switch name {
+		case String.DeviceGray, "G": "DefaultGray"
+		case String.DeviceRGB, "RGB": "DefaultRGB"
+		case String.DeviceCMYK, "CMYK": "DefaultCMYK"
+		default: nil
+		}
+		if
+			let defaultName,
+			let colorSpaceArray = content.resolveResourceArray(
+				category: .ColorSpace,
+				key: defaultName,
+				lookup: lookup
+			),
+			let colorSpace = PdfColorSpace.parse(.array(colorSpaceArray), lookup: lookup)
+		{
+			return colorSpace
+		}
+		if let deviceColorSpace = PdfColorSpace(name: name) {
+			return deviceColorSpace
+		}
+		guard let colorSpaceArray = content.resolveResourceArray(
+			category: .ColorSpace,
+			key: name,
+			lookup: lookup
+		) else {
+			return nil
+		}
+		return PdfColorSpace.parse(.array(colorSpaceArray), lookup: lookup)
 	}
 }

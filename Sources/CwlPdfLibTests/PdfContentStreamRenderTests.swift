@@ -235,6 +235,79 @@ struct PdfContentStreamRenderTests {
 	}
 
 	@Test
+	func `GIVEN a DeviceN color space WHEN filled THEN its calculator tint transform supplies the color`() throws {
+		let tintTransform = PdfStream(
+			objectIdentifier: PdfObjectIdentifier(number: 20_001, generation: 0),
+			dictionary: [
+				.Domain: .array([.integer(0), .integer(1), .integer(0), .integer(1)]),
+				.FunctionType: .integer(4),
+				.Range: .array([
+					.integer(0), .integer(1), .integer(0), .integer(1),
+					.integer(0), .integer(1), .integer(0), .integer(1)
+				])
+			],
+			data: Data("{0 0}".utf8)
+		)
+		let colorSpace = try #require(PdfColorSpace.parse(
+			.array([
+				.name(.DeviceN),
+				.array([.name("Cyan"), .name("Magenta")]),
+				.name(.DeviceCMYK),
+				.stream(tintTransform)
+			]),
+			lookup: nil
+		))
+		guard let context = CGContext(
+			data: nil,
+			width: 10,
+			height: 10,
+			bitsPerComponent: 8,
+			bytesPerRow: 0,
+			space: CGColorSpaceCreateDeviceRGB(),
+			bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+		) else {
+			Issue.record("Failed to create CGContext")
+			return
+		}
+		var colorState = ColorState(fillColorSpace: colorSpace)
+		colorState.setFillColor([1, 0.7])
+		colorState.applyFillColor(to: context)
+		context.fill(CGRect(x: 0, y: 0, width: 10, height: 10))
+		let image = try #require(context.makeImage())
+		let color = try #require(rgbaPixel(atX: 5, y: 5, in: image))
+
+		#expect(color.red < 100)
+		#expect(color.green < 160)
+		#expect(color.blue > 100)
+	}
+
+	@Test
+	func `GIVEN a default device color space WHEN a device operator is used THEN the default is substituted`() throws {
+		let resources = """
+		/Resources << /ColorSpace << /DefaultGray [
+		/Separation /Ink /DeviceRGB
+		<< /FunctionType 2 /Domain [0 1] /C0 [1 0 0]
+		/C1 [0 1 0] /N 1 /Range [0 1 0 1 0 1] >>
+		] >> >>
+		"""
+		let document = try PdfDocument(
+			source: PdfDataSource(
+				minimalPdfData(
+					contentStream: "0 g 0 0 40 40 re f",
+					pageResources: resources
+				)
+			)
+		)
+		let page = try #require(document.pages.first)
+		let image = try #require(page.renderedImage(lookup: document.lookup, scale: 1))
+		let color = try #require(rgbaPixel(atX: 20, y: 20, in: image))
+
+		#expect(color.red > 200)
+		#expect(color.green < 50)
+		#expect(color.blue < 50)
+	}
+
+	@Test
 	func `GIVEN an inherited clip and no local soft mask WHEN SMask None is applied THEN the inherited clip remains active`() throws {
 		guard let context = CGContext(
 			data: nil,

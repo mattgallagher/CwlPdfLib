@@ -81,6 +81,20 @@ struct ColorState {
 			var cmykComponents = components.prefix(4).map(\.self)
 			cmykComponents.append(alpha)
 			return CGColor(colorSpace: CGColorSpaceCreateDeviceCMYK(), components: cmykComponents)
+		case .deviceN(let names, let alternate, let tintTransform):
+			guard
+				components.count >= names.count,
+				let alternateComponents = tintTransform.evaluate(
+					components.prefix(names.count).map { Double($0) }
+				)
+			else {
+				return nil
+			}
+			return createCGColor(
+				colorSpace: alternate,
+				components: alternateComponents.map { CGFloat($0) },
+				alpha: alpha
+			)
 		case .iccBased(let componentCount, let profile):
 			guard components.count >= componentCount else { return nil }
 			if let provider = CGDataProvider(data: profile as CFData),

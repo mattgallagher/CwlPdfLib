@@ -6,6 +6,8 @@ public enum PdfColorSpace: Sendable, Hashable {
 	case deviceGray
 	case deviceRGB
 	case deviceCMYK
+	/// A multi-component named color space converted through an alternate color space.
+	indirect case deviceN(names: [String], alternate: PdfColorSpace, tintTransform: PdfFunction)
 	indirect case indexed(base: PdfColorSpace, hival: Int, lookup: Data?)
 	case iccBased(components: Int, profile: Data)
 	indirect case separation(name: String, alternate: PdfColorSpace, tintTransform: PdfFunction)
@@ -31,6 +33,8 @@ public enum PdfColorSpace: Sendable, Hashable {
 			3
 		case .deviceCMYK:
 			4
+		case .deviceN(let names, _, _):
+			names.count
 		case .indexed:
 			1 // Indexed uses a single index value per pixel
 		case .iccBased(let components, _):
@@ -47,7 +51,7 @@ public enum PdfColorSpace: Sendable, Hashable {
 			true
 		case .iccBased(let components, _):
 			components == 4
-		case .separation(_, let alternate, _):
+		case .deviceN(_, let alternate, _), .separation(_, let alternate, _):
 			alternate.isCMYK
 		default:
 			false
@@ -79,6 +83,23 @@ public enum PdfColorSpace: Sendable, Hashable {
 						return nil
 					}
 					return .separation(name: name, alternate: alternate, tintTransform: tintTransform)
+
+				case .DeviceN:
+					// [/DeviceN names alternateSpace tintTransform attributes]
+					guard
+						array.count >= 4,
+						let nameObjects = array[1].array(lookup: lookup),
+						!nameObjects.isEmpty,
+						let alternate = parse(array[2], lookup: lookup),
+						let tintTransform = PdfFunction.parse(array[3], lookup: lookup)
+					else {
+						return nil
+					}
+					let names = nameObjects.compactMap { $0.name(lookup: lookup) }
+					guard names.count == nameObjects.count else {
+						return nil
+					}
+					return .deviceN(names: names, alternate: alternate, tintTransform: tintTransform)
 
 				case .Indexed:
 					// [/Indexed baseColorSpace hival lookupData]
@@ -121,6 +142,8 @@ public extension PdfColorSpace {
 			  (.deviceRGB, .deviceRGB),
 			  (.deviceCMYK, .deviceCMYK):
 			true
+		case (.deviceN(let names1, let alternate1, let tintTransform1), .deviceN(let names2, let alternate2, let tintTransform2)):
+			names1 == names2 && alternate1 == alternate2 && tintTransform1 == tintTransform2
 		case (.indexed(let base1, let hival1, let lookup1), .indexed(let base2, let hival2, let lookup2)):
 			base1 == base2 && hival1 == hival2 && lookup1 == lookup2
 		case (.iccBased(let c1, let p1), .iccBased(let c2, let p2)):
@@ -140,17 +163,22 @@ public extension PdfColorSpace {
 			hasher.combine(1)
 		case .deviceCMYK:
 			hasher.combine(2)
-		case .indexed(let base, let hival, let lookup):
+		case .deviceN(let names, let alternate, let tintTransform):
 			hasher.combine(3)
+			hasher.combine(names)
+			hasher.combine(alternate)
+			hasher.combine(tintTransform)
+		case .indexed(let base, let hival, let lookup):
+			hasher.combine(4)
 			hasher.combine(base)
 			hasher.combine(hival)
 			hasher.combine(lookup)
 		case .iccBased(let components, let profile):
-			hasher.combine(4)
+			hasher.combine(5)
 			hasher.combine(components)
 			hasher.combine(profile)
 		case .separation(let name, let alternate, let tintTransform):
-			hasher.combine(5)
+			hasher.combine(6)
 			hasher.combine(name)
 			hasher.combine(alternate)
 			hasher.combine(tintTransform)
