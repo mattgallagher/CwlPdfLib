@@ -27,6 +27,12 @@ extension PdfPage {
 	) throws {
 		try cancellationCheck()
 		
+		context.saveGState()
+		defer {
+			context.restoreGState()
+		}
+		context.applyPdfInitialGraphicsState(colorState: ColorState())
+
 		let rect = renderBounds(lookup: lookup)
 		let deviceScaleX = max(hypot(context.ctm.a, context.ctm.c), 1)
 		let deviceScaleY = max(hypot(context.ctm.b, context.ctm.d), 1)
@@ -165,8 +171,10 @@ extension PdfPage {
 		}
 		
 		if let backgroundColor {
+			context.saveGState()
 			context.setFillColor(backgroundColor)
 			context.fill(CGRect(x: 0, y: 0, width: pixelWidth, height: pixelHeight))
+			context.restoreGState()
 		}
 		
 		try cancellationCheck()

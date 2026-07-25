@@ -8,6 +8,60 @@ import Testing
 
 struct PdfContentStreamRenderTests {
 	@Test
+	func `GIVEN content without a color operator WHEN rendered over a white background THEN PDF initial black is used`() throws {
+		let document = try PdfDocument(
+			source: PdfDataSource(minimalPdfData(contentStream: "0 0 40 40 re f"))
+		)
+		let page = try #require(document.pages.first)
+		let image = try #require(page.renderedImage(lookup: document.lookup, scale: 1))
+
+		#expect(pixel(atX: 20, y: 20, in: image) == .black)
+	}
+
+	@Test
+	func `GIVEN a caller graphics state WHEN a page is rendered THEN PDF initial values are isolated from the caller`() throws {
+		let document = try PdfDocument(
+			source: PdfDataSource(
+				minimalPdfData(contentStream: "0 0 20 40 re f 30 0 m 30 40 l S")
+			)
+		)
+		let page = try #require(document.pages.first)
+		guard let context = CGContext(
+			data: nil,
+			width: 40,
+			height: 40,
+			bitsPerComponent: 8,
+			bytesPerRow: 0,
+			space: CGColorSpaceCreateDeviceRGB(),
+			bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+		) else {
+			Issue.record("Failed to create CGContext")
+			return
+		}
+		context.setFillColor(CGColor(gray: 1, alpha: 1))
+		context.fill(CGRect(x: 0, y: 0, width: 40, height: 40))
+		context.setFillColor(CGColor(red: 1, green: 0, blue: 0, alpha: 1))
+		context.setLineDash(phase: 0, lengths: [2, 2])
+		context.setLineWidth(9)
+		context.setStrokeColor(CGColor(red: 1, green: 0, blue: 0, alpha: 1))
+
+		try page.render(in: context, lookup: document.lookup, cancellationCheck: {})
+		context.fill(CGRect(x: 35, y: 0, width: 5, height: 40))
+		let image = try #require(context.makeImage())
+		let initialStroke = try #require(rgbaPixel(atX: 30, y: 20, in: image))
+		let restoredColor = try #require(rgbaPixel(atX: 37, y: 20, in: image))
+
+		#expect(pixel(atX: 10, y: 20, in: image) == .black)
+		#expect(pixel(atX: 26, y: 20, in: image) == .white)
+		#expect(initialStroke.red == initialStroke.green)
+		#expect(initialStroke.green == initialStroke.blue)
+		#expect(initialStroke.red < 255)
+		#expect(restoredColor.red > 200)
+		#expect(restoredColor.green < 100)
+		#expect(restoredColor.blue < 100)
+	}
+
+	@Test
 	func `GIVEN an image render request WHEN page renderer completes THEN image has requested dimensions`() async throws {
 		let document = try PdfDocument(source: PdfDataSource(minimalPdfData(contentStream: "0 g 0 0 40 40 re f")))
 		let page = try #require(document.pages.first)

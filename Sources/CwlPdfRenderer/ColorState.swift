@@ -4,11 +4,11 @@ import CoreGraphics
 import CwlPdfParser
 
 struct ColorState {
-	var strokeColorSpace: PdfColorSpace = .deviceRGB
+	var strokeColorSpace: PdfColorSpace = .deviceGray
 	var strokeComponents: [CGFloat] = [0]
 	var strokeAlpha: CGFloat = 1
 
-	var fillColorSpace: PdfColorSpace = .deviceRGB
+	var fillColorSpace: PdfColorSpace = .deviceGray
 	var fillComponents: [CGFloat] = [0]
 	var fillAlpha: CGFloat = 1
 

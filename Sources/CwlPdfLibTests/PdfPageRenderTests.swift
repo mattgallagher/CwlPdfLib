@@ -18,7 +18,9 @@ struct PdfPageRenderTests {
 		("Basic/three-page-images-annots.pdf", 2, nil, 0.0004),
 		("Basic/three-page-images-annots.pdf", 3, nil, 0.0004),
 		("PDFUA-Reference-Files_1-1_2024_02/PDFUA-Ref-2-01_Magazine-danish.pdf", 3, CGRect(x: 24, y: 126, width: 334, height: 430), 0.0006),
-		("PDFUA-Reference-Files_1-1_2024_02/PDFUA-Ref-2-01_Magazine-danish.pdf", 27, CGRect(x: 950, y: 530, width: 180, height: 200), 0.003)
+		("PDFUA-Reference-Files_1-1_2024_02/PDFUA-Ref-2-01_Magazine-danish.pdf", 27, CGRect(x: 950, y: 530, width: 180, height: 200), 0.003),
+		("PDFUA-Reference-Files_1-1_2024_02/PDFUA-Ref-2-03_AcademicAbstract.pdf", 1, nil, 0.0002),
+		("PDFUA-Reference-Files_1-1_2024_02/PDFUA-Ref-2-03_AcademicAbstract.pdf", 2, nil, 0.0002)
 	])
 	func `GIVEN a fixture page WHEN rendered by CwlPdfRenderer and PDFKit THEN pixel difference remains below threshold`(fixturePath: String, pageNumber: Int, cropRect: CGRect?, threshold: Double) throws {
 		let fileURL = try #require(fixtureURL(path: fixturePath))

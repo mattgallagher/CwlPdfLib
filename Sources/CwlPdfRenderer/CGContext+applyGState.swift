@@ -49,6 +49,20 @@ struct RenderState {
 }
 
 extension CGContext {
+	func applyPdfInitialGraphicsState(colorState: ColorState) {
+		setAlpha(1)
+		setBlendMode(.normal)
+		setLineCap(.butt)
+		setLineDash(phase: 0, lengths: [])
+		setLineJoin(.miter)
+		setLineWidth(1)
+		setMiterLimit(10)
+		setTextDrawingMode(.fill)
+		textMatrix = .identity
+		colorState.applyFillColor(to: self)
+		colorState.applyStrokeColor(to: self)
+	}
+
 	func reapplyClips(renderState: RenderState, renderStack: [RenderState]) {
 		let pathBackup = path
 		beginPath()
