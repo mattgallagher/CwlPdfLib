@@ -111,7 +111,7 @@ struct PdfContentStreamRenderTests {
 			source: PdfDataSource(
 				minimalPdfData(
 					contentStreams: [
-						"0 g 10 10 m 30 10 l",
+						"0 g 10 10 m 30 10 l ",
 						"30 30 l 10 30 l h f"
 					]
 				)

@@ -52,16 +52,13 @@ extension PdfContentStream {
 			state.renderState.addClipPath(bboxPath, ctm: context.ctm, fillRule: .winding)
 		}
 		
-		for stream in streams {
-			try cancellationCheck()
-			try state.render(
-				stream,
-				resources: self,
-				in: context,
-				lookup: lookup,
-				cancellationCheck: cancellationCheck
-			)
-		}
+		try cancellationCheck()
+		try state.render(
+			self,
+			in: context,
+			lookup: lookup,
+			cancellationCheck: cancellationCheck
+		)
 	}
 
 	func render(

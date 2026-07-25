@@ -47,6 +47,8 @@ public enum PdfParseFailure: Int, Sendable {
 public enum PdfParseIntent: Equatable, Sendable {
 	/// Parsing operators from the identified content stream object.
 	case contentOperatorStream(streamObject: PdfObjectIdentifier)
+	/// Parsing operators from an ordered collection of content stream objects.
+	case contentOperatorStreams(streamObjects: [PdfObjectIdentifier])
 	/// Parsing either a classic cross-reference table or cross-reference stream header.
 	case crossReferenceSection
 	/// Parsing the identified cross-reference stream object.
@@ -77,7 +79,7 @@ extension PdfParseIntent {
 		switch self {
 		case .indirectObject(let objectIdentifier):
 			objectIdentifier
-		case .contentOperatorStream, .crossReferenceSection, .crossReferenceStream, .encodingCMap, .objectFromObjectStream, .objectStreamHeader, .pdfHeader, .pdfObject, .pdfStructureScan, .startXrefAndEof, .toUnicodeCMap:
+		case .contentOperatorStream, .contentOperatorStreams, .crossReferenceSection, .crossReferenceStream, .encodingCMap, .objectFromObjectStream, .objectStreamHeader, .pdfHeader, .pdfObject, .pdfStructureScan, .startXrefAndEof, .toUnicodeCMap:
 			nil
 		}
 	}
@@ -87,7 +89,7 @@ extension PdfParseIntent {
 		switch self {
 		case .indirectObject(let objectIdentifier):
 			objectIdentifier
-		case .contentOperatorStream, .crossReferenceSection, .crossReferenceStream, .encodingCMap, .objectFromObjectStream, .objectStreamHeader, .pdfHeader, .pdfObject, .pdfStructureScan, .startXrefAndEof, .toUnicodeCMap:
+		case .contentOperatorStream, .contentOperatorStreams, .crossReferenceSection, .crossReferenceStream, .encodingCMap, .objectFromObjectStream, .objectStreamHeader, .pdfHeader, .pdfObject, .pdfStructureScan, .startXrefAndEof, .toUnicodeCMap:
 			nil
 		}
 	}

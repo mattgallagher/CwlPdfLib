@@ -189,9 +189,13 @@ public struct PdfObjectLookup: Sendable {
 }
 
 final class PdfObjectCache: Sendable {
+	struct ContentOperatorKey: Hashable, Sendable {
+		let streamObjectIdentifiers: [PdfObjectIdentifier]
+	}
+
 	struct State: Sendable {
 		var cachedObjects = [PdfObjectIdentifier: PdfObject]()
-		var contentOperators = [PdfObjectIdentifier: [PdfOperator]]()
+		var contentOperators = [ContentOperatorKey: [PdfOperator]]()
 		
 		// Changed objects exist only in the cachedObjects dictionary and must not be evicted until file save
 		var changedObjects = Set<PdfObjectIdentifier>()
@@ -208,11 +212,21 @@ final class PdfObjectCache: Sendable {
 	}
 
 	func cachedContentOperators(for objectIdentifier: PdfObjectIdentifier) -> [PdfOperator]? {
-		state.withLock { $0.contentOperators[objectIdentifier] }
+		cachedContentOperators(for: [objectIdentifier])
 	}
 
 	func cacheContentOperators(_ operators: [PdfOperator], for objectIdentifier: PdfObjectIdentifier) {
-		state.withLock { $0.contentOperators[objectIdentifier] = operators }
+		cacheContentOperators(operators, for: [objectIdentifier])
+	}
+
+	func cachedContentOperators(for objectIdentifiers: [PdfObjectIdentifier]) -> [PdfOperator]? {
+		let key = ContentOperatorKey(streamObjectIdentifiers: objectIdentifiers)
+		return state.withLock { $0.contentOperators[key] }
+	}
+
+	func cacheContentOperators(_ operators: [PdfOperator], for objectIdentifiers: [PdfObjectIdentifier]) {
+		let key = ContentOperatorKey(streamObjectIdentifiers: objectIdentifiers)
+		state.withLock { $0.contentOperators[key] = operators }
 	}
 
 	func isChanged(for objectIdentifier: PdfObjectIdentifier) -> Bool {

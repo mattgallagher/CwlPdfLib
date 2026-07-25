@@ -9,6 +9,61 @@ public protocol PdfContentStream {
 }
 
 extension PdfContentStream {
+	/// Parses PDF content operators from the ordered streams as one logical content stream.
+	///
+	/// - Parameters:
+	///   - lookup: The object lookup whose shared cache stores a completed operator list.
+	///   - visitor: A closure invoked for each operator. Return `false` to stop parsing.
+	public func parseContentOperators(
+		lookup: PdfObjectLookup? = nil,
+		_ visitor: (PdfOperator) throws -> Bool
+	) throws {
+		guard let firstStream = streams.first else {
+			return
+		}
+		guard streams.count > 1 else {
+			try firstStream.parseContentOperators(lookup: lookup, visitor)
+			return
+		}
+
+		let objectIdentifiers = streams.map(\.objectIdentifier)
+		if let cachedOperators = lookup?.mutableState.cachedContentOperators(for: objectIdentifiers) {
+			for cachedOperator in cachedOperators {
+				if try !visitor(cachedOperator) {
+					return
+				}
+			}
+			return
+		}
+
+		var data = Data()
+		data.reserveCapacity(streams.reduce(0) { $0 + $1.data.count })
+		for stream in streams {
+			data.append(stream.data)
+		}
+
+		var parsedOperators = [PdfOperator]()
+		var parsedToEnd = false
+		try data.parseContext(
+			intent: .contentOperatorStreams(streamObjects: objectIdentifiers)
+		) { context in
+			repeat {
+				guard let nextOperator = try PdfOperator.parseNext(context: &context) else {
+					parsedToEnd = true
+					return
+				}
+				parsedOperators.append(nextOperator)
+				if try !visitor(nextOperator) {
+					return
+				}
+			} while true
+		}
+
+		if parsedToEnd {
+			lookup?.mutableState.cacheContentOperators(parsedOperators, for: objectIdentifiers)
+		}
+	}
+
 	/// Resolves a named resource array in the specified resource category.
 	public func resolveResourceArray(category: PdfResourceCategory, key: String, lookup: PdfObjectLookup?) -> PdfArray? {
 		resources?[category.rawValue]?.dictionary(lookup: lookup)?[key]?.array(lookup: lookup)

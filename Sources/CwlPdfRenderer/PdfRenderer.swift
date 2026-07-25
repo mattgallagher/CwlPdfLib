@@ -70,8 +70,36 @@ struct PdfRenderer {
 		lookup: PdfObjectLookup?,
 		cancellationCheck: () throws -> Void
 	) throws {
+		let content = PdfPageContent(streams: [stream], resources: resources.resources)
+		try render(
+			content,
+			in: context,
+			lookup: lookup,
+			cancellationCheck: cancellationCheck
+		)
+	}
+
+	mutating func render(
+		_ content: any PdfContentStream,
+		in context: CGContext,
+		lookup: PdfObjectLookup?
+	) {
+		try? render(
+			content,
+			in: context,
+			lookup: lookup,
+			cancellationCheck: {}
+		)
+	}
+
+	mutating func render(
+		_ content: any PdfContentStream,
+		in context: CGContext,
+		lookup: PdfObjectLookup?,
+		cancellationCheck: () throws -> Void
+	) throws {
 		do {
-			try stream.parseContentOperators(lookup: lookup) { op in
+			try content.parseContentOperators(lookup: lookup) { op in
 				try cancellationCheck()
 				
 				switch op {
@@ -145,7 +173,7 @@ struct PdfRenderer {
 					if let deviceColorSpace = PdfColorSpace(name: name) {
 						renderState.colorState.strokeColorSpace = deviceColorSpace
 					} else if
-						let colorSpaceArray = resources.resolveResourceArray(category: .ColorSpace, key: name, lookup: lookup),
+						let colorSpaceArray = content.resolveResourceArray(category: .ColorSpace, key: name, lookup: lookup),
 						let colorSpace = PdfColorSpace.parse(.array(colorSpaceArray), lookup: lookup)
 					{
 						renderState.colorState.strokeColorSpace = colorSpace
@@ -154,7 +182,7 @@ struct PdfRenderer {
 					if let deviceColorSpace = PdfColorSpace(name: name) {
 						renderState.colorState.fillColorSpace = deviceColorSpace
 					} else if
-						let colorSpaceArray = resources.resolveResourceArray(category: .ColorSpace, key: name, lookup: lookup),
+						let colorSpaceArray = content.resolveResourceArray(category: .ColorSpace, key: name, lookup: lookup),
 						let colorSpace = PdfColorSpace.parse(.array(colorSpaceArray), lookup: lookup)
 					{
 						renderState.colorState.fillColorSpace = colorSpace
@@ -167,7 +195,7 @@ struct PdfRenderer {
 				case .d1:
 					break
 				case .Do(let xobjectName):
-					guard let xobjectStream = resources.resolveResourceStream(
+					guard let xobjectStream = content.resolveResourceStream(
 						category: .XObject,
 						key: xobjectName,
 						lookup: lookup
@@ -200,7 +228,7 @@ struct PdfRenderer {
 					else if xobjectStream.dictionary.isForm(lookup: lookup) {
 						let formContent = PdfFormContent(
 							stream: xobjectStream,
-							resources: resources.resources,
+							resources: content.resources,
 							lookup: lookup
 						)
 						try formContent.render(
@@ -241,7 +269,7 @@ struct PdfRenderer {
 					renderState.colorState.setFillGray(CGFloat(gray))
 					renderState.colorState.applyFillColor(to: context)
 				case .gs(let name):
-					guard let gstateDictionary = resources.resolveResourceDictionary(
+					guard let gstateDictionary = content.resolveResourceDictionary(
 						category: .ExtGState,
 						key: name,
 						lookup: lookup
@@ -351,7 +379,7 @@ struct PdfRenderer {
 					renderState.colorState.setFillColor(colors.map { CGFloat($0) })
 					renderState.colorState.applyFillColor(to: context)
 				case .sh(let shadingName):
-					guard let shadingDictionary = resources.resolveResourceDictionary(
+					guard let shadingDictionary = content.resolveResourceDictionary(
 						category: .Shading,
 						key: shadingName,
 						lookup: lookup
@@ -378,7 +406,7 @@ struct PdfRenderer {
 				case .Tf(let fontKey, let size):
 					textState.fontSize = size
 					guard
-						let fontDictionary = resources.resolveResourceDictionary(category: .Font, key: fontKey, lookup: lookup)
+						let fontDictionary = content.resolveResourceDictionary(category: .Font, key: fontKey, lookup: lookup)
 					else {
 						textState.font = nil
 						break

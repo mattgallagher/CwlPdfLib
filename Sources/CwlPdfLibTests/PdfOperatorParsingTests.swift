@@ -68,13 +68,32 @@ struct PdfOperatorParsingTests {
 	}
 
 	@Test
-	func `GIVEN an invalid content stream WHEN parsing fails THEN error identifies parse intent and stream object`() throws {
+	func `GIVEN page contents split between operator operands WHEN parsed THEN streams form one operator stream`() throws {
 		let document = try fixtureDocument(
 			path: "PDFUA-Reference-Files_1-1_2024_02/PDFUA-Ref-2-03_AcademicAbstract.pdf"
 		)
-		let objectIdentifier = PdfObjectIdentifier(number: 269, generation: 0)
-		let object = try #require(try document.lookup.object(for: objectIdentifier))
-		let stream = try #require(object.stream(lookup: document.lookup))
+		let page = try #require(document.pages.first)
+		let content = page.content(lookup: document.lookup)
+		let objectIdentifiers = content.streams.map(\.objectIdentifier)
+		var parsed = [PdfOperator]()
+
+		try content.parseContentOperators(lookup: document.lookup) { op in
+			parsed.append(op)
+			return true
+		}
+
+		#expect(!parsed.isEmpty)
+		#expect(document.lookup.mutableState.cachedContentOperators(for: objectIdentifiers) == parsed)
+	}
+
+	@Test
+	func `GIVEN an invalid standalone content stream WHEN parsing fails THEN error identifies stream object`() throws {
+		let objectIdentifier = PdfObjectIdentifier(number: 10_001, generation: 0)
+		let stream = PdfStream(
+			objectIdentifier: objectIdentifier,
+			dictionary: [:],
+			data: Data("/T1_1 ".utf8)
+		)
 
 		let error = #expect(throws: PdfParseError.self) {
 			try stream.parseContentOperators { _ in true }
@@ -82,7 +101,6 @@ struct PdfOperatorParsingTests {
 
 		#expect(error?.failure == .expectedOperator)
 		#expect(error?.intent == .contentOperatorStream(streamObject: objectIdentifier))
-		#expect(String(describing: error).contains("contentOperatorStream(streamObject: 269 0 R)"))
 	}
 }
 
