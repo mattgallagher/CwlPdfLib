@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		43AE80CBEFBE2B266595AB74 /* CwlPdfApp.icon in Resources */ = {isa = PBXBuildFile; fileRef = D2D1E38DBE31A66EF389D37E /* CwlPdfApp.icon */; };
 		5F4F5702CBD4B764116C3717 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 87BFE48BAE9A19F8CB0FFB46 /* Assets.xcassets */; };
 		6CB1103014E66277CE1689AE /* CwlPdfApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A7A902EABB5237711B3E165 /* CwlPdfApp.swift */; };
 		7D4378C88E4E1404BB635460 /* PageViewPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBC85D912983ECE405A367F3 /* PageViewPreview.swift */; };
@@ -23,6 +24,7 @@
 		BBC85D912983ECE405A367F3 /* PageViewPreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PageViewPreview.swift; sourceTree = "<group>"; };
 		BE45582895601A2518835EA7 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		BE954613C5D2CC7461CC9618 /* CwlPdfApp.xctestplan */ = {isa = PBXFileReference; path = CwlPdfApp.xctestplan; sourceTree = "<group>"; };
+		D2D1E38DBE31A66EF389D37E /* CwlPdfApp.icon */ = {isa = PBXFileReference; lastKnownFileType = wrapper.icon; path = CwlPdfApp.icon; sourceTree = "<group>"; };
 		E8898324D51417072CAD3976 /* Preview.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Preview.xcassets; sourceTree = "<group>"; };
 		FF163B13490A42592CA6B5B6 /* CwlPdfLib */ = {isa = PBXFileReference; lastKnownFileType = folder; name = CwlPdfLib; path = .; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
@@ -51,6 +53,7 @@
 			isa = PBXGroup;
 			children = (
 				87BFE48BAE9A19F8CB0FFB46 /* Assets.xcassets */,
+				D2D1E38DBE31A66EF389D37E /* CwlPdfApp.icon */,
 				8A7A902EABB5237711B3E165 /* CwlPdfApp.swift */,
 				BE954613C5D2CC7461CC9618 /* CwlPdfApp.xctestplan */,
 				BE45582895601A2518835EA7 /* Info.plist */,
@@ -143,6 +146,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				5F4F5702CBD4B764116C3717 /* Assets.xcassets in Resources */,
+				43AE80CBEFBE2B266595AB74 /* CwlPdfApp.icon in Resources */,
 				B9587B9C049285970FA8C9D0 /* Preview.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -285,7 +289,7 @@
 		7B0F32F404DEF25E14C698F7 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_APPICON_NAME = CwlPdfApp;
 				COMBINE_HIDPI_IMAGES = YES;
 				DEVELOPMENT_ASSET_PATHS = CwlPdfApp/Preview.xcassets;
 				ENABLE_PREVIEWS = YES;
@@ -303,7 +307,7 @@
 		AA76F8B2BBF3516AF658D69A /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_APPICON_NAME = CwlPdfApp;
 				COMBINE_HIDPI_IMAGES = YES;
 				DEVELOPMENT_ASSET_PATHS = CwlPdfApp/Preview.xcassets;
 				ENABLE_PREVIEWS = YES;

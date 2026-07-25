@@ -44,6 +44,7 @@ targets:
         NSPrincipalClass: NSApplication
     settings:
       base:
+        ASSETCATALOG_COMPILER_APPICON_NAME: CwlPdfApp
         PRODUCT_BUNDLE_IDENTIFIER: com.mattgallagher.CwlPdfApp
         INFOPLIST_FILE: CwlPdfApp/Info.plist
         DEVELOPMENT_ASSET_PATHS: CwlPdfApp/Preview.xcassets
@@ -54,6 +55,8 @@ schemes:
     build:
       targets:
         CwlPdfApp: build
+    run:
+      config: Release
     test:
       testPlans:
         - path: CwlPdfApp/CwlPdfApp.xctestplan
