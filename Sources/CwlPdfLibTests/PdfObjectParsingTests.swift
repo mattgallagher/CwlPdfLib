@@ -103,10 +103,27 @@ struct PdfObjectParsingTests {
 	@Test
 	func `GIVEN a null token WHEN PdfObject.parse THEN null object returned`() throws {
 		let data = Data("null".utf8)
-		let object = try data.parseContext { context in
+		let object = try data.parseContext(intent: .pdfObject) { context in
 			try PdfObject.parse(context: &context)
 		}
 		
 		#expect(object == .null)
+	}
+
+	@Test
+	func `GIVEN parse intents WHEN object identifiers requested THEN identifiers match their semantic role`() {
+		let objectIdentifier = PdfObjectIdentifier(number: 10, generation: 2)
+		let streamIdentifier = PdfObjectIdentifier(number: 20, generation: 0)
+		let indirectObject = PdfParseIntent.indirectObject(object: objectIdentifier)
+		let objectStreamObject = PdfParseIntent.objectFromObjectStream(
+			object: objectIdentifier,
+			streamObject: streamIdentifier
+		)
+
+		#expect(indirectObject.expectedIndirectObjectIdentifier == objectIdentifier)
+		#expect(indirectObject.enclosingObjectIdentifier == objectIdentifier)
+		#expect(objectStreamObject.expectedIndirectObjectIdentifier == nil)
+		#expect(objectStreamObject.enclosingObjectIdentifier == nil)
+		#expect(PdfParseIntent.contentOperatorStream(streamObject: streamIdentifier).enclosingObjectIdentifier == nil)
 	}
 }

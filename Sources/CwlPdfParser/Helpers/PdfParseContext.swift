@@ -5,7 +5,7 @@ import Foundation
 struct PdfParseContext {
 	var slice: OffsetSlice<UnsafeRawBufferPointer>
 	var decryption: PdfDecryption?
-	var objectIdentifier: PdfObjectIdentifier?
+	var intent: PdfParseIntent
 	var skipComments = true
 	var errorIfEndOfRange = false
 	var tokenStart: Int?
@@ -40,7 +40,7 @@ extension PdfParseContext {
 	func decryptString(_ data: Data) -> Data {
 		guard
 			let decryption,
-			let objectIdentifier,
+			let objectIdentifier = intent.enclosingObjectIdentifier,
 			let decrypted = try? decryption.decryptString(data: data, objectId: objectIdentifier)
 		else {
 			return data

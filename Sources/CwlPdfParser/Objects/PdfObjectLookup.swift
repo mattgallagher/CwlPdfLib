@@ -17,13 +17,13 @@ public struct PdfObjectLookup: Sendable {
 		for table in xrefTables {
 			if let location = table.objectLocations[objectIdentifier] {
 				guard let layout = objectLayoutFromOffset[location] else {
-					throw PdfParseError(failure: .missingLayoutForObject, objectIdentifier: objectIdentifier, range: 0..<source.length)
+					throw PdfParseError(failure: .missingLayoutForObject, range: 0..<source.length, intent: .indirectObject(object: objectIdentifier))
 				}
 				return layout
 			}
 			if table.objectStreamLocations[objectIdentifier] != nil {
 				guard let layout = objectLayoutFromObjectStream[objectIdentifier] else {
-					throw PdfParseError(failure: .missingLayoutForObject, objectIdentifier: objectIdentifier, range: 0..<source.length)
+					throw PdfParseError(failure: .missingLayoutForObject, range: 0..<source.length, intent: .indirectObject(object: objectIdentifier))
 				}
 				return layout
 			}
@@ -34,9 +34,7 @@ public struct PdfObjectLookup: Sendable {
 	public func object(layout: PdfObjectLayout) throws -> PdfObject {
 		switch layout.storage {
 		case .uncompressed(let range):
-			try source.parseContext(range: range) { context in
-				context.decryption = decryption
-				context.objectIdentifier = layout.objectIdentifier
+			try source.parseContext(intent: .indirectObject(object: layout.objectIdentifier), range: range) { context in
 				return try PdfObject.parseIndirect(lookup: self, context: &context)
 			}
 		case .objectStream(let streamIdentifier, let index):
@@ -102,11 +100,15 @@ public struct PdfObjectLookup: Sendable {
 		index: Int,
 		expectedIdentifier: PdfObjectIdentifier
 	) throws -> PdfObject {
+		let intent = PdfParseIntent.objectFromObjectStream(
+			object: expectedIdentifier,
+			streamObject: streamIdentifier
+		)
 		guard let streamObject = try object(for: streamIdentifier) else {
-			throw PdfParseError(failure: .objectNotFound, objectIdentifier: streamIdentifier, range: 0..<source.length)
+			throw PdfParseError(failure: .objectNotFound, range: 0..<source.length, intent: intent)
 		}
 		guard case .stream(let stream) = streamObject else {
-			throw PdfParseError(failure: .expectedDictionary, objectIdentifier: streamIdentifier, range: 0..<source.length)
+			throw PdfParseError(failure: .expectedDictionary, range: 0..<source.length, intent: intent)
 		}
 		return try parseObjectFromObjectStream(
 			stream: stream,
@@ -127,7 +129,11 @@ public struct PdfObjectLookup: Sendable {
 			throw PdfParseError(failure: .missingRequiredParameters)
 		}
 		guard count > 0, index >= 0, index < count else {
-			throw PdfParseError(failure: .objectNotFound, objectIdentifier: expectedIdentifier, range: 0..<stream.data.count)
+			throw PdfParseError(
+				failure: .objectNotFound,
+				range: 0..<stream.data.count,
+				intent: .objectFromObjectStream(object: expectedIdentifier, streamObject: stream.objectIdentifier)
+			)
 		}
 		guard first >= 0, first <= stream.data.count else {
 			throw PdfParseError(failure: .missingRequiredParameters)
@@ -136,7 +142,9 @@ public struct PdfObjectLookup: Sendable {
 		let headerData = stream.data.prefix(first)
 		var values = [Int]()
 		values.reserveCapacity(count * 2)
-		try headerData.parseContext { context in
+		try headerData.parseContext(
+			intent: .objectStreamHeader(streamObject: stream.objectIdentifier)
+		) { context in
 			for _ in 0..<(count * 2) {
 				let token = try PdfToken.parse(context: &context)
 				try values.append(token.requireNaturalNumber(context: &context))
@@ -161,13 +169,20 @@ public struct PdfObjectLookup: Sendable {
 		}
 		
 		let objectData = stream.data.subdata(in: objectStart..<objectEnd)
-		return try objectData.parseContext { context in
-			context.decryption = decryption
+		return try objectData.parseContext(
+			intent: .objectFromObjectStream(
+				object: expectedIdentifier,
+				streamObject: stream.objectIdentifier
+			)
+		) { context in
 			let objectIdentifier = PdfObjectIdentifier(number: objectNumbers[index], generation: 0)
 			if objectIdentifier != expectedIdentifier {
-				throw PdfParseError(failure: .objectNotFound, objectIdentifier: expectedIdentifier, range: 0..<stream.data.count)
+				throw PdfParseError(
+					failure: .objectNotFound,
+					range: 0..<stream.data.count,
+					intent: context.intent
+				)
 			}
-			context.objectIdentifier = objectIdentifier
 			return try PdfObject.parse(context: &context)
 		}
 	}

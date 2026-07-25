@@ -11,7 +11,7 @@ extension PdfObject: PdfContextParseable {
 	}
 	
 	static func parseIndirect(lookup: PdfObjectLookup?, context: inout PdfParseContext) throws -> PdfObject {
-		let expectedIdentifier = context.objectIdentifier
+		let expectedIdentifier = context.intent.expectedIndirectObjectIdentifier
 		let (objectIdentifier, object) = try parseIndirectObject(lookup: lookup, context: &context)
 		if let expectedIdentifier, expectedIdentifier != objectIdentifier {
 			throw PdfParseError(context: context, failure: .objectNotFound)
@@ -29,7 +29,12 @@ extension PdfObject: PdfContextParseable {
 			.requireNaturalNumber(context: &context)
 		
 		let objectIdentifier = PdfObjectIdentifier(number: number, generation: generation)
-		context.objectIdentifier = objectIdentifier
+		context.intent = switch context.intent {
+		case .crossReferenceSection:
+			.crossReferenceStream(streamObject: objectIdentifier)
+		default:
+			.indirectObject(object: objectIdentifier)
+		}
 		context.decryption = lookup?.decryption
 		
 		try PdfToken
@@ -62,7 +67,7 @@ extension PdfObject: PdfContextParseable {
 				filters: filters,
 				decodeParams: dictionary["DecodeParms"],
 				decryption: lookup?.decryption,
-				objectId: context.objectIdentifier,
+				objectId: context.intent.enclosingObjectIdentifier,
 				isImage: dictionary.isImage(lookup: lookup)
 			)
 			object = .stream(PdfStream(objectIdentifier: objectIdentifier, dictionary: dictionary, data: data))

@@ -66,6 +66,24 @@ struct PdfOperatorParsingTests {
 
 		#expect(document.lookup.mutableState.cachedContentOperators(for: stream.objectIdentifier) == nil)
 	}
+
+	@Test
+	func `GIVEN an invalid content stream WHEN parsing fails THEN error identifies parse intent and stream object`() throws {
+		let document = try fixtureDocument(
+			path: "PDFUA-Reference-Files_1-1_2024_02/PDFUA-Ref-2-03_AcademicAbstract.pdf"
+		)
+		let objectIdentifier = PdfObjectIdentifier(number: 269, generation: 0)
+		let object = try #require(try document.lookup.object(for: objectIdentifier))
+		let stream = try #require(object.stream(lookup: document.lookup))
+
+		let error = #expect(throws: PdfParseError.self) {
+			try stream.parseContentOperators { _ in true }
+		}
+
+		#expect(error?.failure == .expectedOperator)
+		#expect(error?.intent == .contentOperatorStream(streamObject: objectIdentifier))
+		#expect(String(describing: error).contains("contentOperatorStream(streamObject: 269 0 R)"))
+	}
 }
 
 @Sendable

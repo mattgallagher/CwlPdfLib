@@ -108,7 +108,9 @@ extension PdfStream {
 
 		var parsedOperators = [PdfOperator]()
 		var parsedToEnd = false
-		try data.parseContext { context in
+		try data.parseContext(
+			intent: .contentOperatorStream(streamObject: objectIdentifier)
+		) { context in
 			repeat {
 				guard let nextOperator = try PdfOperator.parseNext(context: &context) else {
 					parsedToEnd = true

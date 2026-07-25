@@ -1,17 +1,22 @@
 // CwlPdfLib. Copyright © 2025 Matt Gallagher. See LICENSE file for usage permissions.
 
 extension PdfSource {
-	func parseContext<Output>(range: Range<Int>, handler: (inout PdfParseContext) throws -> Output) throws -> Output {
+	func parseContext<Output>(intent: PdfParseIntent, range: Range<Int>, handler: (inout PdfParseContext) throws -> Output) throws -> Output {
 		try bytes(in: range) { buffer in
-			var context = PdfParseContext(slice: buffer[...])
-			return try handler(&context)
+			var context = PdfParseContext(slice: buffer[...], intent: intent)
+			do {
+				return try handler(&context)
+			} catch var error as PdfParseError {
+				error.intent = error.intent ?? context.intent
+				throw error
+			}
 		}
 	}
 	
-	func parseContext<Output, S: BidirectionalCollection>(untilMatch pattern: S, limit: Int? = nil, reverse: Bool = false, buffer: inout PdfSourceBuffer, handler: (inout PdfParseContext) throws -> Output) throws -> Output where S.Element == UInt8, S.Index == Int {
+	func parseContext<Output, S: BidirectionalCollection>(intent: PdfParseIntent, untilMatch pattern: S, limit: Int? = nil, reverse: Bool = false, buffer: inout PdfSourceBuffer, handler: (inout PdfParseContext) throws -> Output) throws -> Output where S.Element == UInt8, S.Index == Int {
 		guard !pattern.isEmpty else {
 			let buffer = UnsafeRawBufferPointer(start: nil, count: 0)
-			var context = PdfParseContext(slice: OffsetSlice(buffer, bounds: 0..<0, offset: 0))
+			var context = PdfParseContext(slice: OffsetSlice(buffer, bounds: 0..<0, offset: 0), intent: intent)
 			return try handler(&context)
 		}
 		
@@ -25,7 +30,7 @@ extension PdfSource {
 				buffer: &buffer,
 				until: { byte, context in context.step(byte: byte) }
 			)
-			return try parseContext(range: range, handler: handler)
+			return try parseContext(intent: intent, range: range, handler: handler)
 		} else {
 			var context = KMPMatchContext(pattern: pattern)
 			let range = try advance(
@@ -36,11 +41,11 @@ extension PdfSource {
 				buffer: &buffer,
 				until: { byte, context in context.step(byte: byte) }
 			)
-			return try parseContext(range: range, handler: handler)
+			return try parseContext(intent: intent, range: range, handler: handler)
 		}
 	}
 	
-	func parseContext<Output>(lineCount: Int, limit: Int? = nil, reverse: Bool = false, buffer: inout PdfSourceBuffer, handler: (inout PdfParseContext) throws -> Output) throws -> Output {
+	func parseContext<Output>(intent: PdfParseIntent, lineCount: Int, limit: Int? = nil, reverse: Bool = false, buffer: inout PdfSourceBuffer, handler: (inout PdfParseContext) throws -> Output) throws -> Output {
 		var context = EndOfLineContext()
 		context.reverse = reverse
 		let start = buffer.offset
@@ -63,7 +68,7 @@ extension PdfSource {
 				range = start..<range.upperBound
 			}
 		}
-		return try parseContext(range: range, handler: handler)
+		return try parseContext(intent: intent, range: range, handler: handler)
 	}
 }
 

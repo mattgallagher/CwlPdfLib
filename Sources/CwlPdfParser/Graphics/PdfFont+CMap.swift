@@ -32,7 +32,9 @@ extension PdfFont {
 			throw PdfParseError(failure: .missingRequiredParameters)
 		}
 
-		let (writingMode, codeSpaceRanges, mappings) = try stream.data.parseContext { context in
+		let (writingMode, codeSpaceRanges, mappings) = try stream.data.parseContext(
+			intent: .encodingCMap(streamObject: stream.objectIdentifier)
+		) { context in
 			var writingMode = WritingMode.horizontal
 			var codeSpaceRanges = [CodeSpaceRange]()
 			var mappings = [CMapMapping]()
@@ -73,7 +75,9 @@ extension PdfFont {
 			return nil
 		}
 
-		let (codeSpaceRanges, mappings) = try stream.data.parseContext { context in
+		let (codeSpaceRanges, mappings) = try stream.data.parseContext(
+			intent: .toUnicodeCMap(streamObject: stream.objectIdentifier)
+		) { context in
 			var codeSpaceRanges = [CodeSpaceRange]()
 			var mappings = [UnicodeMapping]()
 

@@ -15,7 +15,7 @@ struct PdfDocumentTests {
 		var buffer = PdfSourceBuffer()
 		try dataSource.seek(to: 0, buffer: &buffer)
 		
-		let header = try dataSource.parseContext(lineCount: 1, buffer: &buffer) { context in
+		let header = try dataSource.parseContext(intent: .pdfHeader, lineCount: 1, buffer: &buffer) { context in
 			try PdfHeader.parse(context: &context)
 		}
 		
@@ -33,7 +33,7 @@ struct PdfDocumentTests {
 		var buffer = PdfSourceBuffer()
 		try dataSource.seek(to: dataSource.length, buffer: &buffer)
 		
-		let xref = try dataSource.parseContext(lineCount: 3, reverse: true, buffer: &buffer) { context in
+		let xref = try dataSource.parseContext(intent: .startXrefAndEof, lineCount: 3, reverse: true, buffer: &buffer) { context in
 			try PdfStartXrefAndEof.parse(context: &context)
 		}
 		
@@ -48,7 +48,7 @@ struct PdfDocumentTests {
 		let fileURL = try #require(Bundle.module.url(forResource: "Fixtures/Basic/\(filename)", withExtension: nil))
 		let dataSource = try PdfDataSource(Data(contentsOf: fileURL, options: .mappedIfSafe)) as any PdfSource
 		
-		let xrefTable = try dataSource.parseContext(range: range) { context in
+		let xrefTable = try dataSource.parseContext(intent: .crossReferenceSection, range: range) { context in
 			try PdfXRefTable.parse(context: &context)
 		}
 		
@@ -78,7 +78,7 @@ struct PdfDocumentTests {
 		let source = try PdfDataSource(Data(contentsOf: fileURL, options: .mappedIfSafe))
 		var buffer = PdfSourceBuffer()
 		try source.seek(to: source.length, buffer: &buffer)
-		let startXrefAndEof = try source.parseContext(lineCount: 3, reverse: true, buffer: &buffer) { context in
+		let startXrefAndEof = try source.parseContext(intent: .startXrefAndEof, lineCount: 3, reverse: true, buffer: &buffer) { context in
 			try PdfStartXrefAndEof.parse(context: &context)
 		}
 		
@@ -135,7 +135,7 @@ struct PdfDocumentTests {
 		let source = try PdfDataSource(Data(contentsOf: fileURL, options: .mappedIfSafe))
 		var buffer = PdfSourceBuffer()
 		try source.seek(to: source.length, buffer: &buffer)
-		let startXrefAndEof = try source.parseContext(lineCount: 3, reverse: true, buffer: &buffer) { context in
+		let startXrefAndEof = try source.parseContext(intent: .startXrefAndEof, lineCount: 3, reverse: true, buffer: &buffer) { context in
 			try PdfStartXrefAndEof.parse(context: &context)
 		}
 		let (xrefTables, _, _, objectStreamLayouts) = try PdfXRefTable.parseXrefTables(

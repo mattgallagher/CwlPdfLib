@@ -13,7 +13,7 @@ public struct PdfDocument: Sendable {
 	public init(source: any PdfSource, password: String? = nil) throws {
 		var buffer = PdfSourceBuffer()
 		try source.seek(to: 0, buffer: &buffer)
-		self.header = try source.parseContext(lineCount: 1, buffer: &buffer) { context in
+		self.header = try source.parseContext(intent: .pdfHeader, lineCount: 1, buffer: &buffer) { context in
 			try PdfHeader.parse(context: &context)
 		}
 
@@ -80,7 +80,7 @@ public struct PdfDocument: Sendable {
 	) throws -> (PdfStartXrefAndEof, [PdfXRefTable], PdfDictionary, [Int: PdfObjectLayout], [PdfObjectIdentifier: PdfObjectLayout]) {
 		do {
 			try source.seek(to: source.length, buffer: &buffer)
-			let startXrefAndEof = try source.parseContext(lineCount: 3, reverse: true, buffer: &buffer) { context in
+			let startXrefAndEof = try source.parseContext(intent: .startXrefAndEof, lineCount: 3, reverse: true, buffer: &buffer) { context in
 				try PdfStartXrefAndEof.parse(context: &context)
 			}
 			let (xrefTables, trailer, objectLayoutFromOffset, objectLayoutFromObjectStream) = try PdfXRefTable.parseXrefTables(

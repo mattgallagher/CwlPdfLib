@@ -189,10 +189,7 @@ private extension PdfXRefTable {
     }
 
     static func scanForObjectsAndTrailer(source: any PdfSource) throws -> ScanResult {
-        try source.bytes(in: 0..<source.length) { buffer in
-            var context = PdfParseContext(
-                slice: buffer
-            )
+        try source.parseContext(intent: .pdfStructureScan, range: 0..<source.length) { context in
             var objectLocations: [PdfObjectIdentifier: Int] = [:]
             var trailer: PdfDictionary?
 
@@ -268,8 +265,7 @@ private extension PdfXRefTable {
         for layout in sortedLayouts {
             guard let range = layout.range else { continue }
             do {
-                let object = try source.parseContext(range: range) { context in
-                    context.objectIdentifier = layout.objectIdentifier
+                let object = try source.parseContext(intent: .indirectObject(object: layout.objectIdentifier), range: range) { context in
                     return try PdfObject.parseIndirect(lookup: nil, context: &context)
                 }
                 if
@@ -328,7 +324,7 @@ private extension PdfXRefTable {
 		repeat {
 			do {
 				// Parse either a classic "xref" table or an xref stream.
-				return try source.parseContext(range: nextRange) { context in
+				return try source.parseContext(intent: .crossReferenceSection, range: nextRange) { context in
 					context.errorIfEndOfRange = true
 					var probeContext = context
 					if let token = try PdfToken.parseNext(context: &probeContext), token.isIdentifier(context: probeContext, equals: .xref) {
