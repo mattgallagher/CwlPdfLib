@@ -71,7 +71,7 @@ struct PdfRenderer {
 		cancellationCheck: () throws -> Void
 	) throws {
 		do {
-			try stream.parseContentOperators { op in
+			try stream.parseContentOperators(lookup: lookup) { op in
 				try cancellationCheck()
 				
 				switch op {

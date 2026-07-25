@@ -89,16 +89,40 @@ public struct PdfAnnotationAppearanceContent: PdfContentStream {
 
 extension PdfStream {
 	/// Parses PDF content stream operators from the stream data.
-	public func parseContentOperators(_ visitor: (PdfOperator) throws -> Bool) throws {
+	///
+	/// - Parameters:
+	///   - lookup: The object lookup whose shared cache stores a completed operator list.
+	///   - visitor: A closure invoked for each operator. Return `false` to stop parsing.
+	public func parseContentOperators(
+		lookup: PdfObjectLookup? = nil,
+		_ visitor: (PdfOperator) throws -> Bool
+	) throws {
+		if let cachedOperators = lookup?.mutableState.cachedContentOperators(for: objectIdentifier) {
+			for cachedOperator in cachedOperators {
+				if try !visitor(cachedOperator) {
+					return
+				}
+			}
+			return
+		}
+
+		var parsedOperators = [PdfOperator]()
+		var parsedToEnd = false
 		try data.parseContext { context in
 			repeat {
 				guard let nextOperator = try PdfOperator.parseNext(context: &context) else {
+					parsedToEnd = true
 					return
 				}
+				parsedOperators.append(nextOperator)
 				if try !visitor(nextOperator) {
 					return
 				}
 			} while true
+		}
+
+		if parsedToEnd {
+			lookup?.mutableState.cacheContentOperators(parsedOperators, for: objectIdentifier)
 		}
 	}
 }

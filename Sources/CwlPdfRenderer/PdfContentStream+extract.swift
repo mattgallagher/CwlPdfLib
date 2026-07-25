@@ -32,7 +32,7 @@ extension PdfContentStream {
 
 		do {
 			for stream in streams {
-				try stream.parseContentOperators { op in
+				try stream.parseContentOperators(lookup: lookup) { op in
 					switch op {
 					case .`'`(let text):
 						state.textPosition.lineMatrix = state.textPosition.lineMatrix.translatedBy(x: 0, y: -state.textState.leading)

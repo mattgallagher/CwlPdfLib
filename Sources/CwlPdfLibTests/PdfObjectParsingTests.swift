@@ -84,6 +84,21 @@ struct PdfObjectParsingTests {
 		
 		#expect(object == matches)
 	}
+
+	@Test
+	func `GIVEN an object lookup WHEN an object is requested THEN object is cached in shared mutable state`() throws {
+		let document = try basicFixtureDocument(filename: "blank-page.pdf")
+		let objectIdentifier = PdfObjectIdentifier(number: 6, generation: 0)
+		let lookupCopy = document.lookup
+
+		let object = try document.lookup.object(for: objectIdentifier)
+
+		#expect(document.lookup.mutableState.cachedObject(for: objectIdentifier) == object)
+		#expect(lookupCopy.mutableState.cachedObject(for: objectIdentifier) == object)
+		document.lookup.mutableState.cache(.null, for: objectIdentifier)
+		#expect(try lookupCopy.object(for: objectIdentifier) == .null)
+		#expect(!document.lookup.mutableState.isChanged(for: objectIdentifier))
+	}
 	
 	@Test
 	func `GIVEN a null token WHEN PdfObject.parse THEN null object returned`() throws {

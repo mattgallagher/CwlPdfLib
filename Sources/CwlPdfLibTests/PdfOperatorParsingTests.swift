@@ -29,6 +29,43 @@ struct PdfOperatorParsingTests {
 			#expect(op == parse)
 		}
 	}
+
+	@Test
+	func `GIVEN a content stream WHEN parsed repeatedly THEN completed operators are cached and replayed`() throws {
+		let document = try basicFixtureDocument(filename: "blank-page.pdf")
+		let page = try #require(document.pages.first)
+		let stream = try #require(page.content(lookup: document.lookup).streams.first)
+		var parsed = [PdfOperator]()
+
+		try stream.parseContentOperators(lookup: document.lookup) { op in
+			parsed.append(op)
+			return true
+		}
+
+		#expect(document.lookup.mutableState.cachedContentOperators(for: stream.objectIdentifier) == parsed)
+
+		document.lookup.mutableState.cacheContentOperators([.Q], for: stream.objectIdentifier)
+		var replayed = [PdfOperator]()
+		try stream.parseContentOperators(lookup: document.lookup) { op in
+			replayed.append(op)
+			return true
+		}
+		#expect(replayed == [.Q])
+	}
+
+	@Test
+	func `GIVEN a content stream WHEN parsing stops early THEN partial operators are not cached`() throws {
+		let document = try basicFixtureDocument(filename: "blank-page.pdf")
+		let stream = PdfStream(
+			objectIdentifier: PdfObjectIdentifier(number: 10_000, generation: 0),
+			dictionary: [:],
+			data: Data("q Q".utf8)
+		)
+
+		try stream.parseContentOperators(lookup: document.lookup) { _ in false }
+
+		#expect(document.lookup.mutableState.cachedContentOperators(for: stream.objectIdentifier) == nil)
+	}
 }
 
 @Sendable

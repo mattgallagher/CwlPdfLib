@@ -1,12 +1,14 @@
 // CwlPdfLib. Copyright © 2026 Matt Gallagher. See LICENSE file for usage permissions.
 
 import Foundation
+import Synchronization
 
 public struct PdfObjectLookup: Sendable {
 	let source: any PdfSource
 	let xrefTables: [PdfXRefTable]
 	let objectLayoutFromOffset: [Int: PdfObjectLayout]
 	let objectLayoutFromObjectStream: [PdfObjectIdentifier: PdfObjectLayout]
+	let mutableState = PdfObjectCache()
 
 	/// Decryption handler for encrypted documents. Set after initialization when encryption is detected.
 	var decryption: PdfDecryption?
@@ -43,8 +45,13 @@ public struct PdfObjectLookup: Sendable {
 	}
 	
 	public func object(for objectIdentifier: PdfObjectIdentifier) throws -> PdfObject? {
+		if let cachedObject = mutableState.cachedObject(for: objectIdentifier) {
+			return cachedObject
+		}
 		guard let layout = try objectLayout(for: objectIdentifier) else { return nil }
-		return try object(layout: layout)
+		let object = try object(layout: layout)
+		mutableState.cache(object, for: objectIdentifier)
+		return object
 	}
 	
 	public var allObjectByteRanges: [PdfObjectLayout] {
@@ -163,5 +170,37 @@ public struct PdfObjectLookup: Sendable {
 			context.objectIdentifier = objectIdentifier
 			return try PdfObject.parse(context: &context)
 		}
+	}
+}
+
+final class PdfObjectCache: Sendable {
+	struct State: Sendable {
+		var cachedObjects = [PdfObjectIdentifier: PdfObject]()
+		var contentOperators = [PdfObjectIdentifier: [PdfOperator]]()
+		
+		// Changed objects exist only in the cachedObjects dictionary and must not be evicted until file save
+		var changedObjects = Set<PdfObjectIdentifier>()
+	}
+
+	private let state = Mutex(State())
+
+	func cachedObject(for objectIdentifier: PdfObjectIdentifier) -> PdfObject? {
+		state.withLock { $0.cachedObjects[objectIdentifier] }
+	}
+
+	func cache(_ object: PdfObject, for objectIdentifier: PdfObjectIdentifier) {
+		state.withLock { $0.cachedObjects[objectIdentifier] = object }
+	}
+
+	func cachedContentOperators(for objectIdentifier: PdfObjectIdentifier) -> [PdfOperator]? {
+		state.withLock { $0.contentOperators[objectIdentifier] }
+	}
+
+	func cacheContentOperators(_ operators: [PdfOperator], for objectIdentifier: PdfObjectIdentifier) {
+		state.withLock { $0.contentOperators[objectIdentifier] = operators }
+	}
+
+	func isChanged(for objectIdentifier: PdfObjectIdentifier) -> Bool {
+		state.withLock { $0.changedObjects.contains(objectIdentifier) }
 	}
 }
