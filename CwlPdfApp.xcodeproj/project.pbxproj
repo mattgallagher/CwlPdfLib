@@ -21,6 +21,7 @@
 		87BFE48BAE9A19F8CB0FFB46 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		8A7A902EABB5237711B3E165 /* CwlPdfApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CwlPdfApp.swift; sourceTree = "<group>"; };
 		BBC85D912983ECE405A367F3 /* PageViewPreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PageViewPreview.swift; sourceTree = "<group>"; };
+		BE45582895601A2518835EA7 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		BE954613C5D2CC7461CC9618 /* CwlPdfApp.xctestplan */ = {isa = PBXFileReference; path = CwlPdfApp.xctestplan; sourceTree = "<group>"; };
 		E8898324D51417072CAD3976 /* Preview.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Preview.xcassets; sourceTree = "<group>"; };
 		FF163B13490A42592CA6B5B6 /* CwlPdfLib */ = {isa = PBXFileReference; lastKnownFileType = folder; name = CwlPdfLib; path = .; sourceTree = SOURCE_ROOT; };
@@ -52,6 +53,7 @@
 				87BFE48BAE9A19F8CB0FFB46 /* Assets.xcassets */,
 				8A7A902EABB5237711B3E165 /* CwlPdfApp.swift */,
 				BE954613C5D2CC7461CC9618 /* CwlPdfApp.xctestplan */,
+				BE45582895601A2518835EA7 /* Info.plist */,
 				E8898324D51417072CAD3976 /* Preview.xcassets */,
 				912232FD03B341B609A753F3 /* Previews */,
 			);
@@ -287,7 +289,7 @@
 				COMBINE_HIDPI_IMAGES = YES;
 				DEVELOPMENT_ASSET_PATHS = CwlPdfApp/Preview.xcassets;
 				ENABLE_PREVIEWS = YES;
-				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = CwlPdfApp/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -305,7 +307,7 @@
 				COMBINE_HIDPI_IMAGES = YES;
 				DEVELOPMENT_ASSET_PATHS = CwlPdfApp/Preview.xcassets;
 				ENABLE_PREVIEWS = YES;
-				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = CwlPdfApp/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",

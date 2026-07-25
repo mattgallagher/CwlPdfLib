@@ -32,10 +32,20 @@ targets:
     dependencies:
       - package: CwlPdfLib
         product: CwlPdfView
+    info:
+      path: CwlPdfApp/Info.plist
+      properties:
+        CFBundleDocumentTypes:
+          - CFBundleTypeName: PDF Document
+            CFBundleTypeRole: Viewer
+            LSHandlerRank: Alternate
+            LSItemContentTypes:
+              - com.adobe.pdf
+        NSPrincipalClass: NSApplication
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.mattgallagher.CwlPdfApp
-        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_FILE: CwlPdfApp/Info.plist
         DEVELOPMENT_ASSET_PATHS: CwlPdfApp/Preview.xcassets
         ENABLE_PREVIEWS: YES
 
