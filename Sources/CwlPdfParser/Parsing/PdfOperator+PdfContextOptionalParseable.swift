@@ -93,10 +93,12 @@ extension PdfOperator: PdfContextOptionalParseable {
 					return PdfOperator.cs(name)
 				case .d:
 					guard
-						let dashPhase = stack.popLast()?.real(lookup: nil) else {
+						let dashPhase = stack.popLast()?.real(lookup: nil),
+						let dashValues = stack.popLast()?.array(lookup: nil)
+					else {
 						throw PdfParseError(context: context, failure: .missingRequiredParameters)
 					}
-					let dashArray = stack.compactMap { $0.real(lookup: nil) }
+					let dashArray = dashValues.compactMap { $0.real(lookup: nil) }
 					return PdfOperator.d(dashPhase, dashArray)
 				case .d0:
 					return PdfOperator.d0

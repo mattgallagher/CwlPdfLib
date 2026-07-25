@@ -54,6 +54,23 @@ struct PdfOperatorParsingTests {
 	}
 
 	@Test
+	func `GIVEN a dash operator WHEN parsed THEN dash array and phase are extracted`() throws {
+		let stream = PdfStream(
+			objectIdentifier: PdfObjectIdentifier(number: 10_002, generation: 0),
+			dictionary: [:],
+			data: Data("[0 4.993] 2 d".utf8)
+		)
+		var parsed = [PdfOperator]()
+
+		try stream.parseContentOperators { op in
+			parsed.append(op)
+			return true
+		}
+
+		#expect(parsed == [.d(2, [0, 4.993])])
+	}
+
+	@Test
 	func `GIVEN a content stream WHEN parsing stops early THEN partial operators are not cached`() throws {
 		let document = try basicFixtureDocument(filename: "blank-page.pdf")
 		let stream = PdfStream(

@@ -19,6 +19,23 @@ struct PdfContentStreamRenderTests {
 	}
 
 	@Test
+	func `GIVEN a zero length round dash WHEN rendered THEN separated dots are drawn`() throws {
+		let document = try PdfDocument(
+			source: PdfDataSource(
+				minimalPdfData(contentStream: "1 J 1 w [0 5] 0 d 5 20 m 35 20 l S")
+			)
+		)
+		let page = try #require(document.pages.first)
+		let image = try #require(page.renderedImage(lookup: document.lookup, scale: 2))
+		let firstDot = try #require(rgbaPixel(atX: 10, y: 40, in: image))
+		let secondDot = try #require(rgbaPixel(atX: 20, y: 40, in: image))
+
+		#expect(firstDot.red < 128)
+		#expect(pixel(atX: 15, y: 40, in: image) == .white)
+		#expect(secondDot.red < 128)
+	}
+
+	@Test
 	func `GIVEN a caller graphics state WHEN a page is rendered THEN PDF initial values are isolated from the caller`() throws {
 		let document = try PdfDocument(
 			source: PdfDataSource(
