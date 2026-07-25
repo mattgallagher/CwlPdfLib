@@ -114,6 +114,45 @@ struct PdfPageRenderTests {
 			"Expected less than 0.5% chart pixel difference but found \(difference.normalizedTotal * 100)%"
 		)
 	}
+
+	@Test
+	func `GIVEN the page 5 CMYK photograph WHEN rendered THEN its ICC colors match PDFKit`() throws {
+		let fileURL = try #require(fixtureURL(
+			path: "PDFUA-Reference-Files_1-1_2024_02/PDFUA-Ref-2-08_BookChapter.pdf"
+		))
+		let document = try PdfDocument(
+			source: PdfDataSource(Data(contentsOf: fileURL, options: .mappedIfSafe))
+		)
+		let page = try #require(document.pages.indices.contains(4) ? document.pages[4] : nil)
+		let pdfKitDocument = try #require(PDFDocument(url: fileURL))
+		let pdfKitPage = try #require(pdfKitDocument.page(at: 4))
+		let scale: CGFloat = 2
+		let renderedImage = try #require(renderCwlPdfRendererImage(
+			page: page,
+			lookup: document.lookup,
+			pdfKitPage: pdfKitPage,
+			scale: scale
+		))
+		let pdfKitImage = try #require(renderPDFKitImage(page: pdfKitPage, scale: scale))
+
+		// CwlPdfRenderer currently positions the MediaBox origin differently from PDFKit. Offset the
+		// crops so this regression remains focused on the photograph's color conversion.
+		let cropSize = CGSize(width: 590, height: 380)
+		let renderedPhotograph = try #require(renderedImage.cropping(to: CGRect(
+			origin: CGPoint(x: 206, y: 99),
+			size: cropSize
+		)))
+		let pdfKitPhotograph = try #require(pdfKitImage.cropping(to: CGRect(
+			origin: CGPoint(x: 140, y: 165),
+			size: cropSize
+		)))
+		let difference = pixelDifference(lhs: renderedPhotograph, rhs: pdfKitPhotograph, diffURL: nil)
+
+		#expect(
+			difference.normalizedTotal < 0.003,
+			"Expected less than 0.3% photograph pixel difference but found \(difference.normalizedTotal * 100)%"
+		)
+	}
 }
 
 private struct DebugImageURLs {

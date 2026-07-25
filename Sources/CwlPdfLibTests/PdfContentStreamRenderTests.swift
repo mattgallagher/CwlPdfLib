@@ -79,7 +79,7 @@ struct PdfContentStreamRenderTests {
 	}
 
 	@Test
-	func `GIVEN an image render request WHEN page renderer completes THEN image has requested dimensions`() async throws {
+	func `GIVEN an image render request WHEN page renderer completes THEN image has requested dimensions and sRGB color space`() async throws {
 		let document = try PdfDocument(source: PdfDataSource(minimalPdfData(contentStream: "0 g 0 0 40 40 re f")))
 		let page = try #require(document.pages.first)
 		let image = try page.renderedImage(
@@ -92,6 +92,21 @@ struct PdfContentStreamRenderTests {
 		
 		#expect(image.width == 80)
 		#expect(image.height == 60)
+		#expect(image.colorSpace?.name == CGColorSpace.sRGB)
+	}
+
+	@Test
+	func `GIVEN a destination color space WHEN page renderer completes THEN image uses requested color space`() throws {
+		let document = try PdfDocument(source: PdfDataSource(minimalPdfData(contentStream: "0 g 0 0 40 40 re f")))
+		let page = try #require(document.pages.first)
+		let displayP3 = try #require(CGColorSpace(name: CGColorSpace.displayP3))
+		let image = try #require(page.renderedImage(
+			lookup: document.lookup,
+			scale: 1,
+			destinationColorSpace: displayP3
+		))
+
+		#expect(image.colorSpace?.name == CGColorSpace.displayP3)
 	}
 	
 	@Test

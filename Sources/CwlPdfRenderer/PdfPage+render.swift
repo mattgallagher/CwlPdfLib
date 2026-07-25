@@ -80,10 +80,18 @@ extension PdfPage {
 		}
 	}
 
+	/// Renders the page into a `CGImage` at the supplied scale.
+	///
+	/// - Parameters:
+	///   - lookup: The object lookup used while rendering page content.
+	///   - scale: The number of output pixels per page-space unit.
+	///   - backgroundColor: The color painted behind the page, or `nil` for transparency.
+	///   - destinationColorSpace: The RGB color space of the rendered bitmap. Defaults to sRGB.
 	public func renderedImage(
 		lookup: PdfObjectLookup?,
 		scale: CGFloat = 1,
-		backgroundColor: CGColor? = CGColor(gray: 1, alpha: 1)
+		backgroundColor: CGColor? = CGColor(gray: 1, alpha: 1),
+		destinationColorSpace: CGColorSpace = CGColorSpace(name: CGColorSpace.sRGB)!
 	) -> CGImage? {
 		guard
 			scale > 0
@@ -98,6 +106,7 @@ extension PdfPage {
 			pixelWidth: pixelWidth,
 			pixelHeight: pixelHeight,
 			backgroundColor: backgroundColor,
+			destinationColorSpace: destinationColorSpace,
 			cancellationCheck: {}
 		) { context in
 			context.scaleBy(x: scale, y: scale)
@@ -108,12 +117,22 @@ extension PdfPage {
 	}
 	
 	/// Renders the page into a `CGImage` with the supplied pixel dimensions.
+	///
+	/// - Parameters:
+	///   - lookup: The object lookup used while rendering page content.
+	///   - bounds: The page-space bounds to render.
+	///   - pixelWidth: The output image width in pixels.
+	///   - pixelHeight: The output image height in pixels.
+	///   - backgroundColor: The color painted behind the page, or `nil` for transparency.
+	///   - destinationColorSpace: The RGB color space of the rendered bitmap. Defaults to sRGB.
+	///   - cancellationCheck: A closure invoked periodically to stop cancelled renders.
 	public func renderedImage(
 		lookup: PdfObjectLookup?,
 		bounds: CGRect,
 		pixelWidth: Int,
 		pixelHeight: Int,
 		backgroundColor: CGColor? = CGColor(gray: 1, alpha: 1),
+		destinationColorSpace: CGColorSpace = CGColorSpace(name: CGColorSpace.sRGB)!,
 		cancellationCheck: () throws -> Void
 	) throws -> CGImage {
 		try cancellationCheck()
@@ -131,6 +150,7 @@ extension PdfPage {
 			pixelWidth: pixelWidth,
 			pixelHeight: pixelHeight,
 			backgroundColor: backgroundColor,
+			destinationColorSpace: destinationColorSpace,
 			cancellationCheck: cancellationCheck
 		) { context in
 			context.scaleBy(
@@ -146,6 +166,7 @@ extension PdfPage {
 		pixelWidth: Int,
 		pixelHeight: Int,
 		backgroundColor: CGColor?,
+		destinationColorSpace: CGColorSpace,
 		cancellationCheck: () throws -> Void,
 		render: (CGContext) throws -> Void
 	) throws -> CGImage {
@@ -164,7 +185,7 @@ extension PdfPage {
 			height: pixelHeight,
 			bitsPerComponent: 8,
 			bytesPerRow: 0,
-			space: CGColorSpaceCreateDeviceRGB(),
+			space: destinationColorSpace,
 			bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
 		) else {
 			throw PdfPageImageRenderError.contextCreationFailed

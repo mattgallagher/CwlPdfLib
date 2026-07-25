@@ -118,6 +118,7 @@ struct PageCanvas: View {
 			bounds: pageRect,
 			pixelWidth: pixelSize.width,
 			pixelHeight: pixelSize.height,
+			destinationColorSpace: CGColorSpace(name: CGColorSpace.displayP3)!,
 			cancellationCheck: Task.checkCancellation
 		)
 	}

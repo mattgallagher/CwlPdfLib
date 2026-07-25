@@ -18,7 +18,18 @@ public struct PdfImage: Sendable {
 	public let softMask: PdfStream?
 	public let matte: [Double]?
 
-	public init(stream: PdfStream, lookup: PdfObjectLookup?) throws {
+	/// Creates an image from a PDF image stream.
+	///
+	/// - Parameters:
+	///   - stream: The image XObject stream.
+	///   - lookup: The object lookup used to resolve indirect image metadata.
+	///   - resolvedColorSpace: The color space resolved through the containing resource dictionary,
+	///     including any applicable `DefaultGray`, `DefaultRGB`, or `DefaultCMYK` substitution.
+	public init(
+		stream: PdfStream,
+		lookup: PdfObjectLookup?,
+		resolvedColorSpace: PdfColorSpace? = nil
+	) throws {
 		let dict = stream.dictionary
 
 		guard
@@ -39,7 +50,7 @@ public struct PdfImage: Sendable {
 			self.colorSpace = .deviceGray
 		} else {
 			self.bitsPerComponent = dict[.BitsPerComponent]?.integer(lookup: lookup) ?? 8
-			self.colorSpace = PdfColorSpace.parse(dict[.ColorSpace], lookup: lookup) ?? .deviceRGB
+			self.colorSpace = resolvedColorSpace ?? PdfColorSpace.parse(dict[.ColorSpace], lookup: lookup) ?? .deviceRGB
 		}
 
 		// Parse the filter to determine encoding

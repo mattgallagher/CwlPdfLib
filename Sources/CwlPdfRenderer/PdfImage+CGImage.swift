@@ -111,18 +111,19 @@ extension PdfImage {
 					shouldInterpolate: interpolate
 				)
 			}
+			let cgColorSpace = createCGColorSpace() ?? CGColorSpaceCreateDeviceGray()
 			return CGImage(
 				width: width,
 				height: height,
 				bitsPerComponent: 1,
 				bitsPerPixel: 1,
 				bytesPerRow: stride,
-				space: CGColorSpaceCreateDeviceGray(),
+				space: cgColorSpace,
 				bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.none.rawValue),
 				provider: provider,
 				decode: decodePointer?.baseAddress,
 				shouldInterpolate: interpolate,
-				intent: .defaultIntent
+				intent: cgRenderingIntent
 			)
 		}
 	}
@@ -153,106 +154,46 @@ extension PdfImage {
 	// MARK: - JPEG Image Creation
 	
 	private func createJPEGImage() -> CGImage? {
-		if colorSpace.isCMYK {
-			 guard let provider = CGDataProvider(data: data as CFData) else {
-				  return nil
-			 }
-
-			 // Equivalent to PDF /Decode [1 0 1 0 1 0 1 0]
-			 let decode: [CGFloat] = [
-				  0, 1, // C
-				  0, 1, // M
-				  0, 1, // Y
-				  0, 1, // K
-			 ]
-
-			 return CGImage(
-				  jpegDataProviderSource: provider,
-				  decode: decode,
-				  shouldInterpolate: true,
-				  intent: .defaultIntent
-			 )
-		} else {
-			// Keep ImageIO fallback for non-CMYK / non-special cases.
-			guard
-				let imageSource = CGImageSourceCreateWithData(data as CFData, nil),
-				let image = CGImageSourceCreateImageAtIndex(imageSource, 0, nil)
-			else {
-				return nil
-			}
-
-			return image
+		guard let provider = CGDataProvider(data: data as CFData) else {
+			return nil
 		}
+		let defaultDecode: [CGFloat]? = colorSpace.isCMYK ? [
+			0, 1,
+			0, 1,
+			0, 1,
+			0, 1
+		] : nil
+		let decodeValues = decode?.map { CGFloat($0) } ?? defaultDecode
+		let image = decodeValues.withUnsafeBufferPointerOrNil { decodePointer in
+			CGImage(
+				jpegDataProviderSource: provider,
+				decode: decodePointer?.baseAddress,
+				shouldInterpolate: interpolate,
+				intent: cgRenderingIntent
+			)
+		}
+		guard let image else {
+			return nil
+		}
+		return imageWithResolvedColorSpace(image)
 	}
 	
 	// MARK: - JPEG 2000 Image Creation
 	
 	private func createJPEG2000Image() -> CGImage? {
-		// Use ImageIO for JPEG 2000 decoding
-		guard let imageSource = CGImageSourceCreateWithData(data as CFData, nil) else {
+		guard
+			let imageSource = CGImageSourceCreateWithData(data as CFData, nil),
+			let image = CGImageSourceCreateImageAtIndex(imageSource, 0, nil)
+		else {
 			return nil
 		}
-		return CGImageSourceCreateImageAtIndex(imageSource, 0, nil)
+		return imageWithResolvedColorSpace(image)
 	}
 	
 	// MARK: - Raw Bitmap Image Creation
 	
 	private func createRawBitmapImage() -> CGImage? {
-		let cgColorSpace: CGColorSpace
-		
-		switch colorSpace {
-		case .deviceGray:
-			cgColorSpace = CGColorSpaceCreateDeviceGray()
-			
-		case .deviceRGB:
-			cgColorSpace = CGColorSpaceCreateDeviceRGB()
-			
-		case .deviceCMYK:
-			cgColorSpace = CGColorSpaceCreateDeviceCMYK()
-			
-		case .indexed(let base, let hival, let lookupTable):
-			// Create indexed color space
-			guard let lookupTable else {
-				return nil
-			}
-			let baseColorSpace: CGColorSpace
-			switch base {
-			case .deviceGray:
-				baseColorSpace = CGColorSpaceCreateDeviceGray()
-			case .deviceRGB:
-				baseColorSpace = CGColorSpaceCreateDeviceRGB()
-			case .deviceCMYK:
-				baseColorSpace = CGColorSpaceCreateDeviceCMYK()
-			default:
-				// Nested indexed or ICC-based not supported as indexed base
-				return nil
-			}
-			
-			guard let indexedSpace = CGColorSpace(
-				indexedBaseSpace: baseColorSpace,
-				last: hival,
-				colorTable: [UInt8](lookupTable)
-			) else {
-				return nil
-			}
-			cgColorSpace = indexedSpace
-			
-		case .iccBased(let components, let profile):
-			// Try to create color space from ICC profile using modern API
-			if let iccColorSpace = profile.withUnsafeBytes({ bytes in
-				CGColorSpace(iccData: Data(bytes) as CFData)
-			}) {
-				cgColorSpace = iccColorSpace
-			} else {
-				// Fallback based on component count
-				switch components {
-				case 1: cgColorSpace = CGColorSpaceCreateDeviceGray()
-				case 3: cgColorSpace = CGColorSpaceCreateDeviceRGB()
-				case 4: cgColorSpace = CGColorSpaceCreateDeviceCMYK()
-				default: return nil
-				}
-			}
-		case .deviceN, .separation:
+		guard let cgColorSpace = createCGColorSpace() else {
 			return nil
 		}
 		
@@ -294,9 +235,77 @@ extension PdfImage {
 				provider: provider,
 				decode: decodePtr?.baseAddress,
 				shouldInterpolate: interpolate,
-				intent: .defaultIntent
+				intent: cgRenderingIntent
 			)
 		}
+	}
+
+	private var cgRenderingIntent: CGColorRenderingIntent {
+		intent?.cgColorRenderingIntent ?? .defaultIntent
+	}
+
+	private func createCGColorSpace() -> CGColorSpace? {
+		switch colorSpace {
+		case .deviceGray:
+			return CGColorSpaceCreateDeviceGray()
+		case .deviceRGB:
+			return CGColorSpaceCreateDeviceRGB()
+		case .deviceCMYK:
+			return CGColorSpaceCreateDeviceCMYK()
+		case .indexed(let base, let hival, let lookupTable):
+			guard
+				let lookupTable,
+				let baseColorSpace = base.createCGColorSpaceForImage()
+			else {
+				return nil
+			}
+			return CGColorSpace(
+				indexedBaseSpace: baseColorSpace,
+				last: hival,
+				colorTable: [UInt8](lookupTable)
+			)
+		case .iccBased(let components, let profile):
+			if let iccColorSpace = CGColorSpace(iccData: profile as CFData) {
+				return iccColorSpace
+			}
+			return switch components {
+			case 1: CGColorSpaceCreateDeviceGray()
+			case 3: CGColorSpaceCreateDeviceRGB()
+			case 4: CGColorSpaceCreateDeviceCMYK()
+			default: nil
+			}
+		case .deviceN, .separation:
+			return nil
+		}
+	}
+
+	private func imageWithResolvedColorSpace(_ image: CGImage) -> CGImage? {
+		let resolvedImage: CGImage
+		if let cgColorSpace = createCGColorSpace() {
+			resolvedImage = image.copy(colorSpace: cgColorSpace) ?? image
+		} else {
+			resolvedImage = image
+		}
+		guard
+			resolvedImage.renderingIntent != cgRenderingIntent,
+			let colorSpace = resolvedImage.colorSpace,
+			let provider = resolvedImage.dataProvider
+		else {
+			return resolvedImage
+		}
+		return CGImage(
+			width: resolvedImage.width,
+			height: resolvedImage.height,
+			bitsPerComponent: resolvedImage.bitsPerComponent,
+			bitsPerPixel: resolvedImage.bitsPerPixel,
+			bytesPerRow: resolvedImage.bytesPerRow,
+			space: colorSpace,
+			bitmapInfo: resolvedImage.bitmapInfo,
+			provider: provider,
+			decode: resolvedImage.decode,
+			shouldInterpolate: interpolate,
+			intent: cgRenderingIntent
+		) ?? resolvedImage
 	}
 	
 	private func matteColorRGB() -> (r: UInt8, g: UInt8, b: UInt8)? {
@@ -441,6 +450,23 @@ private extension Optional where Wrapped == Data {
 		}
 		return try self.withUnsafeBytes { buffer in
 			try body(buffer)
+		}
+	}
+}
+
+private extension PdfColorSpace {
+	func createCGColorSpaceForImage() -> CGColorSpace? {
+		switch self {
+		case .deviceGray:
+			CGColorSpaceCreateDeviceGray()
+		case .deviceRGB:
+			CGColorSpaceCreateDeviceRGB()
+		case .deviceCMYK:
+			CGColorSpaceCreateDeviceCMYK()
+		case .iccBased(_, let profile):
+			CGColorSpace(iccData: profile as CFData)
+		case .deviceN, .indexed, .separation:
+			nil
 		}
 	}
 }

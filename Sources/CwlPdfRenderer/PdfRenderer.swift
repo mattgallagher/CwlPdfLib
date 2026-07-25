@@ -196,7 +196,15 @@ struct PdfRenderer {
 					// Check if this is an image XObject
 					if xobjectStream.dictionary.isImage(lookup: lookup) {
 						guard
-							let pdfImage = try? PdfImage(stream: xobjectStream, lookup: lookup)
+							let pdfImage = try? PdfImage(
+								stream: xobjectStream,
+								lookup: lookup,
+								resolvedColorSpace: resolveColorSpace(
+									xobjectStream.dictionary[.ColorSpace],
+									content: content,
+									lookup: lookup
+								)
+							)
 						else {
 							break
 						}
@@ -373,8 +381,10 @@ struct PdfRenderer {
 					) ?? .deviceRGB
 					renderState.colorState.setFillColor([CGFloat(r), CGFloat(g), CGFloat(b)])
 					renderState.colorState.applyFillColor(to: context)
-				case .ri:
-					break
+				case .ri(let name):
+					if let renderingIntent = name.cgColorRenderingIntent {
+						context.setRenderingIntent(renderingIntent)
+					}
 				case .S:
 					applyPendingClipIfNeeded(in: context, preservePath: true)
 					context.strokePath()
@@ -516,6 +526,20 @@ struct PdfRenderer {
 			print(error)
 		}
 
+	}
+
+	func resolveColorSpace(
+		_ object: PdfObject?,
+		content: any PdfContentStream,
+		lookup: PdfObjectLookup?
+	) -> PdfColorSpace? {
+		guard let object else {
+			return nil
+		}
+		if let name = object.name(lookup: lookup) {
+			return resolveColorSpace(name: name, content: content, lookup: lookup)
+		}
+		return PdfColorSpace.parse(object, lookup: lookup)
 	}
 
 	private func resolveColorSpace(

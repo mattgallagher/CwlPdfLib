@@ -57,6 +57,7 @@ extension CGContext {
 		setLineJoin(.miter)
 		setLineWidth(1)
 		setMiterLimit(10)
+		setRenderingIntent(.relativeColorimetric)
 		setTextDrawingMode(.fill)
 		textMatrix = .identity
 		colorState.applyFillColor(to: self)
@@ -135,6 +136,10 @@ extension CGContext {
 
 		if let flatness = gstate.flatness {
 			setFlatness(CGFloat(flatness))
+		}
+
+		if let renderingIntent = gstate.renderingIntent?.cgColorRenderingIntent {
+			setRenderingIntent(renderingIntent)
 		}
 
 		// Handle soft mask
