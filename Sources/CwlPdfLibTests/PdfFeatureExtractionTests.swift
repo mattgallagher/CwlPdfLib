@@ -8,6 +8,22 @@ import Testing
 
 struct PdfFeatureExtractionTests {
 	@Test
+	func `GIVEN kerned word WHEN extracting text THEN TJ fragments form one feature`() throws {
+		let document = try fixtureDocument(
+			path: "PDFUA-Reference-Files_1-1_2024_02/PDFUA-Ref-2-05_BookChapter-german.pdf"
+		)
+		let page = try #require(document.pages.first)
+		let textFeatures: [String] = page.extract(features: .text, lookup: document.lookup).compactMap { feature in
+			guard case .text(let text, _) = feature.payload else {
+				return nil
+			}
+			return text
+		}
+
+		#expect(textFeatures.contains("Einleitung"))
+	}
+
+	@Test
 	func `GIVEN zero descriptor metrics WHEN extracting embedded text THEN platform metrics provide nonzero bounds`() throws {
 		let document = try fixtureDocument(
 			path: "PDFUA-Reference-Files_1-1_2024_02/PDFUA-Ref-2-03_AcademicAbstract.pdf"
@@ -28,7 +44,7 @@ struct PdfFeatureExtractionTests {
 			return text
 		}.joined()
 
-		#expect(name == "Dietrich von Seggern ")
+		#expect(name.hasPrefix("Dietrich von Seggern "))
 		for feature in nameFeatures {
 			guard case .text(let text, _) = feature.payload, !text.trimmingCharacters(in: .whitespaces).isEmpty else {
 				continue

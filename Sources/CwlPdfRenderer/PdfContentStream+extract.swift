@@ -123,17 +123,8 @@ extension PdfContentStream {
 						}
 						break
 					}
-					for item in array {
-						switch item {
-						case .offset(let offset):
-							let displacement = textDisplacementForTJOffset(offset, state: state.textState)
-							let translation = CGAffineTransform(translationX: displacement, y: 0)
-							state.textPosition.textMatrix = translation.concatenating(state.textPosition.textMatrix)
-						case .text(let text):
-							if let feature = extractTextFeature(text, state: &state, lookup: lookup) {
-								extracted.append(feature)
-							}
-						}
+					if let feature = extractTextFeature(array, state: &state, lookup: lookup) {
+						extracted.append(feature)
 					}
 				case .TL(let lead):
 					state.textState.leading = lead
@@ -209,6 +200,54 @@ private struct ResolvedXObject {
 }
 
 private let unitBounds = CGRect(x: 0, y: 0, width: 1, height: 1)
+
+private func extractTextFeature(
+	_ array: [TJElement],
+	state: inout ExtractionGraphicsState,
+	lookup: PdfObjectLookup?
+) -> PdfExtractedFeature? {
+	var combinedBounds: CGRect?
+	var combinedText = ""
+	var font: PdfExtractedFont?
+	var matrix: PdfAffineTransform?
+
+	for item in array {
+		switch item {
+		case .offset(let offset):
+			let displacement = textDisplacementForTJOffset(offset, state: state.textState)
+			let translation = CGAffineTransform(translationX: displacement, y: 0)
+			state.textPosition.textMatrix = translation.concatenating(state.textPosition.textMatrix)
+		case .text(let data):
+			guard let feature = extractTextFeature(data, state: &state, lookup: lookup) else {
+				continue
+			}
+			guard case .text(let text, let featureFont) = feature.payload else {
+				continue
+			}
+
+			let bounds = CGRect(
+				x: feature.bounds.x,
+				y: feature.bounds.y,
+				width: feature.bounds.width,
+				height: feature.bounds.height
+			)
+			combinedBounds = combinedBounds?.union(bounds) ?? bounds
+			combinedText += text
+			font = font ?? featureFont
+			matrix = matrix ?? feature.matrix
+		}
+	}
+
+	guard let combinedBounds, let font, let matrix else {
+		return nil
+	}
+
+	return PdfExtractedFeature(
+		bounds: PdfRect(combinedBounds),
+		matrix: matrix,
+		payload: .text(utf8Text: combinedText, font: font)
+	)
+}
 
 private func extractTextFeature(
 	_ data: Data,
